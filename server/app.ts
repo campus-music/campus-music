@@ -6,8 +6,16 @@ import express, {
   Response,
   NextFunction,
 } from "express";
+import session from "express-session";
+import MemoryStore from "memorystore";
 
 import { registerRoutes } from "./routes";
+
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+  }
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -27,6 +35,25 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+const SessionStore = MemoryStore(session);
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "campus-music-secret-key-development",
+    store: new SessionStore({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    }),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    },
+  })
+);
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;

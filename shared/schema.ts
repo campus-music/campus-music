@@ -1,18 +1,150 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  fullName: text("full_name").notNull(),
+  universityName: text("university_name").notNull(),
+  country: text("country").notNull(),
+  role: text("role").notNull().default("listener"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const artistProfiles = pgTable("artist_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stageName: text("stage_name").notNull(),
+  bio: text("bio"),
+  mainGenre: text("main_genre").notNull(),
+  socialLinks: text("social_links"),
+  profileImageUrl: text("profile_image_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const tracks = pgTable("tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  audioUrl: text("audio_url").notNull(),
+  coverImageUrl: text("cover_image_url"),
+  genre: text("genre").notNull(),
+  universityName: text("university_name").notNull(),
+  country: text("country").notNull(),
+  durationSeconds: integer("duration_seconds").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const playlists = pgTable("playlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  isPublic: boolean("is_public").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const playlistTracks = pgTable("playlist_tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playlistId: varchar("playlist_id").notNull().references(() => playlists.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+export const likes = pgTable("likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const streams = pgTable("streams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+  playedAt: timestamp("played_at").notNull().defaultNow(),
+});
+
+// Insert Schemas
+export const insertUserSchema = createInsertSchema(users, {
+  email: z.string().email().refine((email) => email.endsWith('.edu'), {
+    message: 'Campus Music is currently available only to university students with .edu email addresses.',
+  }),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
+  universityName: z.string().min(1, 'University name is required'),
+  country: z.string().min(1, 'Country is required'),
+}).omit({ id: true, createdAt: true });
+
+export const insertArtistProfileSchema = createInsertSchema(artistProfiles, {
+  stageName: z.string().min(1, 'Stage name is required'),
+  mainGenre: z.string().min(1, 'Main genre is required'),
+}).omit({ id: true, createdAt: true });
+
+export const insertTrackSchema = createInsertSchema(tracks, {
+  title: z.string().min(1, 'Track title is required'),
+  genre: z.string().min(1, 'Genre is required'),
+  durationSeconds: z.number().positive('Duration must be positive'),
+}).omit({ id: true, createdAt: true });
+
+export const insertPlaylistSchema = createInsertSchema(playlists, {
+  name: z.string().min(1, 'Playlist name is required'),
+}).omit({ id: true, createdAt: true });
+
+export const insertPlaylistTrackSchema = createInsertSchema(playlistTracks).omit({ 
+  id: true, 
+  addedAt: true 
+});
+
+export const insertLikeSchema = createInsertSchema(likes).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertStreamSchema = createInsertSchema(streams).omit({ 
+  id: true, 
+  playedAt: true 
+});
+
+// Login Schema
+export const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+// Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertArtistProfile = z.infer<typeof insertArtistProfileSchema>;
+export type ArtistProfile = typeof artistProfiles.$inferSelect;
+
+export type InsertTrack = z.infer<typeof insertTrackSchema>;
+export type Track = typeof tracks.$inferSelect;
+
+export type InsertPlaylist = z.infer<typeof insertPlaylistSchema>;
+export type Playlist = typeof playlists.$inferSelect;
+
+export type InsertPlaylistTrack = z.infer<typeof insertPlaylistTrackSchema>;
+export type PlaylistTrack = typeof playlistTracks.$inferSelect;
+
+export type InsertLike = z.infer<typeof insertLikeSchema>;
+export type Like = typeof likes.$inferSelect;
+
+export type InsertStream = z.infer<typeof insertStreamSchema>;
+export type Stream = typeof streams.$inferSelect;
+
+export type Login = z.infer<typeof loginSchema>;
+
+// Extended types for joined data
+export type TrackWithArtist = Track & {
+  artist: ArtistProfile;
+};
+
+export type PlaylistWithTracks = Playlist & {
+  tracks: TrackWithArtist[];
+};

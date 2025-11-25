@@ -1,37 +1,369 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { 
+  type User, 
+  type InsertUser, 
+  type ArtistProfile, 
+  type InsertArtistProfile,
+  type Track,
+  type InsertTrack,
+  type Playlist,
+  type InsertPlaylist,
+  type PlaylistTrack,
+  type InsertPlaylistTrack,
+  type Like,
+  type InsertLike,
+  type Stream,
+  type InsertStream,
+  type TrackWithArtist
+} from "@shared/schema";
 import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import bcrypt from "bcryptjs";
 
 export interface IStorage {
+  // User methods
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+
+  // Artist Profile methods
+  getArtistProfile(userId: string): Promise<ArtistProfile | undefined>;
+  getArtistProfileById(id: string): Promise<ArtistProfile | undefined>;
+  createArtistProfile(profile: InsertArtistProfile): Promise<ArtistProfile>;
+  getArtistsByUniversity(university: string): Promise<ArtistProfile[]>;
+
+  // Track methods
+  getTrack(id: string): Promise<Track | undefined>;
+  getTrackWithArtist(id: string): Promise<TrackWithArtist | undefined>;
+  getTracksByArtist(artistId: string): Promise<Track[]>;
+  getLatestTracks(limit?: number): Promise<TrackWithArtist[]>;
+  getTrendingTracks(limit?: number): Promise<TrackWithArtist[]>;
+  getTracksByUniversity(university: string): Promise<TrackWithArtist[]>;
+  searchTracks(query: string): Promise<TrackWithArtist[]>;
+  createTrack(track: InsertTrack): Promise<Track>;
+
+  // Playlist methods
+  getPlaylist(id: string): Promise<Playlist | undefined>;
+  getPlaylistsByUser(userId: string): Promise<Playlist[]>;
+  createPlaylist(playlist: InsertPlaylist): Promise<Playlist>;
+  addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack>;
+  removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
+
+  // Like methods
+  likeTrack(data: InsertLike): Promise<Like>;
+  unlikeTrack(userId: string, trackId: string): Promise<void>;
+  getLikedTracks(userId: string): Promise<TrackWithArtist[]>;
+  isTrackLiked(userId: string, trackId: string): Promise<boolean>;
+  getLikeCount(trackId: string): Promise<number>;
+
+  // Stream methods
+  recordStream(data: InsertStream): Promise<Stream>;
+  getStreamCount(trackId: string): Promise<number>;
+  getArtistStats(artistId: string): Promise<{ totalPlays: number; totalLikes: number; trackCount: number }>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private artistProfiles: Map<string, ArtistProfile>;
+  private tracks: Map<string, Track>;
+  private playlists: Map<string, Playlist>;
+  private playlistTracks: Map<string, PlaylistTrack>;
+  private likes: Map<string, Like>;
+  private streams: Map<string, Stream>;
 
   constructor() {
     this.users = new Map();
+    this.artistProfiles = new Map();
+    this.tracks = new Map();
+    this.playlists = new Map();
+    this.playlistTracks = new Map();
+    this.likes = new Map();
+    this.streams = new Map();
   }
 
+  // User methods
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find((user) => user.email === email);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    const user: User = {
+      ...insertUser,
+      id,
+      password: hashedPassword,
+      createdAt: new Date(),
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    const updated = { ...user, ...updates };
+    this.users.set(id, updated);
+    return updated;
+  }
+
+  // Artist Profile methods
+  async getArtistProfile(userId: string): Promise<ArtistProfile | undefined> {
+    return Array.from(this.artistProfiles.values()).find((profile) => profile.userId === userId);
+  }
+
+  async getArtistProfileById(id: string): Promise<ArtistProfile | undefined> {
+    return this.artistProfiles.get(id);
+  }
+
+  async createArtistProfile(insertProfile: InsertArtistProfile): Promise<ArtistProfile> {
+    const id = randomUUID();
+    const profile: ArtistProfile = {
+      ...insertProfile,
+      id,
+      createdAt: new Date(),
+    };
+    this.artistProfiles.set(id, profile);
+    
+    // Update user role to artist
+    const user = await this.getUser(insertProfile.userId);
+    if (user) {
+      await this.updateUser(user.id, { role: 'artist' });
+    }
+    
+    return profile;
+  }
+
+  async getArtistsByUniversity(university: string): Promise<ArtistProfile[]> {
+    const tracks = Array.from(this.tracks.values())
+      .filter(t => t.universityName.toLowerCase().includes(university.toLowerCase()));
+    
+    const artistIds = new Set(tracks.map(t => t.artistId));
+    return Array.from(this.artistProfiles.values())
+      .filter(a => artistIds.has(a.id));
+  }
+
+  // Track methods
+  async getTrack(id: string): Promise<Track | undefined> {
+    return this.tracks.get(id);
+  }
+
+  async getTrackWithArtist(id: string): Promise<TrackWithArtist | undefined> {
+    const track = this.tracks.get(id);
+    if (!track) return undefined;
+    
+    const artist = await this.getArtistProfileById(track.artistId);
+    if (!artist) return undefined;
+    
+    return { ...track, artist };
+  }
+
+  async getTracksByArtist(artistId: string): Promise<Track[]> {
+    return Array.from(this.tracks.values()).filter((track) => track.artistId === artistId);
+  }
+
+  async getLatestTracks(limit: number = 20): Promise<TrackWithArtist[]> {
+    const allTracks = Array.from(this.tracks.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+    
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of allTracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async getTrendingTracks(limit: number = 20): Promise<TrackWithArtist[]> {
+    const streamCounts = new Map<string, number>();
+    Array.from(this.streams.values()).forEach((stream) => {
+      const count = streamCounts.get(stream.trackId) || 0;
+      streamCounts.set(stream.trackId, count + 1);
+    });
+
+    const allTracks = Array.from(this.tracks.values())
+      .sort((a, b) => (streamCounts.get(b.id) || 0) - (streamCounts.get(a.id) || 0))
+      .slice(0, limit);
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of allTracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async getTracksByUniversity(university: string): Promise<TrackWithArtist[]> {
+    const tracks = Array.from(this.tracks.values())
+      .filter(t => t.universityName.toLowerCase().includes(university.toLowerCase()));
+    
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of tracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async searchTracks(query: string): Promise<TrackWithArtist[]> {
+    const lowerQuery = query.toLowerCase();
+    const tracks = Array.from(this.tracks.values()).filter(
+      (track) =>
+        track.title.toLowerCase().includes(lowerQuery) ||
+        track.genre.toLowerCase().includes(lowerQuery) ||
+        track.universityName.toLowerCase().includes(lowerQuery)
+    );
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of tracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async createTrack(insertTrack: InsertTrack): Promise<Track> {
+    const id = randomUUID();
+    const track: Track = {
+      ...insertTrack,
+      id,
+      createdAt: new Date(),
+    };
+    this.tracks.set(id, track);
+    return track;
+  }
+
+  // Playlist methods
+  async getPlaylist(id: string): Promise<Playlist | undefined> {
+    return this.playlists.get(id);
+  }
+
+  async getPlaylistsByUser(userId: string): Promise<Playlist[]> {
+    return Array.from(this.playlists.values()).filter((playlist) => playlist.userId === userId);
+  }
+
+  async createPlaylist(insertPlaylist: InsertPlaylist): Promise<Playlist> {
+    const id = randomUUID();
+    const playlist: Playlist = {
+      ...insertPlaylist,
+      id,
+      createdAt: new Date(),
+    };
+    this.playlists.set(id, playlist);
+    return playlist;
+  }
+
+  async addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack> {
+    const id = randomUUID();
+    const playlistTrack: PlaylistTrack = {
+      ...data,
+      id,
+      addedAt: new Date(),
+    };
+    this.playlistTracks.set(id, playlistTrack);
+    return playlistTrack;
+  }
+
+  async removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+    const toRemove = Array.from(this.playlistTracks.entries()).find(
+      ([_, pt]) => pt.playlistId === playlistId && pt.trackId === trackId
+    );
+    if (toRemove) {
+      this.playlistTracks.delete(toRemove[0]);
+    }
+  }
+
+  // Like methods
+  async likeTrack(data: InsertLike): Promise<Like> {
+    const id = randomUUID();
+    const like: Like = {
+      ...data,
+      id,
+      createdAt: new Date(),
+    };
+    this.likes.set(id, like);
+    return like;
+  }
+
+  async unlikeTrack(userId: string, trackId: string): Promise<void> {
+    const toRemove = Array.from(this.likes.entries()).find(
+      ([_, like]) => like.userId === userId && like.trackId === trackId
+    );
+    if (toRemove) {
+      this.likes.delete(toRemove[0]);
+    }
+  }
+
+  async getLikedTracks(userId: string): Promise<TrackWithArtist[]> {
+    const likedTrackIds = Array.from(this.likes.values())
+      .filter((like) => like.userId === userId)
+      .map((like) => like.trackId);
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const trackId of likedTrackIds) {
+      const track = await this.getTrackWithArtist(trackId);
+      if (track) {
+        tracksWithArtists.push(track);
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async isTrackLiked(userId: string, trackId: string): Promise<boolean> {
+    return Array.from(this.likes.values()).some(
+      (like) => like.userId === userId && like.trackId === trackId
+    );
+  }
+
+  async getLikeCount(trackId: string): Promise<number> {
+    return Array.from(this.likes.values()).filter((like) => like.trackId === trackId).length;
+  }
+
+  // Stream methods
+  async recordStream(data: InsertStream): Promise<Stream> {
+    const id = randomUUID();
+    const stream: Stream = {
+      ...data,
+      id,
+      playedAt: new Date(),
+    };
+    this.streams.set(id, stream);
+    return stream;
+  }
+
+  async getStreamCount(trackId: string): Promise<number> {
+    return Array.from(this.streams.values()).filter((stream) => stream.trackId === trackId).length;
+  }
+
+  async getArtistStats(artistId: string): Promise<{ totalPlays: number; totalLikes: number; trackCount: number }> {
+    const artistTracks = await this.getTracksByArtist(artistId);
+    const trackIds = artistTracks.map(t => t.id);
+    
+    const totalPlays = Array.from(this.streams.values())
+      .filter(s => trackIds.includes(s.trackId))
+      .length;
+    
+    const totalLikes = Array.from(this.likes.values())
+      .filter(l => trackIds.includes(l.trackId))
+      .length;
+    
+    return {
+      totalPlays,
+      totalLikes,
+      trackCount: artistTracks.length,
+    };
   }
 }
 
