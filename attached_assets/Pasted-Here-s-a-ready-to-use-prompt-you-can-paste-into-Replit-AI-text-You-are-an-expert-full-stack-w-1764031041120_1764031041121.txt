@@ -1,0 +1,171 @@
+Here’s a ready-to-use prompt you can paste into Replit AI 👇
+
+```text
+You are an expert full-stack web developer.  
+Build a **“Campus Music”** web application: a dark-themed music platform for university students and student musicians.
+
+GOAL  
+Create a responsive web app similar in feel to **Apple Music / Spotify** (dark UI, big artwork tiles, carousels, sticky audio player) but focused ONLY on university students worldwide. The core idea: student artists upload their music, and other students discover, stream, and share it – without competing directly with mainstream artists.
+
+TECH STACK  
+- Full-stack JavaScript app in a single Replit project.  
+- Use **React** (with a component-based structure) for the front end.  
+- Use **Node.js + Express** for the back end API.  
+- Use **SQLite or PostgreSQL** (whichever is easier on Replit) for persistent data.  
+- Use **Tailwind CSS** or simple CSS modules for styling with a modern dark theme.  
+- Use the built-in HTML5 `<audio>` element for playback with a global sticky player.
+
+AUTHENTICATION & UNIVERSITY LOGIC  
+- Implement **email/password auth** plus session or JWT-based login.  
+- **Very important:** Only allow sign-ups from **university emails ending in `.edu`**.  
+  - If the email does NOT end in `.edu`, show a clear error message:  
+    “Campus Music is currently available only to university students with .edu email addresses.”  
+- Basic password rules (min 8 characters).  
+- Users can reset password via a fake flow (no real email sending needed; just UI and mock behavior).
+
+USER ROLES & MODELS  
+Create these main database models (tables) and basic relationships:
+
+1. **User**
+   - id, fullName, email, passwordHash, universityName, country, role (`"listener"` or `"artist"`), createdAt.
+2. **ArtistProfile**
+   - id, userId (FK to User), stageName, bio, mainGenre, socialLinks (JSON), profileImageUrl.
+3. **Track**
+   - id, artistId (FK to ArtistProfile), title, description, audioUrl (or local file path), coverImageUrl, genre, universityName, country, durationSeconds, createdAt.
+4. **Playlist**
+   - id, userId (FK), name, description, isPublic, createdAt.
+5. **PlaylistTrack**
+   - id, playlistId, trackId, addedAt.
+6. **Like**
+   - id, userId, trackId, createdAt.
+7. **Stream**
+   - id, userId, trackId, playedAt.
+
+Seed the DB with some **fake universities, artists, and tracks** so that the UI looks alive.
+
+CORE FEATURES – MVP  
+
+1. **Landing / Home Page (after login)**
+   - Dark theme similar to Apple Music / Spotify.  
+   - Left sidebar navigation (fixed):
+     - Home
+     - New Releases
+     - Campus Charts
+     - Discover by University
+     - My Library
+     - Profile / Settings
+   - Main content area with sections inspired by Apple Music:
+     - “Best of Campus 2025” – horizontal carousel of curated playlists or albums with large artwork tiles.
+     - “Latest Songs” – vertical list of newest tracks (title, artist, university, play button, three-dot menu).
+     - “Trending on Campus” – grid or carousel of most-streamed tracks in the last 7 days.
+   - Top bar:
+     - App logo “Campus Music”
+     - Search bar
+     - Small user avatar / menu.
+
+2. **New Releases Page**
+   - Grid of the most recently uploaded tracks and EPs, using big cover art tiles (similar to the Apple Music “New Releases” screenshot).  
+   - Each tile: cover image, title, artist, small university tag, hover play button.
+
+3. **Trending Songs Page**
+   - List or grid of tracks sorted by number of streams and likes.  
+   - Show ranking numbers (1, 2, 3, …), track name, artist, university, play icon, like count.
+
+4. **Discover by University**
+   - Dropdown or search box to select a **university** (text search).  
+   - When a university is selected:
+     - Show “Top Artists from [University]”
+     - Show “Top Tracks from [University]”
+     - Show “New from [University]”
+   - Use the `universityName` field in ArtistProfile/Track to filter.
+
+5. **Artist Experience**
+   - Any logged-in user can click “Become an Artist” in their profile:
+     - Opens a form to create an **ArtistProfile** (stage name, genres, bio, links, profile image).  
+   - Artist dashboard:
+     - Button to **upload a track**:
+       - Fields: title, description, genre, upload audio file (mp3), upload cover image, optional lyrics text.
+       - Automatically tags the track with the user’s `universityName` and `country`.
+     - List of their tracks with basic stats:
+       - Play count (from Streams table)
+       - Likes
+       - Upload date.
+
+6. **Listener Experience / My Library**
+   - “Liked Songs” – all tracks the user has liked.
+   - Custom playlists:
+     - Create, rename, delete playlists.
+     - Add/remove tracks from context menus or three-dot menus.
+   - Recently played list.
+
+7. **Global Audio Player**
+   - A **persistent bottom bar** (sticky across pages) similar to Spotify:
+     - Shows currently playing track art, title, artist, university.
+     - Play/pause, previous, next.
+     - Seek bar and volume control.
+   - Clicking play on any track updates this global player.
+
+8. **Search**
+   - Search bar at the top that lets users search by:
+     - track title
+     - artist stage name
+     - university name
+     - genre  
+   - Results page with tabs or sections for Tracks, Artists, Universities.
+
+9. **Profile & Settings**
+   - User can view and edit:
+     - full name
+     - university name
+     - country
+     - change password  
+   - If role = artist, also show quick link to Artist Dashboard and ArtistProfile.
+
+UI & UX REQUIREMENTS  
+- Dark theme, inspired by **Apple Music** & **Spotify**:
+  - Dark gray/black background
+  - Bright accent color for buttons and highlights.
+- Layout:
+  - Left vertical sidebar navigation.
+  - Scrollable main content with multiple horizontal carousels (use horizontal scrolling lists with album/track tiles).
+- Each track card / tile:
+  - Cover image (square)
+  - Title and artist
+  - Small label for university (e.g., “DePaul University, USA”)
+  - Hover or visible play button.
+- Make the site fully responsive:  
+  - On mobile, sidebar becomes a top/bottom nav bar.  
+  - Carousels become swipeable horizontal lists.
+
+BACKEND API ENDPOINTS (examples)  
+Create REST endpoints such as:
+- `POST /api/auth/signup` – validate `.edu` email, create user.
+- `POST /api/auth/login`
+- `GET /api/me` – current user.
+- `PUT /api/me` – update profile.
+- `POST /api/artist` – create/update artist profile.
+- `GET /api/tracks` – list tracks (with filters for new, trending, university, etc.).
+- `POST /api/tracks` – artist uploads track metadata + file.
+- `POST /api/tracks/:id/like` and `DELETE /api/tracks/:id/like`
+- `POST /api/tracks/:id/stream` – record a play.
+- `GET /api/playlists`, `POST /api/playlists`, `POST /api/playlists/:id/tracks`
+
+IMPLEMENTATION NOTES  
+- For file uploads in Replit, you can either:
+  - store audio/cover files in a local `uploads/` folder and reference their URLs, OR  
+  - mock the uploads and use placeholder URLs.  
+- Include clear comments in the code so it’s easy to extend.  
+- Seed script: on server start, if DB is empty, create several sample universities, users (with .edu emails), artists, and tracks so the UI looks populated.
+
+FINAL DELIVERABLE  
+- A working full-stack Campus Music web app running in Replit with:
+  - .edu-only sign up & login
+  - artist and listener flows
+  - Apple Music / Spotify-style dark UI with carousels and a sticky audio player
+  - pages: Home, New Releases, Trending, Discover by University, My Library, Profile.
+- Include instructions in the README on:
+  - how to run the app,
+  - default demo logins for testing (e.g., demo@demo.edu / password123).
+
+Focus on clean, modular code and a polished UI that feels close to Apple Music / Spotify but clearly branded as “Campus Music.”
+```
