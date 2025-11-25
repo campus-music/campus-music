@@ -19,6 +19,9 @@ import Profile from "@/pages/profile";
 import ArtistOnboard from "@/pages/artist-onboard";
 import ArtistDashboard from "@/pages/artist-dashboard";
 import Search from "@/pages/search";
+import Genres from "@/pages/genres";
+import Recommendations from "@/pages/recommendations";
+import ArtistAnalytics from "@/pages/artist-analytics";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
@@ -174,6 +177,36 @@ function Router() {
           <ProtectedRoute component={() => (
             <AppLayout>
               <ArtistDashboard />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/genres">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Genres />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/recommendations">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Recommendations />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/artist/analytics">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <ArtistAnalytics />
             </AppLayout>
           )} />
         )}

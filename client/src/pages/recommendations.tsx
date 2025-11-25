@@ -1,0 +1,63 @@
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { TrackCard } from '@/components/track-card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Sparkles } from 'lucide-react';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import type { TrackWithArtist } from '@shared/schema';
+
+export default function Recommendations() {
+  const { toast } = useToast();
+
+  const { data: recommendations, isLoading } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/user/recommendations'],
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: async (trackId: string) => {
+      const res = await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
+      toast({ title: 'Track liked!' });
+    },
+  });
+
+  return (
+    <div className="space-y-6 pb-32">
+      <div className="flex items-center gap-3">
+        <div className="bg-primary/10 p-3 rounded-lg">
+          <Sparkles className="h-8 w-8 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-4xl font-bold mb-1">Recommended For You</h1>
+          <p className="text-muted-foreground text-lg">
+            Personalized recommendations based on your taste
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {isLoading ? (
+          Array.from({ length: 20 }).map((_, i) => (
+            <Skeleton key={i} className="h-72 rounded-lg" />
+          ))
+        ) : recommendations && recommendations.length > 0 ? (
+          recommendations.map((track) => (
+            <TrackCard
+              key={track.id}
+              track={track}
+              onLike={() => likeMutation.mutate(track.id)}
+              data-testid={`card-recommendation-${track.id}`}
+            />
+          ))
+        ) : (
+          <div className="col-span-full text-center py-20 text-muted-foreground">
+            Like more tracks to get better recommendations
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
