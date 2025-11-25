@@ -530,6 +530,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Genre discovery routes
+  app.get("/api/genres", async (req, res) => {
+    try {
+      const genres = await storage.getGenres();
+      res.json(genres);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/genres/:genre/tracks", async (req, res) => {
+    try {
+      const tracks = await storage.getTracksByGenre(req.params.genre);
+      res.json(tracks);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/genres/:genre/artists", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const artists = await storage.getTopArtistsByGenre(req.params.genre, limit);
+      res.json(artists);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/user/recommendations", requireAuth, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const recommendations = await storage.getPersonalizedRecommendations(req.session.userId!, limit);
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Advanced artist analytics routes
+  app.get("/api/artists/:artistId/analytics", async (req, res) => {
+    try {
+      const analytics = await storage.getArtistAnalytics(req.params.artistId);
+      const safeAnalytics = {
+        ...analytics,
+        streams: Object.fromEntries(analytics.streams),
+        listenerCountries: Object.fromEntries(analytics.listenerCountries),
+      };
+      res.json(safeAnalytics);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Search routes
   app.get("/api/search/tracks", async (req, res) => {
     const { query } = req.query;

@@ -88,6 +88,22 @@ export interface IStorage {
   addPlaylistMember(data: InsertPlaylistMember): Promise<PlaylistMember>;
   removePlaylistMember(playlistId: string, userId: string): Promise<void>;
   getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]>;
+
+  // Genre discovery methods
+  getTracksByGenre(genre: string): Promise<TrackWithArtist[]>;
+  getTopArtistsByGenre(genre: string, limit?: number): Promise<ArtistProfile[]>;
+  getGenres(): Promise<string[]>;
+  getPersonalizedRecommendations(userId: string, limit?: number): Promise<TrackWithArtist[]>;
+
+  // Advanced artist analytics
+  getArtistAnalytics(artistId: string): Promise<{
+    totalPlays: number;
+    totalLikes: number;
+    trackCount: number;
+    streams: Map<string, number>;
+    topTracks: { trackId: string; plays: number }[];
+    listenerCountries: Map<string, number>;
+  }>;
 }
 
 export class MemStorage implements IStorage {
@@ -520,6 +536,120 @@ export class MemStorage implements IStorage {
   async getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]> {
     return Array.from(this.playlistMembers.values())
       .filter(m => m.playlistId === playlistId);
+  }
+
+  // Genre discovery methods
+  async getTracksByGenre(genre: string): Promise<TrackWithArtist[]> {
+    const tracks = Array.from(this.tracks.values())
+      .filter(t => t.genre.toLowerCase() === genre.toLowerCase());
+    
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of tracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async getTopArtistsByGenre(genre: string, limit: number = 10): Promise<ArtistProfile[]> {
+    const genreArtists = new Map<string, number>();
+    Array.from(this.tracks.values())
+      .filter(t => t.genre.toLowerCase() === genre.toLowerCase())
+      .forEach(t => {
+        const count = genreArtists.get(t.artistId) || 0;
+        genreArtists.set(t.artistId, count + 1);
+      });
+
+    const sorted = Array.from(genreArtists.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit);
+
+    const artists: ArtistProfile[] = [];
+    for (const [artistId] of sorted) {
+      const artist = await this.getArtistProfileById(artistId);
+      if (artist) artists.push(artist);
+    }
+    return artists;
+  }
+
+  async getGenres(): Promise<string[]> {
+    const genres = new Set(Array.from(this.tracks.values()).map(t => t.genre));
+    return Array.from(genres).sort();
+  }
+
+  async getPersonalizedRecommendations(userId: string, limit: number = 20): Promise<TrackWithArtist[]> {
+    const user = await this.getUser(userId);
+    if (!user) return [];
+
+    const likedTracks = await this.getLikedTracks(userId);
+    const likedGenres = new Set(likedTracks.map(t => t.genre));
+
+    const allTracks = Array.from(this.tracks.values())
+      .filter(t => likedGenres.has(t.genre) && !likedTracks.find(lt => lt.id === t.id))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of allTracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async getArtistAnalytics(artistId: string): Promise<{
+    totalPlays: number;
+    totalLikes: number;
+    trackCount: number;
+    streams: Map<string, number>;
+    topTracks: { trackId: string; plays: number }[];
+    listenerCountries: Map<string, number>;
+  }> {
+    const artistTracks = await this.getTracksByArtist(artistId);
+    const trackIds = artistTracks.map(t => t.id);
+
+    const streams = new Map<string, number>();
+    const listenerCountries = new Map<string, number>();
+
+    Array.from(this.streams.values())
+      .filter(s => trackIds.includes(s.trackId))
+      .forEach(s => {
+        const count = streams.get(s.trackId) || 0;
+        streams.set(s.trackId, count + 1);
+      });
+
+    const topTracks = Array.from(streams.entries())
+      .map(([trackId, plays]) => ({ trackId, plays }))
+      .sort((a, b) => b.plays - a.plays)
+      .slice(0, 10);
+
+    Array.from(this.users.values()).forEach(user => {
+      if (user.country) {
+        const count = listenerCountries.get(user.country) || 0;
+        listenerCountries.set(user.country, count + 1);
+      }
+    });
+
+    const totalPlays = Array.from(this.streams.values())
+      .filter(s => trackIds.includes(s.trackId))
+      .length;
+
+    const totalLikes = Array.from(this.likes.values())
+      .filter(l => trackIds.includes(l.trackId))
+      .length;
+
+    return {
+      totalPlays,
+      totalLikes,
+      trackCount: artistTracks.length,
+      streams,
+      topTracks,
+      listenerCountries,
+    };
   }
 }
 
