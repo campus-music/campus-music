@@ -23,6 +23,7 @@ import Genres from "@/pages/genres";
 import Recommendations from "@/pages/recommendations";
 import ArtistAnalytics from "@/pages/artist-analytics";
 import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -95,6 +96,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Switch>
+      <Route path="/landing" component={Landing} />
       <Route path="/login" component={() => <PublicRoute component={Login} />} />
       <Route path="/signup" component={() => <PublicRoute component={Signup} />} />
       
