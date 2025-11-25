@@ -11,6 +11,8 @@ export const users = pgTable("users", {
   universityName: text("university_name").notNull(),
   country: text("country").notNull(),
   role: text("role").notNull().default("listener"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  verificationToken: text("verification_token"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -69,6 +71,46 @@ export const streams = pgTable("streams", {
   playedAt: timestamp("played_at").notNull().defaultNow(),
 });
 
+export const followers = pgTable("followers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  followerId: varchar("follower_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  followedAt: timestamp("followed_at").notNull().defaultNow(),
+});
+
+export const trackComments = pgTable("track_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trackId: varchar("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const shares = pgTable("shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id"),
+  playlistId: varchar("playlist_id"),
+  sharedAt: timestamp("shared_at").notNull().defaultNow(),
+});
+
+export const playlistMembers = pgTable("playlist_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playlistId: varchar("playlist_id").notNull().references(() => playlists.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("collaborator"),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+});
+
+export const userListeningHistory = pgTable("user_listening_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+  genre: text("genre").notNull(),
+  listeningCount: integer("listening_count").notNull().default(1),
+  lastPlayedAt: timestamp("last_played_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email().refine((email) => email.endsWith('.edu'), {
@@ -78,7 +120,7 @@ export const insertUserSchema = createInsertSchema(users, {
   fullName: z.string().min(1, 'Full name is required'),
   universityName: z.string().min(1, 'University name is required'),
   country: z.string().min(1, 'Country is required'),
-}).omit({ id: true, createdAt: true });
+}).omit({ id: true, createdAt: true, verificationToken: true });
 
 export const insertArtistProfileSchema = createInsertSchema(artistProfiles, {
   stageName: z.string().min(1, 'Stage name is required'),
@@ -110,6 +152,26 @@ export const insertStreamSchema = createInsertSchema(streams).omit({
   playedAt: true 
 });
 
+export const insertFollowerSchema = createInsertSchema(followers).omit({ 
+  id: true, 
+  followedAt: true 
+});
+
+export const insertTrackCommentSchema = createInsertSchema(trackComments).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertShareSchema = createInsertSchema(shares).omit({ 
+  id: true, 
+  sharedAt: true 
+});
+
+export const insertPlaylistMemberSchema = createInsertSchema(playlistMembers).omit({ 
+  id: true, 
+  joinedAt: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -137,6 +199,18 @@ export type Like = typeof likes.$inferSelect;
 
 export type InsertStream = z.infer<typeof insertStreamSchema>;
 export type Stream = typeof streams.$inferSelect;
+
+export type InsertFollower = z.infer<typeof insertFollowerSchema>;
+export type Follower = typeof followers.$inferSelect;
+
+export type InsertTrackComment = z.infer<typeof insertTrackCommentSchema>;
+export type TrackComment = typeof trackComments.$inferSelect;
+
+export type InsertShare = z.infer<typeof insertShareSchema>;
+export type Share = typeof shares.$inferSelect;
+
+export type InsertPlaylistMember = z.infer<typeof insertPlaylistMemberSchema>;
+export type PlaylistMember = typeof playlistMembers.$inferSelect;
 
 export type Login = z.infer<typeof loginSchema>;
 

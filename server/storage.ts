@@ -13,7 +13,15 @@ import {
   type InsertLike,
   type Stream,
   type InsertStream,
-  type TrackWithArtist
+  type TrackWithArtist,
+  type Follower,
+  type InsertFollower,
+  type TrackComment,
+  type InsertTrackComment,
+  type Share,
+  type InsertShare,
+  type PlaylistMember,
+  type InsertPlaylistMember
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
@@ -59,6 +67,27 @@ export interface IStorage {
   recordStream(data: InsertStream): Promise<Stream>;
   getStreamCount(trackId: string): Promise<number>;
   getArtistStats(artistId: string): Promise<{ totalPlays: number; totalLikes: number; trackCount: number }>;
+
+  // Follower methods
+  followArtist(data: InsertFollower): Promise<Follower>;
+  unfollowArtist(userId: string, followerId: string): Promise<void>;
+  getFollowers(userId: string): Promise<User[]>;
+  getFollowing(userId: string): Promise<User[]>;
+  isFollowing(userId: string, followerId: string): Promise<boolean>;
+
+  // Comment methods
+  addComment(data: InsertTrackComment): Promise<TrackComment>;
+  getTrackComments(trackId: string): Promise<TrackComment[]>;
+  deleteComment(commentId: string): Promise<void>;
+
+  // Share methods
+  shareTrack(data: InsertShare): Promise<Share>;
+  getShareCount(trackId: string): Promise<number>;
+
+  // Playlist Member methods
+  addPlaylistMember(data: InsertPlaylistMember): Promise<PlaylistMember>;
+  removePlaylistMember(playlistId: string, userId: string): Promise<void>;
+  getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -69,6 +98,10 @@ export class MemStorage implements IStorage {
   private playlistTracks: Map<string, PlaylistTrack>;
   private likes: Map<string, Like>;
   private streams: Map<string, Stream>;
+  private followers: Map<string, Follower>;
+  private comments: Map<string, TrackComment>;
+  private shares: Map<string, Share>;
+  private playlistMembers: Map<string, PlaylistMember>;
 
   constructor() {
     this.users = new Map();
@@ -78,6 +111,10 @@ export class MemStorage implements IStorage {
     this.playlistTracks = new Map();
     this.likes = new Map();
     this.streams = new Map();
+    this.followers = new Map();
+    this.comments = new Map();
+    this.shares = new Map();
+    this.playlistMembers = new Map();
   }
 
   // User methods
@@ -364,6 +401,125 @@ export class MemStorage implements IStorage {
       totalLikes,
       trackCount: artistTracks.length,
     };
+  }
+
+  // Follower methods
+  async followArtist(data: InsertFollower): Promise<Follower> {
+    const id = randomUUID();
+    const follower: Follower = {
+      ...data,
+      id,
+      followedAt: new Date(),
+    };
+    this.followers.set(id, follower);
+    return follower;
+  }
+
+  async unfollowArtist(userId: string, followerId: string): Promise<void> {
+    const toRemove = Array.from(this.followers.entries()).find(
+      ([_, f]) => f.userId === userId && f.followerId === followerId
+    );
+    if (toRemove) {
+      this.followers.delete(toRemove[0]);
+    }
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    const followerIds = Array.from(this.followers.values())
+      .filter(f => f.userId === userId)
+      .map(f => f.followerId);
+    
+    const followers: User[] = [];
+    for (const id of followerIds) {
+      const user = await this.getUser(id);
+      if (user) followers.push(user);
+    }
+    return followers;
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    const followingIds = Array.from(this.followers.values())
+      .filter(f => f.followerId === userId)
+      .map(f => f.userId);
+    
+    const following: User[] = [];
+    for (const id of followingIds) {
+      const user = await this.getUser(id);
+      if (user) following.push(user);
+    }
+    return following;
+  }
+
+  async isFollowing(userId: string, followerId: string): Promise<boolean> {
+    return Array.from(this.followers.values()).some(
+      f => f.userId === userId && f.followerId === followerId
+    );
+  }
+
+  // Comment methods
+  async addComment(data: InsertTrackComment): Promise<TrackComment> {
+    const id = randomUUID();
+    const comment: TrackComment = {
+      ...data,
+      id,
+      createdAt: new Date(),
+    };
+    this.comments.set(id, comment);
+    return comment;
+  }
+
+  async getTrackComments(trackId: string): Promise<TrackComment[]> {
+    return Array.from(this.comments.values())
+      .filter(c => c.trackId === trackId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async deleteComment(commentId: string): Promise<void> {
+    this.comments.delete(commentId);
+  }
+
+  // Share methods
+  async shareTrack(data: InsertShare): Promise<Share> {
+    const id = randomUUID();
+    const share: Share = {
+      ...data,
+      id,
+      sharedAt: new Date(),
+    };
+    this.shares.set(id, share);
+    return share;
+  }
+
+  async getShareCount(trackId: string): Promise<number> {
+    return Array.from(this.shares.values())
+      .filter(s => s.trackId === trackId)
+      .length;
+  }
+
+  // Playlist Member methods
+  async addPlaylistMember(data: InsertPlaylistMember): Promise<PlaylistMember> {
+    const id = randomUUID();
+    const member: PlaylistMember = {
+      ...data,
+      id,
+      joinedAt: new Date(),
+    };
+    this.playlistMembers.set(id, member);
+    return member;
+  }
+
+  async removePlaylistMember(playlistId: string, userId: string): Promise<void> {
+    const toRemove = Array.from(this.playlistMembers.entries()).find(
+      ([_, m]) => m.playlistId === playlistId && m.userId === userId
+    );
+    if (toRemove) {
+      this.playlistMembers.delete(toRemove[0]);
+    }
+  }
+
+  async getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]> {
+    return Array.from(this.playlistMembers.values())
+      .filter(m => m.playlistId === playlistId);
   }
 }
 

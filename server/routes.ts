@@ -346,6 +346,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email verification endpoint
+  app.post("/api/auth/verify-email", requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body;
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.verificationToken !== code) {
+        return res.status(400).json({ error: "Invalid verification code" });
+      }
+
+      const updated = await storage.updateUser(req.session.userId!, {
+        emailVerified: true,
+        verificationToken: undefined,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = updated;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Follower routes
+  app.post("/api/artists/:artistId/follow", requireAuth, async (req, res) => {
+    try {
+      const isFollowing = await storage.isFollowing(req.session.userId!, req.params.artistId);
+      if (isFollowing) {
+        return res.status(400).json({ error: "Already following" });
+      }
+
+      const follower = await storage.followArtist({
+        userId: req.params.artistId,
+        followerId: req.session.userId!,
+      });
+      res.json(follower);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/artists/:artistId/follow", requireAuth, async (req, res) => {
+    try {
+      await storage.unfollowArtist(req.params.artistId, req.session.userId!);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/artists/:artistId/followers", async (req, res) => {
+    try {
+      const followers = await storage.getFollowers(req.params.artistId);
+      const safeFollowers = followers.map(f => {
+        const { password, ...safe } = f;
+        return safe;
+      });
+      res.json(safeFollowers);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/user/following", requireAuth, async (req, res) => {
+    try {
+      const following = await storage.getFollowing(req.session.userId!);
+      const safeFollowing = following.map(f => {
+        const { password, ...safe } = f;
+        return safe;
+      });
+      res.json(safeFollowing);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Track comments routes
+  app.post("/api/tracks/:trackId/comments", requireAuth, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: "Content is required" });
+      }
+
+      const comment = await storage.addComment({
+        trackId: req.params.trackId,
+        userId: req.session.userId!,
+        content,
+      });
+      res.json(comment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks/:trackId/comments", async (req, res) => {
+    try {
+      const comments = await storage.getTrackComments(req.params.trackId);
+      res.json(comments);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/comments/:commentId", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteComment(req.params.commentId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Share routes
+  app.post("/api/tracks/:trackId/share", requireAuth, async (req, res) => {
+    try {
+      const share = await storage.shareTrack({
+        userId: req.session.userId!,
+        trackId: req.params.trackId,
+      });
+      res.json(share);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks/:trackId/share-count", async (req, res) => {
+    try {
+      const count = await storage.getShareCount(req.params.trackId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Collaborative playlist routes
+  app.post("/api/playlists/:id/members", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist || playlist.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const member = await storage.addPlaylistMember({
+        playlistId: req.params.id,
+        userId,
+        role: 'collaborator',
+      });
+      res.json(member);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/playlists/:id/members", async (req, res) => {
+    try {
+      const members = await storage.getPlaylistMembers(req.params.id);
+      res.json(members);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/playlists/:id/members/:userId", requireAuth, async (req, res) => {
+    try {
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist || playlist.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.removePlaylistMember(req.params.id, req.params.userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Search routes
   app.get("/api/search/tracks", async (req, res) => {
     const { query } = req.query;
