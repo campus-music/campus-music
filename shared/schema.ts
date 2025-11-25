@@ -113,9 +113,7 @@ export const userListeningHistory = pgTable("user_listening_history", {
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
-  email: z.string().email().refine((email) => email.endsWith('.edu'), {
-    message: 'Campus Music is currently available only to university students with .edu email addresses.',
-  }),
+  email: z.string().email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(1, 'Full name is required'),
   universityName: z.string().min(1, 'University name is required'),

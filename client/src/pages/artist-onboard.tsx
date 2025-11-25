@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/lib/auth-context';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Music } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Music, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 
 export default function ArtistOnboard() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -20,8 +23,13 @@ export default function ArtistOnboard() {
     socialLinks: '',
   });
 
+  const isEduEmail = user?.email?.endsWith('.edu') || false;
+
   const createArtistMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!isEduEmail) {
+        throw new Error('Only .edu email addresses can create artist profiles');
+      }
       const res = await apiRequest('POST', '/api/artist', data);
       return res.json();
     },
@@ -31,10 +39,25 @@ export default function ArtistOnboard() {
       toast({ title: 'Artist profile created successfully!' });
       setLocation('/artist/dashboard');
     },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create artist profile',
+        variant: 'destructive',
+      });
+    },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isEduEmail) {
+      toast({
+        title: 'Invalid Email',
+        description: 'You must have a .edu email address to become an artist on Campus Music',
+        variant: 'destructive',
+      });
+      return;
+    }
     await createArtistMutation.mutateAsync(formData);
   };
 
@@ -60,7 +83,15 @@ export default function ArtistOnboard() {
               Tell us about yourself and your music
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {!isEduEmail && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  You must have a .edu email address to upload music. Your current email is: <strong>{user?.email}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="stageName">Stage Name *</Label>
@@ -115,7 +146,7 @@ export default function ArtistOnboard() {
               <div className="flex gap-2 pt-4">
                 <Button
                   type="submit"
-                  disabled={createArtistMutation.isPending}
+                  disabled={createArtistMutation.isPending || !isEduEmail}
                   data-testid="button-create-artist-profile"
                 >
                   {createArtistMutation.isPending ? 'Creating...' : 'Create Artist Profile'}

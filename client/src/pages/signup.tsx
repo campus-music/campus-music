@@ -54,7 +54,7 @@ export default function Signup() {
         <Card>
           <CardHeader>
             <CardTitle>Create an account</CardTitle>
-            <CardDescription>Sign up with your university email (.edu)</CardDescription>
+            <CardDescription>Join the campus music community as a listener</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -71,18 +71,18 @@ export default function Signup() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">University Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@university.edu"
+                  placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   data-testid="input-email"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Must be a valid .edu email address
+                  Use any email to listen. Student artists must have a .edu email to upload music.
                 </p>
               </div>
               <div className="space-y-2">

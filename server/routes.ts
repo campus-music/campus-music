@@ -70,12 +70,21 @@ async function seedData() {
     }
   }
 
-  // Create a listener user
+  // Create listener users - both with .edu and regular emails
   await storage.createUser({
     email: "listener@stanford.edu",
     password: "password123",
-    fullName: "Demo Listener",
+    fullName: "Demo Student Listener",
     universityName: "Stanford University",
+    country: "United States",
+    role: "listener",
+  });
+
+  await storage.createUser({
+    email: "regular.listener@gmail.com",
+    password: "password123",
+    fullName: "Demo Regular Listener",
+    universityName: "Unknown",
     country: "United States",
     role: "listener",
   });
@@ -171,6 +180,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Artist profile routes
   app.post("/api/artist", requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.email.endsWith('.edu')) {
+        return res.status(403).json({ error: "Only users with .edu email addresses can create artist profiles" });
+      }
+
       const data = insertArtistProfileSchema.parse({
         ...req.body,
         userId: req.session.userId,
