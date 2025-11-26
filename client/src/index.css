@@ -2,31 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Scrolling animations for musical notation background */
-@keyframes scroll-left {
+/* Scrolling animations for musical symbols along staff lines */
+@keyframes scroll-symbols {
   0% {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 
-@keyframes scroll-left-delayed {
+@keyframes scroll-symbols-delayed {
   0% {
-    transform: translateX(100%);
+    transform: translateX(0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 
-.animate-scroll-left {
-  animation: scroll-left 25s linear infinite;
+.animate-scroll-symbols {
+  animation: scroll-symbols 30s linear infinite;
 }
 
-.animate-scroll-left-delayed {
-  animation: scroll-left-delayed 30s linear infinite 5s;
+.animate-scroll-symbols-delayed {
+  animation: scroll-symbols-delayed 35s linear infinite 5s;
+}
+
+.scale-y-50 {
+  transform: scaleY(0.5);
 }
 
 /* Custom text size for extra small */

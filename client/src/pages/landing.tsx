@@ -9,31 +9,56 @@ export default function Landing() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
-      {/* Floating Musical Notation Background */}
+      {/* Musical Notation Background with Staff Lines */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Top line flowing right to left */}
-        <div className="absolute top-20 w-full h-24 overflow-hidden">
+        {/* Staff line 1 */}
+        <div className="absolute top-1/4 w-full h-40 overflow-hidden">
           <img 
             src={notationUrl}
-            alt="Musical notations"
-            className="h-full w-96 object-cover opacity-20 animate-scroll-left"
+            alt="Musical staff"
+            className="h-full w-full object-cover opacity-30 scale-y-50"
           />
         </div>
-        {/* Middle line flowing right to left with delay */}
-        <div className="absolute top-1/3 w-full h-20 overflow-hidden">
+        
+        {/* Scrolling musical symbols on staff 1 */}
+        <div className="absolute top-1/4 left-0 w-full h-10 overflow-hidden flex items-center">
+          <div className="whitespace-nowrap animate-scroll-symbols">
+            <img 
+              src={notationUrl}
+              alt="Musical symbols"
+              className="h-10 w-auto object-contain opacity-25 inline-block"
+            />
+            <img 
+              src={notationUrl}
+              alt="Musical symbols"
+              className="h-10 w-auto object-contain opacity-25 inline-block ml-96"
+            />
+          </div>
+        </div>
+
+        {/* Staff line 2 */}
+        <div className="absolute top-1/2 w-full h-40 overflow-hidden">
           <img 
             src={notationUrl}
-            alt="Musical notations"
-            className="h-full w-96 object-cover opacity-15 animate-scroll-left-delayed"
+            alt="Musical staff"
+            className="h-full w-full object-cover opacity-25 scale-y-50"
           />
         </div>
-        {/* Bottom line flowing right to left */}
-        <div className="absolute top-1/2 w-full h-24 overflow-hidden">
-          <img 
-            src={notationUrl}
-            alt="Musical notations"
-            className="h-full w-96 object-cover opacity-20 animate-scroll-left"
-          />
+        
+        {/* Scrolling musical symbols on staff 2 */}
+        <div className="absolute top-1/2 left-0 w-full h-10 overflow-hidden flex items-center">
+          <div className="whitespace-nowrap animate-scroll-symbols-delayed">
+            <img 
+              src={notationUrl}
+              alt="Musical symbols"
+              className="h-10 w-auto object-contain opacity-20 inline-block"
+            />
+            <img 
+              src={notationUrl}
+              alt="Musical symbols"
+              className="h-10 w-auto object-contain opacity-20 inline-block ml-96"
+            />
+          </div>
         </div>
       </div>
 
