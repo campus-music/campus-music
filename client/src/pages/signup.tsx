@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Music, Headphones, Mic2 } from 'lucide-react';
+import { Headphones, Mic2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -58,9 +59,12 @@ export default function Signup() {
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center gap-2 mb-4">
-              <div className="bg-primary rounded-md p-3">
-                <Music className="h-8 w-8 text-primary-foreground" />
-              </div>
+              <img 
+                src={logoUrl} 
+                alt="Campus Music Logo"
+                className="h-8 w-8 object-contain"
+                data-testid="img-signup-choice-logo"
+              />
               <span className="text-3xl font-bold">Campus Music</span>
             </div>
             <p className="text-muted-foreground text-lg">Choose how you want to join</p>
@@ -129,9 +133,12 @@ export default function Signup() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center gap-2 mb-4">
-            <div className="bg-primary rounded-md p-3">
-              <Music className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <img 
+              src={logoUrl} 
+              alt="Campus Music Logo"
+              className="h-8 w-8 object-contain"
+              data-testid="img-signup-form-logo"
+            />
             <span className="text-3xl font-bold">Campus Music</span>
           </div>
           <p className="text-muted-foreground">
