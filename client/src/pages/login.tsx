@@ -54,11 +54,11 @@ export default function Login() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">University Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@university.edu"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -88,14 +88,13 @@ export default function Login() {
             </form>
             <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">Don't have an account? </span>
-              <Button
-                variant="link"
-                className="p-0 h-auto"
+              <button
                 onClick={() => setLocation('/signup')}
+                className="text-primary hover:underline cursor-pointer"
                 data-testid="link-signup"
               >
                 Sign up
-              </Button>
+              </button>
             </div>
           </CardContent>
         </Card>

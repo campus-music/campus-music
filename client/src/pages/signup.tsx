@@ -110,14 +110,13 @@ export default function Signup() {
 
           <div className="mt-8 text-center text-sm">
             <span className="text-muted-foreground">Already have an account? </span>
-            <Button
-              variant="link"
-              className="p-0 h-auto"
+            <button
               onClick={() => setLocation('/login')}
+              className="text-primary hover:underline cursor-pointer"
               data-testid="link-login"
             >
               Sign in
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -237,14 +236,13 @@ export default function Signup() {
 
             <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">Already have an account? </span>
-              <Button
-                variant="link"
-                className="p-0 h-auto"
+              <button
                 onClick={() => setLocation('/login')}
+                className="text-primary hover:underline cursor-pointer"
                 data-testid="link-login"
               >
                 Sign in
-              </Button>
+              </button>
             </div>
           </CardContent>
         </Card>
