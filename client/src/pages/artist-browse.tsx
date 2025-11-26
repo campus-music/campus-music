@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Music, MapPin, Users, Zap } from "lucide-react";
 import { Link } from "wouter";
+import { SupportModal } from "@/components/support-modal";
 
 interface Artist {
   id: string;
@@ -77,13 +78,17 @@ export default function ArtistBrowse() {
             )}
           </div>
 
-          <Button
-            size="sm"
-            className="w-full rounded-full"
-            data-testid={`button-follow-${artist.id}`}
-          >
-            Follow
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 rounded-full"
+              data-testid={`button-follow-${artist.id}`}
+            >
+              Follow
+            </Button>
+            <SupportModal artistId={artist.id} artistName={artist.stageName} />
+          </div>
         </div>
       </Card>
     </Link>

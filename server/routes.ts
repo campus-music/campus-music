@@ -659,6 +659,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Support system endpoints
+  // Send support to an artist
+  app.post("/api/support", requireAuth, async (req, res) => {
+    try {
+      const { artistId, amount, paymentMethod, message } = req.body;
+      
+      if (!artistId || !amount || !paymentMethod) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (amount <= 0 || amount > 500000) {
+        return res.status(400).json({ error: "Amount must be between 0 and $5000" });
+      }
+
+      const support = await storage.sendSupport({
+        supporterId: req.session.userId,
+        artistId,
+        amount,
+        paymentMethod,
+        message: message || undefined,
+        status: "completed",
+      });
+
+      res.json(support);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get support history for an artist
+  app.get("/api/artist/:artistId/supports", async (req, res) => {
+    try {
+      const { artistId } = req.params;
+      const supports = await storage.getArtistSupports(artistId);
+      
+      const withSupporterInfo = supports.map((support: any) => ({
+        ...support,
+        amountDisplay: `$${(support.amount / 100).toFixed(2)}`,
+      }));
+
+      res.json(withSupporterInfo);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get artist wallet info
+  app.get("/api/artist/:artistId/wallet", async (req, res) => {
+    try {
+      const { artistId } = req.params;
+      const wallet = await storage.getArtistWallet(artistId);
+      
+      if (!wallet) {
+        const artistProfile = await storage.getArtistProfileById(artistId);
+        if (!artistProfile) return res.status(404).json({ error: "Artist not found" });
+        
+        const newWallet = await storage.createOrUpdateArtistWallet({
+          artistId,
+          payoutEmail: undefined,
+          payoutMethod: undefined,
+        });
+        
+        return res.json({
+          ...newWallet,
+          balanceDisplay: "$0.00",
+        });
+      }
+
+      res.json({
+        ...wallet,
+        balanceDisplay: `$${(wallet.balance / 100).toFixed(2)}`,
+        totalReceivedDisplay: `$${(wallet.totalReceived / 100).toFixed(2)}`,
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update artist wallet payout info (for artists)
+  app.put("/api/artist/:artistId/wallet", requireAuth, async (req, res) => {
+    try {
+      const { artistId } = req.params;
+      const { payoutEmail, payoutMethod } = req.body;
+
+      // Verify artist owns this wallet
+      const artistProfile = await storage.getArtistProfileById(artistId);
+      if (!artistProfile || artistProfile.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const wallet = await storage.updateArtistWallet(artistId, {
+        payoutEmail,
+        payoutMethod,
+      });
+
+      res.json(wallet);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 

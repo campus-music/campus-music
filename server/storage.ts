@@ -129,6 +129,8 @@ export class MemStorage implements IStorage {
   private comments: Map<string, TrackComment>;
   private shares: Map<string, Share>;
   private playlistMembers: Map<string, PlaylistMember>;
+  private supports: Map<string, Support>;
+  private artistWallets: Map<string, ArtistWallet>;
 
   constructor() {
     this.users = new Map();
@@ -142,6 +144,8 @@ export class MemStorage implements IStorage {
     this.comments = new Map();
     this.shares = new Map();
     this.playlistMembers = new Map();
+    this.supports = new Map();
+    this.artistWallets = new Map();
   }
 
   // User methods
@@ -661,6 +665,76 @@ export class MemStorage implements IStorage {
       topTracks,
       listenerCountries,
     };
+  }
+
+  // Support system methods
+  async sendSupport(data: InsertSupport): Promise<Support> {
+    const id = randomUUID();
+    // Mocked payment processing - in production would connect to Stripe/PayPal/Mobile Money
+    const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const support: Support = {
+      ...data,
+      id,
+      status: "completed",
+      transactionId,
+      createdAt: new Date(),
+    };
+    this.supports.set(id, support);
+
+    // Update artist wallet
+    const wallet = await this.getArtistWallet(data.artistId);
+    if (wallet) {
+      const updated = {
+        ...wallet,
+        totalReceived: wallet.totalReceived + data.amount,
+        balance: wallet.balance + data.amount,
+      };
+      this.artistWallets.set(wallet.id, updated);
+    }
+
+    return support;
+  }
+
+  async getArtistSupports(artistId: string): Promise<Support[]> {
+    return Array.from(this.supports.values())
+      .filter(s => s.artistId === artistId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getArtistWallet(artistId: string): Promise<ArtistWallet | undefined> {
+    return Array.from(this.artistWallets.values()).find(w => w.artistId === artistId);
+  }
+
+  async createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet> {
+    const existing = await this.getArtistWallet(data.artistId);
+    
+    if (existing) {
+      const updated = { ...existing, ...data };
+      this.artistWallets.set(existing.id, updated);
+      return updated;
+    }
+
+    const id = randomUUID();
+    const wallet: ArtistWallet = {
+      ...data,
+      id,
+      totalReceived: 0,
+      balance: 0,
+      lastPayoutAt: null,
+      createdAt: new Date(),
+    };
+    this.artistWallets.set(id, wallet);
+    return wallet;
+  }
+
+  async updateArtistWallet(artistId: string, updates: Partial<ArtistWallet>): Promise<ArtistWallet | undefined> {
+    const wallet = await this.getArtistWallet(artistId);
+    if (!wallet) return undefined;
+    
+    const updated = { ...wallet, ...updates };
+    this.artistWallets.set(wallet.id, updated);
+    return updated;
   }
 }
 
