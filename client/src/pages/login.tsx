@@ -37,11 +37,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex flex-col items-center justify-center gap-4 mb-4">
+          <div className="flex flex-col items-center justify-center gap-4 mb-4 cursor-pointer" onClick={() => setLocation('/landing')}>
             <img 
               src={logoUrl} 
               alt="Campus Music Logo"
-              className="h-24 w-24 object-contain"
+              className="h-24 w-24 object-contain hover-elevate"
               data-testid="img-login-logo"
             />
             <span className="text-3xl font-bold">Campus Music</span>
