@@ -2,7 +2,44 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
-import notationUrl from '@assets/musical notations symbols_1764118955236.png';
+
+const MusicalStaff = () => (
+  <svg viewBox="0 0 1200 80" className="w-full h-20" preserveAspectRatio="none">
+    {/* Staff lines */}
+    {[0, 20, 40, 60, 80].map((y) => (
+      <line key={`line-${y}`} x1="0" y1={y} x2="1200" y2={y} stroke="rgba(255,255,255,0.15)" strokeWidth="2"/>
+    ))}
+  </svg>
+);
+
+const MusicalSymbols = () => (
+  <div className="flex gap-32 animate-scroll-symbols">
+    {/* Eighth notes */}
+    <svg viewBox="0 0 30 50" className="w-6 h-8 flex-shrink-0 opacity-30">
+      <circle cx="8" cy="35" r="4" fill="rgba(255,255,255,0.6)"/>
+      <line x1="12" y1="35" x2="12" y2="10" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+      <path d="M 12 10 Q 18 12 18 18" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"/>
+    </svg>
+    
+    {/* Quarter note */}
+    <svg viewBox="0 0 30 50" className="w-6 h-8 flex-shrink-0 opacity-30">
+      <circle cx="8" cy="35" r="5" fill="rgba(255,255,255,0.6)"/>
+      <line x1="13" y1="35" x2="13" y2="8" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+    </svg>
+
+    {/* Half note */}
+    <svg viewBox="0 0 30 50" className="w-6 h-8 flex-shrink-0 opacity-30">
+      <circle cx="8" cy="30" r="5" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+      <line x1="13" y1="30" x2="13" y2="5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+    </svg>
+
+    {/* Treble clef */}
+    <svg viewBox="0 0 30 80" className="w-5 h-10 flex-shrink-0 opacity-30">
+      <path d="M 15 20 Q 10 25 15 35 Q 20 25 15 20 M 10 45 L 20 45 M 10 55 L 20 55" 
+            stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    </svg>
+  </div>
+);
 
 export default function Landing() {
   const [, navigate] = useLocation();
@@ -11,53 +48,25 @@ export default function Landing() {
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
       {/* Musical Notation Background with Staff Lines */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Staff line 1 */}
-        <div className="absolute top-1/4 w-full h-40 overflow-hidden">
-          <img 
-            src={notationUrl}
-            alt="Musical staff"
-            className="h-full w-full object-cover opacity-30 scale-y-50"
-          />
+        {/* Staff 1 */}
+        <div className="absolute top-1/4 w-full">
+          <MusicalStaff />
         </div>
         
-        {/* Scrolling musical symbols on staff 1 */}
-        <div className="absolute top-1/4 left-0 w-full h-10 overflow-hidden flex items-center">
-          <div className="whitespace-nowrap animate-scroll-symbols">
-            <img 
-              src={notationUrl}
-              alt="Musical symbols"
-              className="h-10 w-auto object-contain opacity-25 inline-block"
-            />
-            <img 
-              src={notationUrl}
-              alt="Musical symbols"
-              className="h-10 w-auto object-contain opacity-25 inline-block ml-96"
-            />
-          </div>
+        {/* Scrolling symbols on staff 1 */}
+        <div className="absolute top-1/4 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
+          <MusicalSymbols />
         </div>
 
-        {/* Staff line 2 */}
-        <div className="absolute top-1/2 w-full h-40 overflow-hidden">
-          <img 
-            src={notationUrl}
-            alt="Musical staff"
-            className="h-full w-full object-cover opacity-25 scale-y-50"
-          />
+        {/* Staff 2 */}
+        <div className="absolute top-2/3 w-full">
+          <MusicalStaff />
         </div>
         
-        {/* Scrolling musical symbols on staff 2 */}
-        <div className="absolute top-1/2 left-0 w-full h-10 overflow-hidden flex items-center">
-          <div className="whitespace-nowrap animate-scroll-symbols-delayed">
-            <img 
-              src={notationUrl}
-              alt="Musical symbols"
-              className="h-10 w-auto object-contain opacity-20 inline-block"
-            />
-            <img 
-              src={notationUrl}
-              alt="Musical symbols"
-              className="h-10 w-auto object-contain opacity-20 inline-block ml-96"
-            />
+        {/* Scrolling symbols on staff 2 */}
+        <div className="absolute top-2/3 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
+          <div className="animate-scroll-symbols-delayed">
+            <MusicalSymbols />
           </div>
         </div>
       </div>
