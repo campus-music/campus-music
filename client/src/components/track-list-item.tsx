@@ -2,9 +2,11 @@ import { Play, Heart, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { TrackWithArtist } from '@shared/schema';
 import { useAudioPlayer } from '@/lib/audio-player-context';
 import { cn } from '@/lib/utils';
+import { AddToPlaylist } from './add-to-playlist';
 
 interface TrackListItemProps {
   track: TrackWithArtist;
@@ -74,9 +76,18 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
           <Heart className={cn("h-4 w-4", isLiked && "fill-current text-primary")} />
         </Button>
       )}
-      <Button size="icon" variant="ghost" data-testid={`button-menu-${track.id}`}>
-        <MoreVertical className="h-4 w-4" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="ghost" data-testid={`button-menu-${track.id}`}>
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <AddToPlaylist trackId={track.id} trackTitle={track.title} />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

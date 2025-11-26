@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TrackCard } from '@/components/track-card';
 import { TrackListItem } from '@/components/track-list-item';
@@ -5,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Music, Flame, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Music, Flame, Star, X } from 'lucide-react';
 import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Link } from 'wouter';
@@ -15,7 +17,12 @@ interface Artist extends ArtistProfile {
   streams: number;
 }
 
+const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Indie', 'Jazz', 'Classical'];
+const UNIVERSITIES = ['MIT', 'Stanford', 'Harvard', 'UC Berkeley', 'Oxford', 'Yale', 'Princeton'];
+
 export default function Home() {
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
   const { data: latestTracks, isLoading: latestLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/latest'],
   });
@@ -31,6 +38,12 @@ export default function Home() {
   const topArtists = allArtists
     ? [...allArtists].sort((a, b) => b.streams - a.streams).slice(0, 6)
     : [];
+
+  const filteredTrendingTracks = trendingTracks?.filter(track => {
+    if (selectedGenre && track.genre !== selectedGenre) return false;
+    if (selectedUniversity && track.universityName !== selectedUniversity) return false;
+    return true;
+  }) || [];
 
   const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
     <div className="flex items-center justify-between mb-6">
@@ -56,6 +69,77 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Filters */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold mb-3">Filter by Genre</h3>
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-2">
+              {GENRES.map((genre) => (
+                <Button
+                  key={genre}
+                  size="sm"
+                  variant={selectedGenre === genre ? 'default' : 'outline'}
+                  onClick={() => setSelectedGenre(selectedGenre === genre ? null : genre)}
+                  data-testid={`button-filter-genre-${genre}`}
+                  className="rounded-full"
+                >
+                  {genre}
+                </Button>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold mb-3">Filter by University</h3>
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-2">
+              {UNIVERSITIES.map((uni) => (
+                <Button
+                  key={uni}
+                  size="sm"
+                  variant={selectedUniversity === uni ? 'default' : 'outline'}
+                  onClick={() => setSelectedUniversity(selectedUniversity === uni ? null : uni)}
+                  data-testid={`button-filter-university-${uni}`}
+                  className="rounded-full"
+                >
+                  {uni}
+                </Button>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+
+        {(selectedGenre || selectedUniversity) && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Filters applied:</span>
+            {selectedGenre && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-1 cursor-pointer hover-elevate"
+                onClick={() => setSelectedGenre(null)}
+              >
+                {selectedGenre}
+                <X className="h-3 w-3" />
+              </Badge>
+            )}
+            {selectedUniversity && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-1 cursor-pointer hover-elevate"
+                onClick={() => setSelectedUniversity(null)}
+              >
+                {selectedUniversity}
+                <X className="h-3 w-3" />
+              </Badge>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Trending Songs List */}
       <section>
         <SectionHeader title="Trending Songs" icon={Flame} />
@@ -64,13 +148,13 @@ export default function Home() {
             Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-16 w-full rounded-md" />
             ))
-          ) : trendingTracks && trendingTracks.length > 0 ? (
-            trendingTracks.slice(0, 8).map((track, index) => (
+          ) : filteredTrendingTracks.length > 0 ? (
+            filteredTrendingTracks.slice(0, 8).map((track, index) => (
               <TrackListItem key={track.id} track={track} index={index + 1} />
             ))
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              No trending tracks available yet
+              {selectedGenre || selectedUniversity ? 'No tracks match your filters' : 'No trending tracks available yet'}
             </div>
           )}
         </div>
