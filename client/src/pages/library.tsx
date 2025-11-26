@@ -47,21 +47,33 @@ export default function Library() {
   };
 
   return (
-    <div className="space-y-6 pb-32">
+    <div className="space-y-8 pb-32">
       <div>
-        <h1 className="text-4xl font-bold mb-2">My Library</h1>
+        <h1 className="text-4xl font-bold mb-2">Your Library</h1>
         <p className="text-muted-foreground text-lg">
-          Your liked songs and playlists
+          Your saved tracks and playlists
         </p>
       </div>
 
       <Tabs defaultValue="liked" className="w-full">
-        <TabsList>
-          <TabsTrigger value="liked" data-testid="tab-liked-songs">Liked Songs</TabsTrigger>
-          <TabsTrigger value="playlists" data-testid="tab-playlists">Playlists</TabsTrigger>
+        <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
+          <TabsTrigger 
+            value="liked" 
+            data-testid="tab-liked-songs"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+          >
+            Liked Songs
+          </TabsTrigger>
+          <TabsTrigger 
+            value="playlists" 
+            data-testid="tab-playlists"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+          >
+            Playlists
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="liked" className="mt-6">
+        <TabsContent value="liked" className="mt-8">
           <div className="space-y-2">
             {likedLoading ? (
               Array.from({ length: 10 }).map((_, i) => (
@@ -69,21 +81,22 @@ export default function Library() {
               ))
             ) : likedTracks && likedTracks.length > 0 ? (
               likedTracks.map((track, index) => (
-                <TrackListItem key={track.id} track={track} index={index} isLiked />
+                <TrackListItem key={track.id} track={track} index={index + 1} isLiked />
               ))
             ) : (
               <div className="text-center py-20 text-muted-foreground">
-                No liked songs yet. Start exploring and like some tracks!
+                <Music className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No liked songs yet. Start exploring and like some tracks!</p>
               </div>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="playlists" className="mt-6">
-          <div className="mb-6">
+        <TabsContent value="playlists" className="mt-8">
+          <div className="mb-8">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-create-playlist">
+                <Button className="rounded-full" data-testid="button-create-playlist">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Playlist
                 </Button>
