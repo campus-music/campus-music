@@ -4,10 +4,16 @@ import { ArrowRight } from 'lucide-react';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 const MusicalStaff = () => (
-  <svg viewBox="0 0 1200 80" className="w-full h-20" preserveAspectRatio="none">
-    {/* Staff lines */}
-    {[0, 20, 40, 60, 80].map((y) => (
-      <line key={`line-${y}`} x1="0" y1={y} x2="1200" y2={y} stroke="rgba(255,255,255,0.15)" strokeWidth="2"/>
+  <svg viewBox="0 0 1200 100" className="w-full h-20" preserveAspectRatio="none">
+    {/* Wavy staff lines */}
+    {[10, 30, 50, 70, 90].map((baseY) => (
+      <path 
+        key={`line-${baseY}`}
+        d={`M 0 ${baseY} Q 150 ${baseY - 5}, 300 ${baseY} T 600 ${baseY} T 900 ${baseY} T 1200 ${baseY}`}
+        stroke="rgba(255,255,255,0.15)" 
+        strokeWidth="2"
+        fill="none"
+      />
     ))}
   </svg>
 );
