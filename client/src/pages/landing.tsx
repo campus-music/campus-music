@@ -11,24 +11,30 @@ export default function Landing() {
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
       {/* Floating Musical Notation Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Top line flowing east to west */}
-        <img 
-          src={notationUrl}
-          alt="Musical notations"
-          className="absolute top-20 -right-96 h-24 w-96 object-cover opacity-20 animate-flow-left"
-        />
-        {/* Middle line flowing east to west */}
-        <img 
-          src={notationUrl}
-          alt="Musical notations"
-          className="absolute top-1/3 -right-96 h-20 w-80 object-cover opacity-15 animate-flow-left-delayed"
-        />
-        {/* Bottom line flowing east to west */}
-        <img 
-          src={notationUrl}
-          alt="Musical notations"
-          className="absolute top-1/2 -right-96 h-24 w-96 object-cover opacity-18 animate-flow-left"
-        />
+        {/* Top line flowing right to left */}
+        <div className="absolute top-20 w-full h-24 overflow-hidden">
+          <img 
+            src={notationUrl}
+            alt="Musical notations"
+            className="h-full w-96 object-cover opacity-20 animate-scroll-left"
+          />
+        </div>
+        {/* Middle line flowing right to left with delay */}
+        <div className="absolute top-1/3 w-full h-20 overflow-hidden">
+          <img 
+            src={notationUrl}
+            alt="Musical notations"
+            className="h-full w-96 object-cover opacity-15 animate-scroll-left-delayed"
+          />
+        </div>
+        {/* Bottom line flowing right to left */}
+        <div className="absolute top-1/2 w-full h-24 overflow-hidden">
+          <img 
+            src={notationUrl}
+            alt="Musical notations"
+            className="h-full w-96 object-cover opacity-20 animate-scroll-left"
+          />
+        </div>
       </div>
 
       {/* Header */}
