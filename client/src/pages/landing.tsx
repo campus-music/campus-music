@@ -10,16 +10,16 @@ export default function Landing() {
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
       {/* Floating Musical Notation Background */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <img 
           src={notationUrl}
           alt="Musical notations"
-          className="absolute top-1/4 left-1/2 transform -translate-x-1/2 h-96 w-full object-cover animate-float-slow"
+          className="absolute top-10 left-1/2 transform -translate-x-1/2 h-72 w-auto object-contain opacity-20 animate-float-slow"
         />
         <img 
           src={notationUrl}
           alt="Musical notations"
-          className="absolute bottom-1/4 -right-1/4 h-72 w-96 object-cover animate-float-reverse"
+          className="absolute bottom-20 -right-32 h-96 w-auto object-contain opacity-15 animate-float-reverse"
         />
       </div>
 
