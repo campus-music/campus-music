@@ -21,7 +21,11 @@ import {
   type Share,
   type InsertShare,
   type PlaylistMember,
-  type InsertPlaylistMember
+  type InsertPlaylistMember,
+  type Support,
+  type InsertSupport,
+  type ArtistWallet,
+  type InsertArtistWallet
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
@@ -104,6 +108,13 @@ export interface IStorage {
     topTracks: { trackId: string; plays: number }[];
     listenerCountries: Map<string, number>;
   }>;
+
+  // Support system methods
+  sendSupport(data: InsertSupport): Promise<Support>;
+  getArtistSupports(artistId: string): Promise<Support[]>;
+  getArtistWallet(artistId: string): Promise<ArtistWallet | undefined>;
+  createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
+  updateArtistWallet(artistId: string, updates: Partial<ArtistWallet>): Promise<ArtistWallet | undefined>;
 }
 
 export class MemStorage implements IStorage {

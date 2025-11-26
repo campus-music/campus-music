@@ -102,6 +102,31 @@ export const playlistMembers = pgTable("playlist_members", {
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
+// Support system: Listeners can financially support artists
+export const supports = pgTable("supports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supporterId: varchar("supporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  artistId: varchar("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(), // Amount in cents (e.g., 500 = $5.00)
+  paymentMethod: text("payment_method").notNull(), // "mobile_money", "paypal", "stripe"
+  status: text("status").notNull().default("completed"), // "pending", "completed", "failed"
+  message: text("message"), // Optional support message
+  transactionId: text("transaction_id"), // Reference ID for payment processing
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Artist wallet: Track artist account balance and payout info
+export const artistWallets = pgTable("artist_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().unique().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  totalReceived: integer("total_received").notNull().default(0), // Total amount in cents
+  balance: integer("balance").notNull().default(0), // Current balance
+  payoutEmail: text("payout_email"),
+  payoutMethod: text("payout_method"), // "mobile_money", "paypal", "bank_transfer"
+  lastPayoutAt: timestamp("last_payout_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const userListeningHistory = pgTable("user_listening_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -170,6 +195,23 @@ export const insertPlaylistMemberSchema = createInsertSchema(playlistMembers).om
   joinedAt: true 
 });
 
+export const insertSupportSchema = createInsertSchema(supports, {
+  amount: z.number().positive('Amount must be greater than 0'),
+  paymentMethod: z.string().min(1, 'Payment method is required'),
+}).omit({ 
+  id: true, 
+  createdAt: true,
+  status: true,
+  transactionId: true 
+});
+
+export const insertArtistWalletSchema = createInsertSchema(artistWallets).omit({ 
+  id: true, 
+  createdAt: true,
+  totalReceived: true,
+  balance: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -209,6 +251,12 @@ export type Share = typeof shares.$inferSelect;
 
 export type InsertPlaylistMember = z.infer<typeof insertPlaylistMemberSchema>;
 export type PlaylistMember = typeof playlistMembers.$inferSelect;
+
+export type InsertSupport = z.infer<typeof insertSupportSchema>;
+export type Support = typeof supports.$inferSelect;
+
+export type InsertArtistWallet = z.infer<typeof insertArtistWalletSchema>;
+export type ArtistWallet = typeof artistWallets.$inferSelect;
 
 export type Login = z.infer<typeof loginSchema>;
 
