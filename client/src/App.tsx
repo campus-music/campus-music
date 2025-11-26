@@ -27,6 +27,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import ArtistBrowse from "@/pages/artist-browse";
 import ArtistDetail from "@/pages/artist-detail";
+import Playlists from "@/pages/playlists";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -191,6 +192,16 @@ function Router() {
           <ProtectedRoute component={() => (
             <AppLayout>
               <Library />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/playlists">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Playlists />
             </AppLayout>
           )} />
         )}
