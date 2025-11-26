@@ -58,7 +58,7 @@ export default function Landing() {
               Campus Music
             </h1>
             
-            <p className="text-lg md:text-xl text-slate-300">
+            <p className="text-base md:text-lg text-slate-400">
               Discover incredible music from student artists across campuses. Support the next generation of creators.
             </p>
           </div>
@@ -89,25 +89,25 @@ export default function Landing() {
           {/* Features */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 max-w-3xl mx-auto">
             <div className="space-y-2">
-              <div className="text-3xl">🎵</div>
-              <h3 className="font-semibold text-white">Discover Music</h3>
-              <p className="text-sm text-slate-400">
+              <div className="text-2xl">🎵</div>
+              <h3 className="text-sm font-semibold text-white">Discover Music</h3>
+              <p className="text-xs text-slate-400">
                 Browse tracks from talented student artists worldwide
               </p>
             </div>
 
             <div className="space-y-2">
-              <div className="text-3xl">👥</div>
-              <h3 className="font-semibold text-white">Support Artists</h3>
-              <p className="text-sm text-slate-400">
+              <div className="text-2xl">👥</div>
+              <h3 className="text-sm font-semibold text-white">Support Artists</h3>
+              <p className="text-xs text-slate-400">
                 Help the next generation of musicians reach their audience
               </p>
             </div>
 
             <div className="space-y-2">
-              <div className="text-3xl">🎧</div>
-              <h3 className="font-semibold text-white">Share & Connect</h3>
-              <p className="text-sm text-slate-400">
+              <div className="text-2xl">🎧</div>
+              <h3 className="text-sm font-semibold text-white">Share & Connect</h3>
+              <p className="text-xs text-slate-400">
                 Create playlists, share tracks, and connect with artists
               </p>
             </div>
