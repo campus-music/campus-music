@@ -1,5 +1,6 @@
-import { Home, Music, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3 } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
   Sidebar,
   SidebarContent,
@@ -15,10 +16,10 @@ import {
 const mainNavItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Search", url: "/search", icon: Search },
-  { title: "New Releases", url: "/new-releases", icon: Music },
+  { title: "New Releases", url: "/new-releases", icon: TrendingUp },
   { title: "Trending", url: "/trending", icon: TrendingUp },
   { title: "Discover by University", url: "/discover", icon: GraduationCap },
-  { title: "Browse Genres", url: "/genres", icon: Music },
+  { title: "Browse Genres", url: "/genres", icon: Sparkles },
 ];
 
 const discoveryItems = [
@@ -40,10 +41,12 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
     <Sidebar>
       <SidebarHeader className="p-6">
         <Link href={isPublic ? "/browse" : "/"} data-testid="link-home-logo">
-          <div className="flex items-center gap-2 cursor-pointer">
-            <div className="bg-primary rounded-md p-2">
-              <Music className="h-5 w-5 text-primary-foreground" />
-            </div>
+          <div className="flex items-center gap-2 cursor-pointer hover-elevate">
+            <img 
+              src={logoUrl}
+              alt="Campus Music"
+              className="h-8 w-8 object-contain"
+            />
             <span className="text-xl font-bold">Campus Music</span>
           </div>
         </Link>
