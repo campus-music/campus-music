@@ -7,9 +7,9 @@ export default function Landing() {
   const [, navigate] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col">
+    <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between p-6 border-b border-slate-700/50">
+      <header className="flex items-center justify-between p-4 border-b border-slate-700/50 flex-shrink-0">
         <div className="flex items-center gap-2">
           <img 
             src={logoUrl} 
@@ -25,13 +25,13 @@ export default function Landing() {
             variant="ghost"
             onClick={() => navigate('/login')}
             data-testid="button-header-login"
-            className="text-slate-300 hover:text-white"
+            className="text-slate-300 hover:text-white text-sm"
           >
             Log In
           </Button>
           <Button
             onClick={() => navigate('/signup')}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
             data-testid="button-header-signup"
           >
             Sign Up
@@ -40,46 +40,46 @@ export default function Landing() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="container mx-auto px-6 text-center space-y-12">
+      <div className="flex-1 flex items-center justify-center overflow-hidden">
+        <div className="w-full px-6 text-center flex flex-col items-center justify-center space-y-6">
           {/* Logo */}
-          <div className="flex justify-center">
+          <div className="flex justify-center flex-shrink-0">
             <img 
               src={logoUrl} 
               alt="Campus Music" 
-              className="h-48 w-48 object-contain"
+              className="h-32 w-32 object-contain"
               data-testid="img-landing-logo"
             />
           </div>
 
           {/* Main Content */}
-          <div className="space-y-6 max-w-2xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-bold text-white">
+          <div className="space-y-3 max-w-2xl flex-shrink-0">
+            <h1 className="text-4xl md:text-5xl font-bold text-white">
               Campus Music
             </h1>
             
-            <p className="text-base md:text-lg text-slate-400">
+            <p className="text-sm md:text-base text-slate-400">
               Discover incredible music from student artists across campuses. Support the next generation of creators.
             </p>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0">
             <Button
-              size="lg"
+              size="sm"
               onClick={() => navigate('/browse')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold text-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-start-listening"
             >
               Start Listening
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
 
             <Button
-              size="lg"
+              size="sm"
               variant="outline"
               onClick={() => navigate('/artist-browse')}
-              className="border-slate-500 text-white hover:bg-slate-800 px-8 py-3 rounded-full font-semibold text-lg"
+              className="border-slate-500 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-browse-artists"
             >
               Browse Artists
@@ -87,28 +87,28 @@ export default function Landing() {
           </div>
 
           {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 max-w-3xl mx-auto">
-            <div className="space-y-2">
-              <div className="text-2xl">🎵</div>
-              <h3 className="text-sm font-semibold text-white">Discover Music</h3>
-              <p className="text-xs text-slate-400">
-                Browse tracks from talented student artists worldwide
+          <div className="grid grid-cols-3 gap-3 max-w-2xl flex-shrink-0">
+            <div className="space-y-1">
+              <div className="text-lg">🎵</div>
+              <h3 className="text-xs font-semibold text-white">Discover Music</h3>
+              <p className="text-xs text-slate-400 line-clamp-2">
+                Browse tracks from student artists
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-2xl">👥</div>
-              <h3 className="text-sm font-semibold text-white">Support Artists</h3>
-              <p className="text-xs text-slate-400">
-                Help the next generation of musicians reach their audience
+            <div className="space-y-1">
+              <div className="text-lg">👥</div>
+              <h3 className="text-xs font-semibold text-white">Support Artists</h3>
+              <p className="text-xs text-slate-400 line-clamp-2">
+                Help musicians reach their audience
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-2xl">🎧</div>
-              <h3 className="text-sm font-semibold text-white">Share & Connect</h3>
-              <p className="text-xs text-slate-400">
-                Create playlists, share tracks, and connect with artists
+            <div className="space-y-1">
+              <div className="text-lg">🎧</div>
+              <h3 className="text-xs font-semibold text-white">Share & Connect</h3>
+              <p className="text-xs text-slate-400 line-clamp-2">
+                Create playlists and connect
               </p>
             </div>
           </div>
