@@ -63,12 +63,13 @@ export default function Landing() {
       </div>
 
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-slate-700/50 flex-shrink-0 relative z-10">
+      <header className="flex items-center justify-between p-4 flex-shrink-0 relative z-10">
         <div className="flex items-center gap-2">
           <img 
             src={logoUrl} 
             alt="Campus Music Logo"
-            className="h-8 w-8 object-contain"
+            className="h-8 w-8 object-contain cursor-pointer"
+            onClick={() => navigate('/')}
             data-testid="img-header-logo"
           />
           <span className="text-xl font-bold text-white">Campus Music</span>
@@ -76,22 +77,29 @@ export default function Landing() {
         
         <div className="flex items-center gap-3">
           <Button
+            size="icon"
             variant="ghost"
             onClick={() => navigate('/login')}
             data-testid="button-header-login"
-            className="text-slate-300 hover:text-white text-sm"
+            className="text-slate-300 hover:text-white text-xs"
           >
             Log In
           </Button>
           <Button
+            size="icon"
             onClick={() => navigate('/signup')}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
             data-testid="button-header-signup"
           >
             Sign Up
           </Button>
         </div>
       </header>
+
+      {/* Wavy Notation Separator */}
+      <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-b from-slate-900/50 to-transparent">
+        <MusicalStaff />
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center overflow-hidden relative z-20">
