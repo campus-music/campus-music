@@ -5,21 +5,21 @@ import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 const MusicalStaff = () => (
   <svg viewBox="0 0 1200 100" className="w-full h-20" preserveAspectRatio="none">
-    {/* Highly wavy staff lines with musical flow */}
-    {[10, 30, 50, 70, 90].map((baseY) => (
+    {/* Subtle wavy staff lines */}
+    {[35, 65].map((baseY) => (
       <path 
         key={`line-${baseY}`}
         d={`M 0 ${baseY}
-           Q 75 ${baseY - 12}, 150 ${baseY}
-           Q 225 ${baseY + 12}, 300 ${baseY}
-           Q 375 ${baseY - 12}, 450 ${baseY}
-           Q 525 ${baseY + 12}, 600 ${baseY}
-           Q 675 ${baseY - 12}, 750 ${baseY}
-           Q 825 ${baseY + 12}, 900 ${baseY}
-           Q 975 ${baseY - 12}, 1050 ${baseY}
-           Q 1125 ${baseY + 12}, 1200 ${baseY}`}
-        stroke="rgba(255,255,255,0.15)" 
-        strokeWidth="2"
+           Q 75 ${baseY - 8}, 150 ${baseY}
+           Q 225 ${baseY + 8}, 300 ${baseY}
+           Q 375 ${baseY - 8}, 450 ${baseY}
+           Q 525 ${baseY + 8}, 600 ${baseY}
+           Q 675 ${baseY - 8}, 750 ${baseY}
+           Q 825 ${baseY + 8}, 900 ${baseY}
+           Q 975 ${baseY - 8}, 1050 ${baseY}
+           Q 1125 ${baseY + 8}, 1200 ${baseY}`}
+        stroke="rgba(255,255,255,0.08)" 
+        strokeWidth="1.5"
         fill="none"
         strokeLinecap="round"
       />
@@ -28,30 +28,18 @@ const MusicalStaff = () => (
 );
 
 const MusicalSymbols = () => (
-  <div className="flex gap-32 animate-scroll-symbols">
+  <div className="flex gap-64 animate-scroll-symbols">
     {/* Eighth notes */}
-    <svg viewBox="0 0 30 50" className="w-6 h-8 flex-shrink-0 opacity-30">
+    <svg viewBox="0 0 30 50" className="w-4 h-6 flex-shrink-0 opacity-12">
       <circle cx="8" cy="35" r="4" fill="rgba(255,255,255,0.6)"/>
       <line x1="12" y1="35" x2="12" y2="10" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
       <path d="M 12 10 Q 18 12 18 18" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"/>
     </svg>
     
     {/* Quarter note */}
-    <svg viewBox="0 0 30 50" className="w-6 h-8 flex-shrink-0 opacity-30">
+    <svg viewBox="0 0 30 50" className="w-4 h-6 flex-shrink-0 opacity-12">
       <circle cx="8" cy="35" r="5" fill="rgba(255,255,255,0.6)"/>
       <line x1="13" y1="35" x2="13" y2="8" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-    </svg>
-
-    {/* Half note */}
-    <svg viewBox="0 0 30 50" className="w-6 h-8 flex-shrink-0 opacity-30">
-      <circle cx="8" cy="30" r="5" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-      <line x1="13" y1="30" x2="13" y2="5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-    </svg>
-
-    {/* Treble clef */}
-    <svg viewBox="0 0 30 80" className="w-5 h-10 flex-shrink-0 opacity-30">
-      <path d="M 15 20 Q 10 25 15 35 Q 20 25 15 20 M 10 45 L 20 45 M 10 55 L 20 55" 
-            stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
     </svg>
   </div>
 );
@@ -61,28 +49,16 @@ export default function Landing() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
-      {/* Musical Notation Background with Staff Lines */}
+      {/* Musical Notation Background - Subtle */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Staff 1 */}
-        <div className="absolute top-1/4 w-full">
+        {/* Staff */}
+        <div className="absolute top-1/3 w-full">
           <MusicalStaff />
         </div>
         
-        {/* Scrolling symbols on staff 1 */}
-        <div className="absolute top-1/4 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
+        {/* Scrolling symbols */}
+        <div className="absolute top-1/3 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
           <MusicalSymbols />
-        </div>
-
-        {/* Staff 2 */}
-        <div className="absolute top-2/3 w-full">
-          <MusicalStaff />
-        </div>
-        
-        {/* Scrolling symbols on staff 2 */}
-        <div className="absolute top-2/3 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
-          <div className="animate-scroll-symbols-delayed">
-            <MusicalSymbols />
-          </div>
         </div>
       </div>
 
