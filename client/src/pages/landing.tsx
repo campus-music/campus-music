@@ -92,7 +92,7 @@ export default function Landing() {
       {/* Background - Removed */}
 
       {/* Header */}
-      <header className="flex items-center justify-between p-4 flex-shrink-0 relative z-10">
+      <header className="flex items-center justify-between p-4 border-b border-slate-600/40 flex-shrink-0 relative z-10">
         <div className="flex items-center gap-2">
           <img 
             src={logoUrl} 
@@ -124,14 +124,6 @@ export default function Landing() {
           </Button>
         </div>
       </header>
-
-      {/* Wavy Notation Separator with Symbols */}
-      <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-b from-slate-900/50 to-transparent overflow-hidden">
-        <MusicalStaff />
-        <div className="absolute left-0 w-full overflow-hidden pl-20" style={{ top: '50%', transform: 'translateY(-55%)' }}>
-          <MusicalSymbols />
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center overflow-hidden relative z-20">
@@ -179,6 +171,14 @@ export default function Landing() {
               Browse Artists
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Wavy Notation Separator with Symbols - Bottom */}
+      <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-t from-slate-900/50 to-transparent overflow-hidden">
+        <MusicalStaff />
+        <div className="absolute left-0 w-full overflow-hidden pl-20" style={{ top: '50%', transform: 'translateY(-55%)' }}>
+          <MusicalSymbols />
         </div>
       </div>
 
