@@ -58,11 +58,11 @@ export default function Signup() {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center gap-2 mb-4">
+            <div className="flex flex-col items-center justify-center gap-2 mb-4">
               <img 
                 src={logoUrl} 
                 alt="Campus Music Logo"
-                className="h-8 w-8 object-contain"
+                className="h-12 w-12 object-contain"
                 data-testid="img-signup-choice-logo"
               />
               <span className="text-3xl font-bold">Campus Music</span>
@@ -132,11 +132,11 @@ export default function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center gap-2 mb-4">
+          <div className="flex flex-col items-center justify-center gap-2 mb-4">
             <img 
               src={logoUrl} 
               alt="Campus Music Logo"
-              className="h-8 w-8 object-contain"
+              className="h-12 w-12 object-contain"
               data-testid="img-signup-form-logo"
             />
             <span className="text-3xl font-bold">Campus Music</span>
