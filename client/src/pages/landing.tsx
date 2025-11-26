@@ -2,14 +2,29 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
+import notationUrl from '@assets/musical notations symbols_1764118955236.png';
 
 export default function Landing() {
   const [, navigate] = useLocation();
 
   return (
-    <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden">
+    <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
+      {/* Floating Musical Notation Background */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+        <img 
+          src={notationUrl}
+          alt="Musical notations"
+          className="absolute top-1/4 left-1/2 transform -translate-x-1/2 h-96 w-full object-cover animate-float-slow"
+        />
+        <img 
+          src={notationUrl}
+          alt="Musical notations"
+          className="absolute bottom-1/4 -right-1/4 h-72 w-96 object-cover animate-float-reverse"
+        />
+      </div>
+
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-slate-700/50 flex-shrink-0">
+      <header className="flex items-center justify-between p-4 border-b border-slate-700/50 flex-shrink-0 relative z-10">
         <div className="flex items-center gap-2">
           <img 
             src={logoUrl} 
@@ -40,10 +55,10 @@ export default function Landing() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden">
-        <div className="w-full px-6 text-center flex flex-col items-center justify-center space-y-6">
+      <div className="flex-1 flex items-center justify-center overflow-hidden relative z-20">
+        <div className="w-full px-6 text-center flex flex-col items-center justify-center">
           {/* Logo */}
-          <div className="flex justify-center flex-shrink-0">
+          <div className="flex justify-center flex-shrink-0 mb-4">
             <img 
               src={logoUrl} 
               alt="Campus Music" 
@@ -64,7 +79,7 @@ export default function Landing() {
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-6">
             <Button
               size="sm"
               onClick={() => navigate('/browse')}
@@ -85,32 +100,34 @@ export default function Landing() {
               Browse Artists
             </Button>
           </div>
+        </div>
+      </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-3 gap-3 max-w-2xl flex-shrink-0">
-            <div className="space-y-1">
-              <div className="text-lg">🎵</div>
-              <h3 className="text-xs font-semibold text-white">Discover Music</h3>
-              <p className="text-xs text-slate-400 line-clamp-2">
-                Browse tracks from student artists
-              </p>
-            </div>
+      {/* Features Footer */}
+      <div className="flex-shrink-0 border-t border-slate-700/50 bg-slate-900/50 py-3 px-6 relative z-10">
+        <div className="grid grid-cols-3 gap-2 max-w-2xl mx-auto">
+          <div className="text-center space-y-0.5">
+            <div className="text-sm">🎵</div>
+            <h3 className="text-2xs font-semibold text-white">Discover Music</h3>
+            <p className="text-2xs text-slate-400 line-clamp-1">
+              Browse student artists
+            </p>
+          </div>
 
-            <div className="space-y-1">
-              <div className="text-lg">👥</div>
-              <h3 className="text-xs font-semibold text-white">Support Artists</h3>
-              <p className="text-xs text-slate-400 line-clamp-2">
-                Help musicians reach their audience
-              </p>
-            </div>
+          <div className="text-center space-y-0.5">
+            <div className="text-sm">👥</div>
+            <h3 className="text-2xs font-semibold text-white">Support Artists</h3>
+            <p className="text-2xs text-slate-400 line-clamp-1">
+              Reach their audience
+            </p>
+          </div>
 
-            <div className="space-y-1">
-              <div className="text-lg">🎧</div>
-              <h3 className="text-xs font-semibold text-white">Share & Connect</h3>
-              <p className="text-xs text-slate-400 line-clamp-2">
-                Create playlists and connect
-              </p>
-            </div>
+          <div className="text-center space-y-0.5">
+            <div className="text-sm">🎧</div>
+            <h3 className="text-2xs font-semibold text-white">Share & Connect</h3>
+            <p className="text-2xs text-slate-400 line-clamp-1">
+              Create playlists
+            </p>
           </div>
         </div>
       </div>
