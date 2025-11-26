@@ -28,18 +28,58 @@ const MusicalStaff = () => (
 );
 
 const MusicalSymbols = () => (
-  <div className="flex gap-64 animate-scroll-symbols">
-    {/* Eighth notes */}
-    <svg viewBox="0 0 30 50" className="w-4 h-6 flex-shrink-0 opacity-12">
-      <circle cx="8" cy="35" r="4" fill="rgba(255,255,255,0.6)"/>
-      <line x1="12" y1="35" x2="12" y2="10" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-      <path d="M 12 10 Q 18 12 18 18" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"/>
+  <div className="flex gap-40 animate-scroll-symbols">
+    {/* Eighth note 1 */}
+    <svg viewBox="0 0 30 60" className="w-5 h-8 flex-shrink-0 opacity-30">
+      <circle cx="10" cy="45" r="4.5" fill="rgba(255,255,255,0.7)"/>
+      <line x1="14.5" y1="45" x2="14.5" y2="15" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+      <path d="M 14.5 15 Q 20 17 20 24" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none"/>
     </svg>
     
     {/* Quarter note */}
-    <svg viewBox="0 0 30 50" className="w-4 h-6 flex-shrink-0 opacity-12">
-      <circle cx="8" cy="35" r="5" fill="rgba(255,255,255,0.6)"/>
-      <line x1="13" y1="35" x2="13" y2="8" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+    <svg viewBox="0 0 30 60" className="w-5 h-8 flex-shrink-0 opacity-30">
+      <circle cx="10" cy="45" r="5" fill="rgba(255,255,255,0.7)"/>
+      <line x1="15" y1="45" x2="15" y2="10" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+    </svg>
+
+    {/* Half note */}
+    <svg viewBox="0 0 30 60" className="w-5 h-8 flex-shrink-0 opacity-30">
+      <circle cx="10" cy="40" r="5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+      <line x1="15" y1="40" x2="15" y2="8" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+    </svg>
+
+    {/* Treble clef */}
+    <svg viewBox="0 0 35 80" className="w-6 h-8 flex-shrink-0 opacity-30">
+      <circle cx="18" cy="50" r="3" fill="rgba(255,255,255,0.7)"/>
+      <circle cx="18" cy="20" r="3" fill="rgba(255,255,255,0.7)"/>
+      <path d="M 18 28 Q 12 35 18 42 Q 24 35 18 28" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none"/>
+    </svg>
+
+    {/* Double eighth notes */}
+    <svg viewBox="0 0 45 60" className="w-6 h-8 flex-shrink-0 opacity-30">
+      <circle cx="8" cy="45" r="4" fill="rgba(255,255,255,0.7)"/>
+      <line x1="12" y1="45" x2="12" y2="18" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+      <circle cx="20" cy="42" r="4" fill="rgba(255,255,255,0.7)"/>
+      <line x1="24" y1="42" x2="24" y2="15" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+      <path d="M 12 18 L 24 15 L 24 20" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none"/>
+    </svg>
+
+    {/* Quarter note 2 */}
+    <svg viewBox="0 0 30 60" className="w-5 h-8 flex-shrink-0 opacity-30">
+      <circle cx="10" cy="45" r="5" fill="rgba(255,255,255,0.7)"/>
+      <line x1="15" y1="45" x2="15" y2="10" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+    </svg>
+
+    {/* Whole note */}
+    <svg viewBox="0 0 30 60" className="w-5 h-8 flex-shrink-0 opacity-30">
+      <circle cx="10" cy="40" r="5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+    </svg>
+
+    {/* Eighth note 2 */}
+    <svg viewBox="0 0 30 60" className="w-5 h-8 flex-shrink-0 opacity-30">
+      <circle cx="10" cy="45" r="4.5" fill="rgba(255,255,255,0.7)"/>
+      <line x1="14.5" y1="45" x2="14.5" y2="15" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
+      <path d="M 14.5 15 Q 20 17 20 24" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none"/>
     </svg>
   </div>
 );
@@ -86,10 +126,10 @@ export default function Landing() {
       </header>
 
       {/* Wavy Notation Separator with Symbols */}
-      <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-b from-slate-900/50 to-transparent">
-        <div className="relative h-full">
+      <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-b from-slate-900/50 to-transparent overflow-hidden">
+        <div className="relative h-full w-full">
           <MusicalStaff />
-          <div className="absolute top-1/3 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
+          <div className="absolute inset-0 left-0 w-full overflow-hidden flex items-center pl-20">
             <MusicalSymbols />
           </div>
         </div>
