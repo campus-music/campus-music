@@ -16,7 +16,7 @@ import {
 const mainNavItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Search", url: "/search", icon: Search },
-  { title: "New Releases", url: "/new-releases", icon: TrendingUp },
+  { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "Trending", url: "/trending", icon: TrendingUp },
   { title: "Discover by University", url: "/discover", icon: GraduationCap },
   { title: "Browse Genres", url: "/genres", icon: Sparkles },
@@ -28,7 +28,6 @@ const discoveryItems = [
 
 const libraryItems = [
   { title: "My Library", url: "/library", icon: Library },
-  { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
   { title: "Profile", url: "/profile", icon: User },
 ];
