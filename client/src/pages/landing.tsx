@@ -128,7 +128,7 @@ export default function Landing() {
       {/* Wavy Notation Separator with Symbols */}
       <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-b from-slate-900/50 to-transparent overflow-hidden">
         <MusicalStaff />
-        <div className="absolute left-0 top-1/2 w-full overflow-hidden -translate-y-1/2 flex pl-20">
+        <div className="absolute left-0 w-full overflow-hidden pl-20" style={{ top: '50%', transform: 'translateY(-55%)' }}>
           <MusicalSymbols />
         </div>
       </div>
