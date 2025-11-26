@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TrackCard } from '@/components/track-card';
 import { TrackListItem } from '@/components/track-list-item';
+import { SearchableFilter } from '@/components/searchable-filter';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Music, Flame, Star, X } from 'lucide-react';
+import { Music, Flame, Star } from 'lucide-react';
 import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Link } from 'wouter';
@@ -71,73 +70,24 @@ export default function Home() {
 
       {/* Filters */}
       <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold mb-3">Filter by Genre</h3>
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2">
-              {GENRES.map((genre) => (
-                <Button
-                  key={genre}
-                  size="sm"
-                  variant={selectedGenre === genre ? 'default' : 'outline'}
-                  onClick={() => setSelectedGenre(selectedGenre === genre ? null : genre)}
-                  data-testid={`button-filter-genre-${genre}`}
-                  className="rounded-full"
-                >
-                  {genre}
-                </Button>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+          <SearchableFilter
+            label="Filter by Genre"
+            options={GENRES}
+            selected={selectedGenre}
+            onSelect={setSelectedGenre}
+            placeholder="Search or select genre..."
+            testIdPrefix="genre"
+          />
+          <SearchableFilter
+            label="Filter by University"
+            options={UNIVERSITIES}
+            selected={selectedUniversity}
+            onSelect={setSelectedUniversity}
+            placeholder="Search or select university..."
+            testIdPrefix="university"
+          />
         </div>
-
-        <div>
-          <h3 className="text-sm font-semibold mb-3">Filter by University</h3>
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2">
-              {UNIVERSITIES.map((uni) => (
-                <Button
-                  key={uni}
-                  size="sm"
-                  variant={selectedUniversity === uni ? 'default' : 'outline'}
-                  onClick={() => setSelectedUniversity(selectedUniversity === uni ? null : uni)}
-                  data-testid={`button-filter-university-${uni}`}
-                  className="rounded-full"
-                >
-                  {uni}
-                </Button>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </div>
-
-        {(selectedGenre || selectedUniversity) && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Filters applied:</span>
-            {selectedGenre && (
-              <Badge
-                variant="secondary"
-                className="flex items-center gap-1 cursor-pointer hover-elevate"
-                onClick={() => setSelectedGenre(null)}
-              >
-                {selectedGenre}
-                <X className="h-3 w-3" />
-              </Badge>
-            )}
-            {selectedUniversity && (
-              <Badge
-                variant="secondary"
-                className="flex items-center gap-1 cursor-pointer hover-elevate"
-                onClick={() => setSelectedUniversity(null)}
-              >
-                {selectedUniversity}
-                <X className="h-3 w-3" />
-              </Badge>
-            )}
-          </div>
-        )}
       </section>
 
       {/* Trending Songs List */}
