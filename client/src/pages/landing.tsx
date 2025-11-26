@@ -5,14 +5,23 @@ import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 const MusicalStaff = () => (
   <svg viewBox="0 0 1200 100" className="w-full h-20" preserveAspectRatio="none">
-    {/* Wavy staff lines */}
+    {/* Highly wavy staff lines with musical flow */}
     {[10, 30, 50, 70, 90].map((baseY) => (
       <path 
         key={`line-${baseY}`}
-        d={`M 0 ${baseY} Q 150 ${baseY - 5}, 300 ${baseY} T 600 ${baseY} T 900 ${baseY} T 1200 ${baseY}`}
+        d={`M 0 ${baseY}
+           Q 75 ${baseY - 12}, 150 ${baseY}
+           Q 225 ${baseY + 12}, 300 ${baseY}
+           Q 375 ${baseY - 12}, 450 ${baseY}
+           Q 525 ${baseY + 12}, 600 ${baseY}
+           Q 675 ${baseY - 12}, 750 ${baseY}
+           Q 825 ${baseY + 12}, 900 ${baseY}
+           Q 975 ${baseY - 12}, 1050 ${baseY}
+           Q 1125 ${baseY + 12}, 1200 ${baseY}`}
         stroke="rgba(255,255,255,0.15)" 
         strokeWidth="2"
         fill="none"
+        strokeLinecap="round"
       />
     ))}
   </svg>
