@@ -49,18 +49,7 @@ export default function Landing() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
-      {/* Musical Notation Background - Subtle */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Staff */}
-        <div className="absolute top-1/3 w-full">
-          <MusicalStaff />
-        </div>
-        
-        {/* Scrolling symbols */}
-        <div className="absolute top-1/3 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
-          <MusicalSymbols />
-        </div>
-      </div>
+      {/* Background - Removed */}
 
       {/* Header */}
       <header className="flex items-center justify-between p-4 flex-shrink-0 relative z-10">
@@ -96,9 +85,14 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Wavy Notation Separator */}
+      {/* Wavy Notation Separator with Symbols */}
       <div className="flex-shrink-0 h-20 relative z-10 bg-gradient-to-b from-slate-900/50 to-transparent">
-        <MusicalStaff />
+        <div className="relative h-full">
+          <MusicalStaff />
+          <div className="absolute top-1/3 left-0 w-full h-20 overflow-hidden flex items-center pl-20">
+            <MusicalSymbols />
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
