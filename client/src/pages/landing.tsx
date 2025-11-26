@@ -78,7 +78,7 @@ export default function Landing() {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => navigate('/browse')}
+              onClick={() => navigate('/artist-browse')}
               className="border-slate-500 text-white hover:bg-slate-800 px-8 py-3 rounded-full font-semibold text-lg"
               data-testid="button-browse-artists"
             >

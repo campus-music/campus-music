@@ -25,6 +25,7 @@ import Recommendations from "@/pages/recommendations";
 import ArtistAnalytics from "@/pages/artist-analytics";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import ArtistBrowse from "@/pages/artist-browse";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -125,6 +126,12 @@ function Router() {
       <Route path="/browse" component={() => (
         <AppLayout isPublic>
           <Home />
+        </AppLayout>
+      )} />
+      
+      <Route path="/artist-browse" component={() => (
+        <AppLayout isPublic>
+          <ArtistBrowse />
         </AppLayout>
       )} />
       

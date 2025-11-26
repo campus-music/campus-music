@@ -626,6 +626,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(filtered);
   });
 
+  // Get all artists with metadata for browse page
+  app.get("/api/artists", async (req, res) => {
+    try {
+      const allArtists = Array.from((storage as any).artistProfiles.values());
+      const allTracks = Array.from((storage as any).tracks.values());
+      const allStreams = Array.from((storage as any).streams.values());
+      
+      const artists = allArtists.map((artist: any) => {
+        const artistTracks = allTracks.filter((t: any) => t.artistId === artist.id);
+        const artistStreams = allStreams.filter((s: any) => 
+          artistTracks.some((t: any) => t.id === s.trackId)
+        );
+        const user: any = Array.from((storage as any).users.values()).find((u: any) => u.id === artist.userId);
+        
+        return {
+          id: artist.id,
+          stageName: artist.stageName,
+          bio: artist.bio,
+          mainGenre: artist.mainGenre,
+          profileImageUrl: artist.profileImageUrl,
+          universityName: user?.universityName || "Unknown",
+          trackCount: artistTracks.length,
+          streams: artistStreams.length,
+          createdAt: artist.createdAt,
+        };
+      });
+      
+      res.json(artists);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 
