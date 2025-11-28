@@ -16,10 +16,14 @@ import {
 const mainNavItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Search", url: "/search", icon: Search },
-  { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "Trending", url: "/trending", icon: TrendingUp },
   { title: "Discover by University", url: "/discover", icon: GraduationCap },
   { title: "Browse Genres", url: "/genres", icon: Sparkles },
+];
+
+const publicNavItems = [
+  { title: "Browse Music", url: "/browse", icon: Home },
+  { title: "Browse Artists", url: "/artist-browse", icon: User },
 ];
 
 const discoveryItems = [
@@ -27,6 +31,7 @@ const discoveryItems = [
 ];
 
 const libraryItems = [
+  { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "My Library", url: "/library", icon: Library },
   { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
   { title: "Profile", url: "/profile", icon: User },
@@ -35,7 +40,7 @@ const libraryItems = [
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
   const [location] = useLocation();
 
-  const browseItems = isPublic ? mainNavItems.slice(0, 3) : mainNavItems;
+  const browseItems = isPublic ? publicNavItems : mainNavItems;
 
   return (
     <Sidebar>
