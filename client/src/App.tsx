@@ -28,6 +28,10 @@ import Landing from "@/pages/landing";
 import ArtistBrowse from "@/pages/artist-browse";
 import ArtistDetail from "@/pages/artist-detail";
 import Playlists from "@/pages/playlists";
+import AllTrending from "@/pages/all-trending";
+import AllReleases from "@/pages/all-releases";
+import AllArtists from "@/pages/all-artists";
+import BestOfCampus from "@/pages/best-of-campus";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -266,6 +270,46 @@ function Router() {
           <ProtectedRoute component={() => (
             <AppLayout>
               <ArtistDetail />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/all-trending">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <AllTrending />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/all-releases">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <AllReleases />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/all-artists">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <AllArtists />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/best-of-campus">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <BestOfCampus />
             </AppLayout>
           )} />
         )}

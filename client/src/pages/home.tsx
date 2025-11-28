@@ -44,13 +44,13 @@ export default function Home() {
     return true;
   }) || [];
 
-  const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
+  const SectionHeader = ({ title, icon: Icon, href }: { title: string; icon: any; href: string }) => (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-3">
         <Icon className="h-6 w-6 text-primary" />
         <h2 className="text-2xl font-bold">{title}</h2>
       </div>
-      <Link href="#" className="text-primary hover:underline text-sm font-semibold">
+      <Link href={href} className="text-primary hover:underline text-sm font-semibold" data-testid={`link-show-all-${title.toLowerCase().replace(/\s+/g, '-')}`}>
         Show all
       </Link>
     </div>
@@ -92,7 +92,7 @@ export default function Home() {
 
       {/* Trending Songs List */}
       <section>
-        <SectionHeader title="Trending Songs" icon={Flame} />
+        <SectionHeader title="Trending Songs" icon={Flame} href="/all-trending" />
         <div className="space-y-1">
           {trendingLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
@@ -113,7 +113,7 @@ export default function Home() {
       {/* Top Artists */}
       {topArtists.length > 0 && (
         <section>
-          <SectionHeader title="Popular Artists" icon={Star} />
+          <SectionHeader title="Popular Artists" icon={Star} href="/all-artists" />
           <ScrollArea className="w-full">
             <div className="flex gap-6 pb-4">
               {artistsLoading ? (
@@ -146,7 +146,7 @@ export default function Home() {
 
       {/* Latest Songs Carousel */}
       <section>
-        <SectionHeader title="Fresh Releases" icon={Music} />
+        <SectionHeader title="Fresh Releases" icon={Music} href="/all-releases" />
         <ScrollArea className="w-full">
           <div className="flex gap-4 pb-4">
             {latestLoading ? (
@@ -171,7 +171,7 @@ export default function Home() {
 
       {/* Best of Campus */}
       <section>
-        <SectionHeader title="Best of Campus 2025" icon={Flame} />
+        <SectionHeader title="Best of Campus 2025" icon={Flame} href="/best-of-campus" />
         <ScrollArea className="w-full">
           <div className="flex gap-4 pb-4">
             {latestLoading ? (
