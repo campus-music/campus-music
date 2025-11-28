@@ -14,33 +14,29 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Search", url: "/search", icon: Search },
-  { title: "Trending", url: "/trending", icon: TrendingUp },
-  { title: "Discover by University", url: "/discover", icon: GraduationCap },
-  { title: "Browse Genres", url: "/genres", icon: Sparkles },
-];
-
-const publicNavItems = [
-  { title: "Browse Music", url: "/browse", icon: Home },
-  { title: "Browse Artists", url: "/artist-browse", icon: User },
+  { title: "Home", url: "/", publicUrl: "/browse", icon: Home },
+  { title: "Search", url: "/search", publicUrl: "/search", icon: Search },
+  { title: "Trending", url: "/trending", publicUrl: "/all-trending", icon: TrendingUp },
+  { title: "Discover by University", url: "/discover", publicUrl: "/discover", icon: GraduationCap },
+  { title: "Browse Genres", url: "/genres", publicUrl: "/genres", icon: Sparkles },
 ];
 
 const discoveryItems = [
-  { title: "Recommended For You", url: "/recommendations", icon: Sparkles },
+  { title: "Recommended For You", url: "/recommendations", publicUrl: "/recommendations", icon: Sparkles },
 ];
 
 const libraryItems = [
-  { title: "Playlists", url: "/playlists", icon: ListMusic },
-  { title: "My Library", url: "/library", icon: Library },
-  { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
-  { title: "Profile", url: "/profile", icon: User },
+  { title: "Playlists", url: "/playlists", publicUrl: "/playlists", icon: ListMusic },
+  { title: "My Library", url: "/library", publicUrl: "/library", icon: Library },
+  { title: "Artist Analytics", url: "/artist/analytics", publicUrl: "/artist/analytics", icon: BarChart3 },
+  { title: "Profile", url: "/profile", publicUrl: "/profile", icon: User },
 ];
 
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
   const [location] = useLocation();
 
-  const browseItems = isPublic ? publicNavItems : mainNavItems;
+  const getUrl = (item: { url: string; publicUrl: string }) => 
+    isPublic ? item.publicUrl : item.url;
 
   return (
     <Sidebar>
@@ -61,59 +57,64 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
           <SidebarGroupLabel>Browse</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {browseItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {mainNavItems.map((item) => {
+                const itemUrl = getUrl(item);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={location === itemUrl || location === item.url}>
+                      <Link href={itemUrl} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {!isPublic && (
-          <>
-            <SidebarGroup>
-              <SidebarGroupLabel>Discovery</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {discoveryItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Discovery</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {discoveryItems.map((item) => {
+                const itemUrl = getUrl(item);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={location === itemUrl || location === item.url}>
+                      <Link href={itemUrl} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-            <SidebarGroup>
-              <SidebarGroupLabel>Library</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {libraryItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        )}
+        <SidebarGroup>
+          <SidebarGroupLabel>Library</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {libraryItems.map((item) => {
+                const itemUrl = getUrl(item);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={location === itemUrl || location === item.url}>
+                      <Link href={itemUrl} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
