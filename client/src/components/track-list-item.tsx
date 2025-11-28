@@ -38,19 +38,17 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
           {index + 1}
         </span>
       )}
-      <div className="relative">
+      <div className="relative cursor-pointer" onClick={() => playTrack(track)}>
         <Avatar className="h-12 w-12 rounded-md">
           <AvatarImage src={track.coverImageUrl || undefined} alt={track.title} />
-          <AvatarFallback className="rounded-md">{track.title[0]}</AvatarFallback>
+          <AvatarFallback className="rounded-md bg-primary/20">{track.title[0]}</AvatarFallback>
         </Avatar>
-        <Button
-          size="icon"
-          className="absolute inset-0 h-12 w-12 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => playTrack(track)}
+        <div
+          className="absolute inset-0 h-12 w-12 rounded-md bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           data-testid={`button-play-${track.id}`}
         >
-          <Play className="h-4 w-4 ml-0.5" />
-        </Button>
+          <Play className="h-5 w-5 text-white fill-white" />
+        </div>
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate" data-testid={`text-track-title-${track.id}`}>
