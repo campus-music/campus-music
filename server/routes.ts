@@ -792,6 +792,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "imageURL is required" });
       }
 
+      if (typeof imageURL !== 'string') {
+        return res.status(400).json({ error: "imageURL must be a string" });
+      }
+
+      if (!imageURL.startsWith('https://storage.googleapis.com/')) {
+        return res.status(400).json({ error: "Invalid image URL format" });
+      }
+
       const artistProfile = await storage.getArtistProfile(req.session.userId!);
       if (!artistProfile) {
         return res.status(404).json({ error: "Artist profile not found" });
@@ -800,6 +808,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(imageURL);
+
+      if (!objectPath.startsWith('/objects/')) {
+        return res.status(400).json({ error: "Invalid upload path" });
+      }
 
       const updatedProfile = await storage.updateArtistProfile(artistProfile.id, {
         profileImageUrl: objectPath,
