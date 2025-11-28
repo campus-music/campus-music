@@ -660,6 +660,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single artist by ID with their tracks
+  app.get("/api/artist/:artistId", async (req, res) => {
+    try {
+      const { artistId } = req.params;
+      const artist = await storage.getArtistProfileById(artistId);
+      
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+
+      const tracks = await storage.getTracksByArtist(artistId);
+      const wallet = await storage.getArtistWallet(artistId);
+      
+      res.json({
+        ...artist,
+        tracks,
+        totalSupport: wallet?.totalReceived || 0,
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Get all artists with metadata for browse page
   app.get("/api/artists", async (req, res) => {
     try {
@@ -975,7 +998,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         universityName: user.universityName || "Unknown",
         country: user.country || "Unknown",
         durationSeconds: Math.round(durationSeconds),
-        isPublished: true,
       });
 
       res.status(201).json(track);
@@ -1005,6 +1027,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting track:", error);
       res.status(500).json({ error: error.message || "Failed to delete track" });
+    }
+  });
+
+  // ===== STRIPE PAYMENT ROUTES =====
+
+  // Get Stripe publishable key for frontend
+  app.get("/api/stripe/config", async (_req, res) => {
+    try {
+      const { getStripePublishableKey } = await import("./stripeClient");
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error: any) {
+      console.error("Error getting Stripe config:", error);
+      res.status(500).json({ error: "Failed to get Stripe configuration" });
+    }
+  });
+
+  // Create checkout session for artist tip
+  app.post("/api/stripe/tip/:artistId", requireAuth, async (req, res) => {
+    try {
+      const { artistId } = req.params;
+      const { amount, message } = req.body;
+
+      if (!amount || typeof amount !== 'number' || amount < 100) {
+        return res.status(400).json({ error: "Minimum tip amount is $1.00 (100 cents)" });
+      }
+
+      if (amount > 50000) {
+        return res.status(400).json({ error: "Maximum tip amount is $500.00" });
+      }
+
+      const artistProfile = await storage.getArtistProfileById(artistId);
+      if (!artistProfile) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+
+      const supporter = await storage.getUser(req.session.userId!);
+      if (!supporter) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Tip for ${artistProfile.stageName}`,
+              description: message ? `Message: "${message.slice(0, 100)}"` : `Support this artist`,
+              images: artistProfile.profileImageUrl ? [artistProfile.profileImageUrl] : undefined,
+            },
+            unit_amount: amount,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${baseUrl}/artist/${artistId}?tip=success`,
+        cancel_url: `${baseUrl}/artist/${artistId}?tip=cancelled`,
+        metadata: {
+          type: 'artist_tip',
+          artistId,
+          supporterId: supporter.id,
+          message: message?.slice(0, 500) || '',
+        },
+      });
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (error: any) {
+      console.error("Error creating tip checkout session:", error);
+      res.status(500).json({ error: error.message || "Failed to create payment session" });
+    }
+  });
+
+  // Get artist's support history (for artist dashboard)
+  app.get("/api/artist/supports", requireAuth, async (req, res) => {
+    try {
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(403).json({ error: "Only artists can view their support history" });
+      }
+
+      const supports = await storage.getArtistSupports(artistProfile.id);
+      res.json(supports);
+    } catch (error: any) {
+      console.error("Error getting artist supports:", error);
+      res.status(500).json({ error: error.message || "Failed to get support history" });
+    }
+  });
+
+  // Get artist wallet info (for artist dashboard)
+  app.get("/api/artist/wallet", requireAuth, async (req, res) => {
+    try {
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(403).json({ error: "Only artists can view their wallet" });
+      }
+
+      let wallet = await storage.getArtistWallet(artistProfile.id);
+      if (!wallet) {
+        wallet = await storage.createArtistWallet({ artistId: artistProfile.id });
+      }
+
+      res.json(wallet);
+    } catch (error: any) {
+      console.error("Error getting artist wallet:", error);
+      res.status(500).json({ error: error.message || "Failed to get wallet info" });
     }
   });
 

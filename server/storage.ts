@@ -120,6 +120,7 @@ export interface IStorage {
   sendSupport(data: InsertSupport): Promise<Support>;
   getArtistSupports(artistId: string): Promise<Support[]>;
   getArtistWallet(artistId: string): Promise<ArtistWallet | undefined>;
+  createArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
   createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
   updateArtistWallet(artistId: string, updates: Partial<ArtistWallet>): Promise<ArtistWallet | undefined>;
 }
@@ -746,16 +747,18 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    const wallet = await this.getArtistWallet(data.artistId);
-    if (wallet) {
-      await db
-        .update(artistWallets)
-        .set({
-          totalReceived: sql`${artistWallets.totalReceived} + ${data.amount}`,
-          balance: sql`${artistWallets.balance} + ${data.amount}`,
-        })
-        .where(eq(artistWallets.artistId, data.artistId));
+    let wallet = await this.getArtistWallet(data.artistId);
+    if (!wallet) {
+      wallet = await this.createArtistWallet({ artistId: data.artistId });
     }
+    
+    await db
+      .update(artistWallets)
+      .set({
+        totalReceived: sql`${artistWallets.totalReceived} + ${data.amount}`,
+        balance: sql`${artistWallets.balance} + ${data.amount}`,
+      })
+      .where(eq(artistWallets.artistId, data.artistId));
 
     return support;
   }
@@ -774,6 +777,14 @@ export class DatabaseStorage implements IStorage {
       .from(artistWallets)
       .where(eq(artistWallets.artistId, artistId));
     return wallet || undefined;
+  }
+
+  async createArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet> {
+    const [wallet] = await db
+      .insert(artistWallets)
+      .values(data)
+      .returning();
+    return wallet;
   }
 
   async createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet> {

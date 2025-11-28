@@ -164,8 +164,13 @@ Preferred communication style: Simple, everyday language.
   3. Submit track metadata with normalized URLs
 - Artist dashboard updated to use real file uploads
 
-**Phase 3: Stripe Payment Integration (PENDING)**
-- Artist tip/support system needs real payment processing
+**Phase 3: Stripe Payment Integration (COMPLETE)**
+- Stripe integration via stripe-replit-sync for automatic webhook handling
+- Artist tip checkout sessions with secure Stripe Checkout
+- Payment routes: POST /api/stripe/tip/:artistId creates checkout session
+- Support history and wallet endpoints for artists
+- Real-time webhook processing for payment events
+- Frontend SupportModal with preset amounts and Stripe checkout redirect
 
 **Phase 4: Email Verification (PENDING)**
 - Email sending and verification workflow
@@ -175,6 +180,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
+- Phase 3 complete: Stripe payment integration for artist tips
+- Atomic wallet upsert prevents race conditions on concurrent first-time tips
+- Transaction-based webhook handler with idempotency (unique transactionId constraint)
+- SupportModal redirects to real Stripe Checkout with preset tip amounts
+- Artist wallet and support history endpoints for financial tracking
 - Phase 2 complete: Real audio file upload functionality
 - TrackUploader component for artists to upload tracks
 - Profile picture upload functionality for artists

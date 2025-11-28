@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useLocation, useSearch } from 'wouter';
 import {
   Dialog,
   DialogContent,
@@ -11,16 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Heart } from 'lucide-react';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { Heart, CreditCard, ExternalLink } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/lib/auth-context';
 
 interface SupportModalProps {
   artistId: string;
@@ -29,37 +24,55 @@ interface SupportModalProps {
 
 export function SupportModal({ artistId, artistName }: SupportModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
+  const search = useSearch();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('5');
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
   const [message, setMessage] = useState('');
 
-  const supportMutation = useMutation({
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const tipStatus = params.get('tip');
+    
+    if (tipStatus === 'success') {
+      toast({
+        title: 'Thank you!',
+        description: `Your support for ${artistName} has been sent successfully.`,
+      });
+      params.delete('tip');
+      const newSearch = params.toString();
+      navigate(window.location.pathname + (newSearch ? `?${newSearch}` : ''), { replace: true });
+    } else if (tipStatus === 'cancelled') {
+      toast({
+        title: 'Payment Cancelled',
+        description: 'Your support payment was cancelled.',
+        variant: 'destructive',
+      });
+      params.delete('tip');
+      const newSearch = params.toString();
+      navigate(window.location.pathname + (newSearch ? `?${newSearch}` : ''), { replace: true });
+    }
+  }, [search, artistName, toast, navigate]);
+
+  const tipMutation = useMutation({
     mutationFn: async () => {
       const amountInCents = Math.round(parseFloat(amount) * 100);
-      const res = await apiRequest('POST', '/api/support', {
-        artistId,
+      const res = await apiRequest('POST', `/api/stripe/tip/${artistId}`, {
         amount: amountInCents,
-        paymentMethod,
         message: message || undefined,
       });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/artist', artistId, 'supports'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/artist', artistId, 'wallet'] });
-      toast({
-        title: 'Success!',
-        description: `You supported ${artistName} with $${amount}. Thank you!`,
-      });
-      setOpen(false);
-      setAmount('5');
-      setMessage('');
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
     },
     onError: (error: any) => {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send support',
+        description: error.message || 'Failed to create payment session',
         variant: 'destructive',
       });
     },
@@ -67,16 +80,38 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || parseFloat(amount) <= 0) {
+    
+    if (!user) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in to support artists.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
+    const amountValue = parseFloat(amount);
+    if (!amount || amountValue < 1) {
       toast({
         title: 'Invalid amount',
-        description: 'Please enter a valid amount',
+        description: 'Minimum tip amount is $1.00',
         variant: 'destructive',
       });
       return;
     }
-    supportMutation.mutate();
+    if (amountValue > 500) {
+      toast({
+        title: 'Invalid amount',
+        description: 'Maximum tip amount is $500.00',
+        variant: 'destructive',
+      });
+      return;
+    }
+    tipMutation.mutate();
   };
+
+  const presetAmounts = [1, 5, 10, 25, 50];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -99,13 +134,27 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (USD)</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {presetAmounts.map((preset) => (
+                <Button
+                  key={preset}
+                  type="button"
+                  variant={amount === String(preset) ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAmount(String(preset))}
+                  data-testid={`button-preset-${preset}`}
+                >
+                  ${preset}
+                </Button>
+              ))}
+            </div>
             <div className="flex gap-2">
               <Input
                 id="amount"
                 type="number"
                 step="0.01"
-                min="0.50"
-                max="5000"
+                min="1"
+                max="500"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="5.00"
@@ -114,22 +163,8 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
               <span className="flex items-center text-muted-foreground">USD</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Between $0.50 and $5,000
+              Between $1.00 and $500.00
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="method">Payment Method</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger data-testid="select-payment-method">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="stripe">Stripe (Card)</SelectItem>
-                <SelectItem value="paypal">PayPal</SelectItem>
-                <SelectItem value="mobile_money">Mobile Money</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
@@ -141,13 +176,22 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
               placeholder="Let them know why you support their music..."
               className="resize-none"
               rows={3}
+              maxLength={500}
               data-testid="textarea-support-message"
             />
+            <p className="text-xs text-muted-foreground text-right">
+              {message.length}/500
+            </p>
           </div>
 
-          <div className="bg-muted p-3 rounded-md text-sm">
-            <p className="text-muted-foreground">
-              You will send <strong className="text-foreground">${parseFloat(amount || '0').toFixed(2)}</strong> to {artistName}
+          <div className="bg-muted p-3 rounded-md space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Amount</span>
+              <span className="font-bold">${parseFloat(amount || '0').toFixed(2)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <CreditCard className="h-3 w-3" />
+              Secure payment via Stripe
             </p>
           </div>
 
@@ -162,11 +206,18 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
             </Button>
             <Button
               type="submit"
-              disabled={supportMutation.isPending}
-              className="flex-1"
+              disabled={tipMutation.isPending}
+              className="flex-1 gap-2"
               data-testid="button-confirm-support"
             >
-              {supportMutation.isPending ? 'Processing...' : 'Send Support'}
+              {tipMutation.isPending ? (
+                'Processing...'
+              ) : (
+                <>
+                  Continue to Payment
+                  <ExternalLink className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </form>

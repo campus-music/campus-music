@@ -111,7 +111,7 @@ export const supports = pgTable("supports", {
   paymentMethod: text("payment_method").notNull(), // "mobile_money", "paypal", "stripe"
   status: text("status").notNull().default("completed"), // "pending", "completed", "failed"
   message: text("message"), // Optional support message
-  transactionId: text("transaction_id"), // Reference ID for payment processing
+  transactionId: text("transaction_id").unique(), // Stripe session ID for idempotency
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
