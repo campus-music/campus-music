@@ -275,45 +275,29 @@ function Router() {
         )}
       </Route>
 
-      <Route path="/all-trending">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <AllTrending />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/all-trending" component={() => (
+        <AppLayout isPublic>
+          <AllTrending />
+        </AppLayout>
+      )} />
 
-      <Route path="/all-releases">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <AllReleases />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/all-releases" component={() => (
+        <AppLayout isPublic>
+          <AllReleases />
+        </AppLayout>
+      )} />
 
-      <Route path="/all-artists">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <AllArtists />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/all-artists" component={() => (
+        <AppLayout isPublic>
+          <AllArtists />
+        </AppLayout>
+      )} />
 
-      <Route path="/best-of-campus">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <BestOfCampus />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/best-of-campus" component={() => (
+        <AppLayout isPublic>
+          <BestOfCampus />
+        </AppLayout>
+      )} />
       
       <Route component={NotFound} />
     </Switch>
