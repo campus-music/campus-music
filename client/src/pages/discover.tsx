@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrackCard } from '@/components/track-card';
 import { TrackListItem } from '@/components/track-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { GraduationCap, Music, Users } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { GraduationCap, Music, Users, Search } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
@@ -14,6 +14,7 @@ import { Link } from 'wouter';
 
 export default function Discover() {
   const [selectedUniversity, setSelectedUniversity] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const { data: universities, isLoading: universitiesLoading } = useQuery<string[]>({
     queryKey: ['/api/universities'],
@@ -39,6 +40,14 @@ export default function Discover() {
     enabled: selectedUniversity.length > 0,
   });
 
+  const filteredUniversities = useMemo(() => {
+    if (!universities) return [];
+    if (!searchQuery.trim()) return universities;
+    return universities.filter(uni => 
+      uni.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [universities, searchQuery]);
+
   return (
     <div className="space-y-8 pb-32">
       <div className="flex items-center gap-3">
@@ -54,15 +63,28 @@ export default function Discover() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Select a University</h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold">Select a University</h2>
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search universities..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              data-testid="input-search-universities"
+            />
+          </div>
+        </div>
         <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-4">
+          <div className="flex gap-3 pb-4 flex-wrap">
             {universitiesLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-10 w-40 rounded-full flex-shrink-0" />
               ))
-            ) : universities && universities.length > 0 ? (
-              universities.map((uni) => (
+            ) : filteredUniversities.length > 0 ? (
+              filteredUniversities.map((uni) => (
                 <Badge
                   key={uni}
                   variant={selectedUniversity === uni ? 'default' : 'outline'}
@@ -74,6 +96,8 @@ export default function Discover() {
                   {uni}
                 </Badge>
               ))
+            ) : searchQuery ? (
+              <p className="text-muted-foreground">No universities matching "{searchQuery}"</p>
             ) : (
               <p className="text-muted-foreground">No universities found</p>
             )}
