@@ -21,11 +21,21 @@ export default function Discover() {
 
   const { data: topTracks, isLoading: tracksLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/by-university', selectedUniversity],
+    queryFn: async () => {
+      const res = await fetch(`/api/tracks/by-university?university=${encodeURIComponent(selectedUniversity)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch tracks');
+      return res.json();
+    },
     enabled: selectedUniversity.length > 0,
   });
 
   const { data: topArtists, isLoading: artistsLoading } = useQuery<ArtistProfile[]>({
     queryKey: ['/api/artists/by-university', selectedUniversity],
+    queryFn: async () => {
+      const res = await fetch(`/api/artists/by-university?university=${encodeURIComponent(selectedUniversity)}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch artists');
+      return res.json();
+    },
     enabled: selectedUniversity.length > 0,
   });
 

@@ -19,12 +19,13 @@ async function seedData() {
     { name: "Harvard University", country: "United States" },
     { name: "UC Berkeley", country: "United States" },
     { name: "Oxford University", country: "United Kingdom" },
+    { name: "DePaul University", country: "United States" },
   ];
 
   const genres = ["Pop", "Hip-Hop", "Electronic", "Rock", "R&B", "Indie", "Jazz"];
-  const artistNames = ["Luna Echo", "The Campus Collective", "Digital Dreams", "Midnight Study", "Thesis Beats"];
+  const artistNames = ["Luna Echo", "The Campus Collective", "Digital Dreams", "Midnight Study", "Thesis Beats", "Blue Demon Beats"];
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const uni = universities[i];
     const user = await storage.createUser({
       email: `demo${i + 1}@${uni.name.toLowerCase().replace(/\s+/g, '')}.edu`,
