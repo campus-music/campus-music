@@ -132,3 +132,20 @@ Preferred communication style: Simple, everyday language.
 - PostCSS with Tailwind CSS and Autoprefixer
 - CSS variables for theme tokens
 - Dark mode as default with light mode support via class-based toggling
+
+**File Storage**
+- Replit App Storage (Google Cloud Storage) for user-uploaded files
+- Custom ObjectUploader component for file uploads with:
+  - Drag-and-drop support
+  - File size validation (5MB max for images)
+  - Image preview before upload
+  - Upload progress and cancellation
+  - Memory-safe URL handling (proper cleanup of object URLs)
+- ObjectStorageService for generating signed upload URLs
+- Profile picture upload endpoint with URL validation
+
+## Recent Updates
+
+- Profile picture upload functionality for artists
+- ObjectUploader component with secure file handling
+- API endpoints for file upload with authentication
