@@ -395,6 +395,68 @@ The application is ready for user testing and can be published for early adopter
 
 ---
 
+---
+
+## Replit-Specific Integrations (Refactored for Render)
+
+The following Replit-specific features were identified and refactored for Render deployment:
+
+### 1. Stripe Connector (server/stripeClient.ts)
+- **Original**: Used Replit Stripe connector via `REPLIT_CONNECTORS_HOSTNAME`, `REPL_IDENTITY`, `WEB_REPL_RENEWAL`, `REPLIT_DEPLOYMENT`
+- **Refactored**: Standard Stripe SDK initialization using `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`
+- **Package removed**: `stripe-replit-sync` (replaced with direct Stripe SDK + manual webhook verification)
+
+### 2. Object Storage (server/objectStorage.ts)
+- **Original**: Replit Object Storage sidecar at `http://127.0.0.1:1106` for GCS credentials
+- **Refactored**: S3-compatible storage abstraction with:
+  - AWS S3 SDK for production (`@aws-sdk/client-s3`)
+  - Local filesystem fallback for development
+  - Environment variables: `S3_BUCKET_NAME`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, `S3_ENDPOINT`
+
+### 3. Webhook URL Generation (server/app.ts, server/routes.ts)
+- **Original**: `process.env.REPLIT_DOMAINS?.split(',')[0]`
+- **Refactored**: `process.env.APP_URL` (e.g., `https://campusmusic.app`)
+
+### 4. Database Connection (server/db.ts)
+- **Original**: Used `@neondatabase/serverless` driver
+- **Status**: Compatible with standard PostgreSQL, uses `DATABASE_URL` environment variable
+- **Note**: Works with Render Postgres out of the box
+
+### 5. Dev Dependencies (package.json devDependencies)
+- `@replit/vite-plugin-cartographer`
+- `@replit/vite-plugin-dev-banner`
+- `@replit/vite-plugin-runtime-error-modal`
+- **Note**: These are dev dependencies and only loaded during development on Replit
+
+## Environment Variables for Render
+
+### Required
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string (Render provides this) |
+| `SESSION_SECRET` | Secret for session encryption (generate a secure random string) |
+| `STRIPE_SECRET_KEY` | Stripe secret API key |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe publishable API key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `APP_URL` | Public URL of the application (e.g., `https://campusmusic.app`) |
+| `PORT` | Server port (Render sets this automatically) |
+
+### Storage (S3-Compatible)
+| Variable | Description |
+|----------|-------------|
+| `S3_BUCKET_NAME` | S3 bucket name for file storage |
+| `S3_ACCESS_KEY` | S3 access key ID |
+| `S3_SECRET_KEY` | S3 secret access key |
+| `S3_REGION` | S3 region (e.g., `us-east-1`) |
+| `S3_ENDPOINT` | S3 endpoint URL (optional, for S3-compatible services) |
+
+### Optional
+| Variable | Description |
+|----------|-------------|
+| `NODE_ENV` | Set to `production` for production builds |
+
+---
+
 **Prepared by:** Development Team  
 **For:** Product Management  
 **Classification:** Internal Use
