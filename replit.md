@@ -137,15 +137,46 @@ Preferred communication style: Simple, everyday language.
 - Replit App Storage (Google Cloud Storage) for user-uploaded files
 - Custom ObjectUploader component for file uploads with:
   - Drag-and-drop support
-  - File size validation (5MB max for images)
+  - File size validation (5MB max for images, 20MB for audio)
   - Image preview before upload
   - Upload progress and cancellation
   - Memory-safe URL handling (proper cleanup of object URLs)
 - ObjectStorageService for generating signed upload URLs
-- Profile picture upload endpoint with URL validation
+- Track upload endpoints for audio files and cover art:
+  - POST /api/tracks/uploads/audio - Get signed URL for audio upload (20MB max, MP3/WAV/FLAC)
+  - POST /api/tracks/uploads/cover - Get signed URL for cover art upload (5MB max, JPG/PNG/WebP)
+  - POST /api/tracks - Create track with uploaded file URLs
+  - DELETE /api/tracks/:trackId - Delete track (artist only)
+
+## Production Upgrade Progress
+
+**Phase 1: PostgreSQL Database (COMPLETE)**
+- Migrated from in-memory storage to PostgreSQL with Drizzle ORM
+- Created DatabaseStorage class implementing IStorage interface
+- Idempotent seed function with 8 demo users, 6 artist profiles, 16 tracks
+- Fixed all routes to use DatabaseStorage methods
+
+**Phase 2: Real File Uploads (COMPLETE)**
+- Extended object storage for audio file uploads
+- TrackUploader component with multi-step upload flow:
+  1. Select audio file + optional cover art
+  2. Upload to cloud storage with progress tracking
+  3. Submit track metadata with normalized URLs
+- Artist dashboard updated to use real file uploads
+
+**Phase 3: Stripe Payment Integration (PENDING)**
+- Artist tip/support system needs real payment processing
+
+**Phase 4: Email Verification (PENDING)**
+- Email sending and verification workflow
+
+**Phase 5: Security & Deployment (PENDING)**
+- Rate limiting, input validation, error handling
 
 ## Recent Updates
 
+- Phase 2 complete: Real audio file upload functionality
+- TrackUploader component for artists to upload tracks
 - Profile picture upload functionality for artists
 - ObjectUploader component with secure file handling
 - API endpoints for file upload with authentication

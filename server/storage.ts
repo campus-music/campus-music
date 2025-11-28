@@ -66,6 +66,7 @@ export interface IStorage {
   getTracksByUniversity(university: string): Promise<TrackWithArtist[]>;
   searchTracks(query: string): Promise<TrackWithArtist[]>;
   createTrack(track: InsertTrack): Promise<Track>;
+  deleteTrack(trackId: string): Promise<void>;
 
   getPlaylist(id: string): Promise<Playlist | undefined>;
   getPlaylistsByUser(userId: string): Promise<Playlist[]>;
@@ -313,6 +314,10 @@ export class DatabaseStorage implements IStorage {
       .values(insertTrack)
       .returning();
     return track;
+  }
+
+  async deleteTrack(trackId: string): Promise<void> {
+    await db.delete(tracks).where(eq(tracks.id, trackId));
   }
 
   async getPlaylist(id: string): Promise<Playlist | undefined> {

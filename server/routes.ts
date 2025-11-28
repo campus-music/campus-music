@@ -856,6 +856,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Track upload endpoints - Audio files
+  app.post("/api/tracks/uploads/audio", requireAuth, async (req, res) => {
+    try {
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(403).json({ error: "Only artists can upload tracks" });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      res.json({ 
+        uploadURL,
+        maxFileSize: 20 * 1024 * 1024,
+        allowedTypes: ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/flac']
+      });
+    } catch (error: any) {
+      console.error("Error getting audio upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL. Please check object storage configuration." });
+    }
+  });
+
+  // Track upload endpoints - Cover art
+  app.post("/api/tracks/uploads/cover", requireAuth, async (req, res) => {
+    try {
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(403).json({ error: "Only artists can upload tracks" });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      res.json({ 
+        uploadURL,
+        maxFileSize: 5 * 1024 * 1024,
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp']
+      });
+    } catch (error: any) {
+      console.error("Error getting cover upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL. Please check object storage configuration." });
+    }
+  });
+
+  // Create track with uploaded files
+  app.post("/api/tracks", requireAuth, async (req, res) => {
+    try {
+      const { title, description, audioUrl, coverImageUrl, genre, durationSeconds } = req.body;
+
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ error: "Track title is required" });
+      }
+      if (!genre || typeof genre !== 'string' || genre.trim().length === 0) {
+        return res.status(400).json({ error: "Genre is required" });
+      }
+      if (!audioUrl || typeof audioUrl !== 'string') {
+        return res.status(400).json({ error: "Audio file URL is required" });
+      }
+      if (!durationSeconds || typeof durationSeconds !== 'number' || durationSeconds <= 0) {
+        return res.status(400).json({ error: "Valid duration is required" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(403).json({ error: "Only artists can create tracks" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { ObjectStorageService, ObjectNotFoundError } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+
+      const normalizedAudioUrl = objectStorageService.normalizeObjectEntityPath(audioUrl);
+      
+      const uuidPattern = /^\/objects\/uploads\/[a-f0-9-]{36}$/i;
+      if (!uuidPattern.test(normalizedAudioUrl)) {
+        return res.status(400).json({ error: "Invalid audio file path format" });
+      }
+
+      try {
+        await objectStorageService.getObjectEntityFile(normalizedAudioUrl);
+      } catch (error: any) {
+        if (error.name === "ObjectNotFoundError") {
+          return res.status(400).json({ error: "Audio file not found. Please upload first." });
+        }
+        throw error;
+      }
+
+      let normalizedCoverUrl: string | null = null;
+      if (coverImageUrl && typeof coverImageUrl === 'string') {
+        normalizedCoverUrl = objectStorageService.normalizeObjectEntityPath(coverImageUrl);
+        if (!uuidPattern.test(normalizedCoverUrl)) {
+          return res.status(400).json({ error: "Invalid cover image path format" });
+        }
+        try {
+          await objectStorageService.getObjectEntityFile(normalizedCoverUrl);
+        } catch (error: any) {
+          if (error.name === "ObjectNotFoundError") {
+            return res.status(400).json({ error: "Cover image not found. Please upload first." });
+          }
+          throw error;
+        }
+      }
+
+      const track = await storage.createTrack({
+        artistId: artistProfile.id,
+        title: title.trim(),
+        description: description?.trim() || null,
+        audioUrl: normalizedAudioUrl,
+        coverImageUrl: normalizedCoverUrl,
+        genre: genre.trim(),
+        universityName: user.universityName || "Unknown",
+        country: user.country || "Unknown",
+        durationSeconds: Math.round(durationSeconds),
+        isPublished: true,
+      });
+
+      res.status(201).json(track);
+    } catch (error: any) {
+      console.error("Error creating track:", error);
+      res.status(500).json({ error: error.message || "Failed to create track" });
+    }
+  });
+
+  // Delete track endpoint
+  app.delete("/api/tracks/:trackId", requireAuth, async (req, res) => {
+    try {
+      const { trackId } = req.params;
+      
+      const track = await storage.getTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile || artistProfile.id !== track.artistId) {
+        return res.status(403).json({ error: "Unauthorized to delete this track" });
+      }
+
+      await storage.deleteTrack(trackId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting track:", error);
+      res.status(500).json({ error: error.message || "Failed to delete track" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 
