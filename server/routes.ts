@@ -879,6 +879,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Local file upload endpoint for development mode (when S3 is not configured)
+  app.put("/api/upload/local/:objectId(*)", requireAuth, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", async () => {
+        try {
+          const buffer = Buffer.concat(chunks);
+          const objectId = req.params.objectId;
+          const objectPath = await objectStorageService.saveLocalFile(objectId, buffer, req.headers["content-type"]);
+          res.json({ success: true, objectPath });
+        } catch (error: any) {
+          console.error("Error saving local file:", error);
+          res.status(500).json({ error: "Failed to save file" });
+        }
+      });
+      req.on("error", (error) => {
+        console.error("Error receiving file:", error);
+        res.status(500).json({ error: "Failed to receive file" });
+      });
+    } catch (error: any) {
+      console.error("Error in local upload:", error);
+      res.status(500).json({ error: error.message || "Failed to upload file" });
+    }
+  });
+
   // Track upload endpoints - Audio files
   app.post("/api/tracks/uploads/audio", requireAuth, async (req, res) => {
     try {

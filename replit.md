@@ -134,17 +134,20 @@ Preferred communication style: Simple, everyday language.
 - Dark mode as default with light mode support via class-based toggling
 
 **File Storage**
-- Replit App Storage (Google Cloud Storage) for user-uploaded files
+- S3-compatible storage abstraction supporting AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2
+- Local filesystem fallback for development (when S3 not configured)
 - Custom ObjectUploader component for file uploads with:
   - Drag-and-drop support
   - File size validation (5MB max for images, 20MB for audio)
   - Image preview before upload
   - Upload progress and cancellation
   - Memory-safe URL handling (proper cleanup of object URLs)
+  - Automatic handling of both S3 presigned URLs and local upload paths
 - ObjectStorageService for generating signed upload URLs
 - Track upload endpoints for audio files and cover art:
   - POST /api/tracks/uploads/audio - Get signed URL for audio upload (20MB max, MP3/WAV/FLAC)
   - POST /api/tracks/uploads/cover - Get signed URL for cover art upload (5MB max, JPG/PNG/WebP)
+  - PUT /api/upload/local/:objectId - Local file upload endpoint (development only)
   - POST /api/tracks - Create track with uploaded file URLs
   - DELETE /api/tracks/:trackId - Delete track (artist only)
 
@@ -165,7 +168,7 @@ Preferred communication style: Simple, everyday language.
 - Artist dashboard updated to use real file uploads
 
 **Phase 3: Stripe Payment Integration (COMPLETE)**
-- Stripe integration via stripe-replit-sync for automatic webhook handling
+- Stripe integration via official Stripe SDK (platform-agnostic)
 - Artist tip checkout sessions with secure Stripe Checkout
 - Payment routes: POST /api/stripe/tip/:artistId creates checkout session
 - Support history and wallet endpoints for artists
@@ -213,8 +216,8 @@ This project is ready to be pushed to GitHub and deployed to a hosting platform.
 
 - The app uses `PORT` environment variable (default 5000)
 - Session cookies require `secure: true` in production (auto-detected via `NODE_ENV`)
-- Stripe webhooks need the production URL configured
-- File storage currently uses Replit Object Storage - will need GCS credentials for other platforms
+- Stripe webhooks need the production URL configured (set APP_URL and configure webhook in Stripe Dashboard)
+- File storage uses S3-compatible APIs - configure S3_BUCKET_NAME, S3_ACCESS_KEY, S3_SECRET_KEY
 
 ### GitHub Preparation Summary
 
@@ -229,11 +232,18 @@ Changes made to prepare for GitHub:
 - [ ] Phase 4: Email verification system
 - [ ] Phase 5: Rate limiting and security hardening
 - [ ] Configure production Stripe webhook URL
-- [ ] Set up GCS bucket and credentials for file uploads
+- [ ] Set up S3 bucket and credentials for file uploads
 - [ ] Add production error monitoring (Sentry, etc.)
 
 ## Recent Updates
 
+- **Platform-agnostic refactoring for Render deployment** (November 2025):
+  - Replaced Replit Stripe connector with official Stripe SDK
+  - Replaced Replit Object Storage with S3-compatible abstraction (AWS SDK)
+  - Added local filesystem fallback for development uploads
+  - Created render.yaml for one-click Render Blueprint deployment
+  - Updated .env.example with S3 storage variables
+  - All REPLIT_DOMAINS references replaced with APP_URL
 - Prepared project for GitHub and deployment (updated .gitignore, created .env.example, README.md)
 - Phase 3 complete: Stripe payment integration for artist tips
 - Atomic wallet upsert prevents race conditions on concurrent first-time tips

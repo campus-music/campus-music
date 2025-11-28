@@ -137,6 +137,8 @@ export function TrackUploader({ open, onOpenChange }: TrackUploaderProps) {
     const res = await apiRequest('POST', endpoint, {});
     const { uploadURL } = await res.json();
     
+    const isLocalUpload = uploadURL.startsWith('/api/upload/local/');
+    
     const xhr = new XMLHttpRequest();
     xhrRef.current = xhr;
     
@@ -146,10 +148,10 @@ export function TrackUploader({ open, onOpenChange }: TrackUploaderProps) {
       }
     };
     
-    await new Promise<void>((resolve, reject) => {
+    const responseText = await new Promise<string>((resolve, reject) => {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
+          resolve(xhr.responseText || '');
         } else {
           reject(new Error(`Upload failed with status ${xhr.status}`));
         }
@@ -163,6 +165,15 @@ export function TrackUploader({ open, onOpenChange }: TrackUploaderProps) {
     });
     
     xhrRef.current = null;
+    
+    if (isLocalUpload && responseText) {
+      try {
+        const { objectPath } = JSON.parse(responseText);
+        if (objectPath) return objectPath;
+      } catch {
+      }
+    }
+    
     return uploadURL.split('?')[0];
   };
 

@@ -20,7 +20,7 @@ interface ObjectUploaderProps {
     failed: Array<{ error: string }>;
   }) => void;
   buttonClassName?: string;
-  buttonVariant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+  buttonVariant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
   buttonSize?: "default" | "sm" | "lg" | "icon";
   children: ReactNode;
   disabled?: boolean;
@@ -115,6 +115,7 @@ export function ObjectUploader({
 
     try {
       const { url } = await onGetUploadParameters();
+      const isLocalUpload = url.startsWith('/api/upload/local/');
 
       const xhr = new XMLHttpRequest();
       xhrRef.current = xhr;
@@ -125,10 +126,10 @@ export function ObjectUploader({
         }
       };
 
-      await new Promise<void>((resolve, reject) => {
+      const responseText = await new Promise<string>((resolve, reject) => {
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
+            resolve(xhr.responseText || '');
           } else {
             reject(new Error(`Upload failed with status ${xhr.status}`));
           }
@@ -143,8 +144,17 @@ export function ObjectUploader({
 
       xhrRef.current = null;
 
+      let finalUrl = url.split('?')[0];
+      if (isLocalUpload && responseText) {
+        try {
+          const { objectPath } = JSON.parse(responseText);
+          if (objectPath) finalUrl = objectPath;
+        } catch {
+        }
+      }
+
       onComplete?.({
-        successful: [{ uploadURL: url.split('?')[0] }],
+        successful: [{ uploadURL: finalUrl }],
         failed: [],
       });
 

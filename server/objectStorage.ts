@@ -115,6 +115,10 @@ export class ObjectStorageService {
     };
   }
 
+  getLocalObjectPath(objectId: string): string {
+    return `/objects/${objectId}`;
+  }
+
   async getObjectEntityFile(objectPath: string): Promise<StorageFile> {
     const key = this.normalizePathToKey(objectPath);
 
