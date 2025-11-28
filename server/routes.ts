@@ -548,6 +548,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // University discovery route
+  app.get("/api/universities", async (req, res) => {
+    try {
+      const universities = await storage.getUniversities();
+      res.json(universities);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Genre discovery routes
   app.get("/api/genres", async (req, res) => {
     try {

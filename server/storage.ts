@@ -97,6 +97,7 @@ export interface IStorage {
   getTracksByGenre(genre: string): Promise<TrackWithArtist[]>;
   getTopArtistsByGenre(genre: string, limit?: number): Promise<ArtistProfile[]>;
   getGenres(): Promise<string[]>;
+  getUniversities(): Promise<string[]>;
   getPersonalizedRecommendations(userId: string, limit?: number): Promise<TrackWithArtist[]>;
 
   // Advanced artist analytics
@@ -592,6 +593,11 @@ export class MemStorage implements IStorage {
   async getGenres(): Promise<string[]> {
     const genres = new Set(Array.from(this.tracks.values()).map(t => t.genre));
     return Array.from(genres).sort();
+  }
+
+  async getUniversities(): Promise<string[]> {
+    const universities = new Set(Array.from(this.tracks.values()).map(t => t.universityName));
+    return Array.from(universities).filter(u => u && u !== 'Unknown').sort();
   }
 
   async getPersonalizedRecommendations(userId: string, limit: number = 20): Promise<TrackWithArtist[]> {

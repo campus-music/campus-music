@@ -151,15 +151,11 @@ function Router() {
         )}
       </Route>
       
-      <Route path="/search">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <Search />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/search" component={() => (
+        <AppLayout isPublic>
+          <Search />
+        </AppLayout>
+      )} />
       
       <Route path="/new-releases">
         {() => (
@@ -181,15 +177,11 @@ function Router() {
         )}
       </Route>
       
-      <Route path="/discover">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <Discover />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/discover" component={() => (
+        <AppLayout isPublic>
+          <Discover />
+        </AppLayout>
+      )} />
       
       <Route path="/library">
         {() => (
@@ -235,15 +227,11 @@ function Router() {
         )}
       </Route>
 
-      <Route path="/genres">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <Genres />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/genres" component={() => (
+        <AppLayout isPublic>
+          <Genres />
+        </AppLayout>
+      )} />
 
       <Route path="/recommendations">
         {() => (
