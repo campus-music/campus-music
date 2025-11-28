@@ -772,6 +772,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile picture upload endpoints
+  app.post("/api/objects/upload", requireAuth, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error: any) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL. Please check object storage configuration." });
+    }
+  });
+
+  app.put("/api/artist/profile-image", requireAuth, async (req, res) => {
+    try {
+      const { imageURL } = req.body;
+      if (!imageURL) {
+        return res.status(400).json({ error: "imageURL is required" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(404).json({ error: "Artist profile not found" });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(imageURL);
+
+      const updatedProfile = await storage.updateArtistProfile(artistProfile.id, {
+        profileImageUrl: objectPath,
+      });
+
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error("Error updating profile image:", error);
+      res.status(500).json({ error: error.message || "Failed to update profile image" });
+    }
+  });
+
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const { ObjectStorageService, ObjectNotFoundError } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error: any) {
+      if (error.name === "ObjectNotFoundError") {
+        return res.sendStatus(404);
+      }
+      console.error("Error serving object:", error);
+      return res.sendStatus(500);
+    }
+  });
+
   // Seed data on startup
   await seedData();
 

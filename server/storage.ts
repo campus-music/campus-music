@@ -41,6 +41,7 @@ export interface IStorage {
   getArtistProfile(userId: string): Promise<ArtistProfile | undefined>;
   getArtistProfileById(id: string): Promise<ArtistProfile | undefined>;
   createArtistProfile(profile: InsertArtistProfile): Promise<ArtistProfile>;
+  updateArtistProfile(id: string, updates: Partial<ArtistProfile>): Promise<ArtistProfile | undefined>;
   getArtistsByUniversity(university: string): Promise<ArtistProfile[]>;
 
   // Track methods
@@ -204,6 +205,14 @@ export class MemStorage implements IStorage {
     }
     
     return profile;
+  }
+
+  async updateArtistProfile(id: string, updates: Partial<ArtistProfile>): Promise<ArtistProfile | undefined> {
+    const profile = this.artistProfiles.get(id);
+    if (!profile) return undefined;
+    const updated = { ...profile, ...updates };
+    this.artistProfiles.set(id, updated);
+    return updated;
   }
 
   async getArtistsByUniversity(university: string): Promise<ArtistProfile[]> {
