@@ -1,0 +1,195 @@
+You are a senior full-stack engineer.
+
+We already have a working **Campus Music** MVP in this Replit:  
+- React + dark Apple Music / Spotify style UI  
+- Node/Express backend  
+- Auth with listener vs artist roles and .edu check  
+- Artist onboarding, uploads (demo URLs), discovery, playlists, social features, and a tip/support system  
+- But: payments, uploads, email verification, and persistence are still simulated or in-memory.
+
+Your job is to TURN THIS INTO A REAL STARTUP-READY PRODUCT, without rebuilding from scratch.
+
+IMPORTANT CONSTRAINTS
+- Do NOT throw away or recreate the app from zero.  
+- Work within the existing file structure and components.  
+- Make **incremental, well-documented changes**.  
+- Keep the **current UI and flows** as much as possible.
+
+### OVERALL GOAL
+
+Upgrade the existing Campus Music MVP so that it has:
+
+1. **Real persistent database (PostgreSQL)**  
+2. **Real audio & image uploads** to a cloud storage provider  
+3. **Real payment integration (Stripe)** for artist tips/support  
+4. **Real email verification** for `.edu` addresses  
+5. Hardened **auth, security, and error handling**  
+6. Clear **configuration for deployment** (env vars + README)
+
+Use a phased approach and finish each phase fully before moving on.
+
+---
+
+## PHASE 1 – Replace In-Memory Storage With PostgreSQL
+
+1. Inspect the current data layer:
+   - Find where data is stored in memory (users, tracks, artists, playlists, tips, etc.).
+   - List all existing models: `User`, `ArtistProfile`, `Track`, `Playlist`, `PlaylistTrack`, `Like`, `Stream`, `SupportTip`, `Wallet` (or whatever is currently implemented).
+
+2. Integrate PostgreSQL:
+   - Use **Prisma** as ORM (preferred) or another clean ORM if Prisma is not feasible here.
+   - Create a `prisma/schema.prisma` (or equivalent) that reflects the existing models. Include relations and indexes where appropriate.
+   - Map current models to DB tables, including:
+     - User (id, name, email, passwordHash, universityName, country, role, emailVerified, createdAt, updatedAt)
+     - ArtistProfile (id, userId, stageName, bio, mainGenre, socialLinks JSON, profileImageUrl, createdAt, updatedAt)
+     - Track (id, artistId, title, description, audioUrl, coverImageUrl, genre, universityName, country, durationSeconds, createdAt, updatedAt)
+     - Playlist, PlaylistTrack, Like, Stream, SupportTip, Wallet (or equivalent).
+
+3. Data Access Refactor:
+   - Replace all in-memory operations with ORM calls.
+   - Keep the same API contracts so the frontend continues to work.
+   - Ensure all CRUD operations (sign-up, login, track listing, likes, playlists, tips, etc.) now read/write from Postgres.
+
+4. Migrations and Seeding:
+   - Add migration scripts.
+   - Implement a seed script that:
+     - Inserts demo users (including the provided demo accounts).
+     - Inserts demo artists, tracks, and basic stats.
+   - Ensure the app can be started from a clean DB using a documented command.
+
+5. Testing:
+   - Run through:
+     - Listener signup + login
+     - Artist signup + onboarding
+     - Browsing new releases, trending, university discovery
+     - Liking tracks, creating playlists, following artists
+   - Confirm data persists across server restarts.
+
+---
+
+## PHASE 2 – Real File Uploads for Audio & Images
+
+1. Choose a provider (e.g., **Cloudinary** or **S3-compatible storage**).  
+   - Implement with environment variables for keys: `STORAGE_API_KEY`, `STORAGE_SECRET`, `STORAGE_BUCKET` or similar.
+   - Add a simple config module to read env vars and fail with a helpful error if missing.
+
+2. Backend:
+   - Create secure upload endpoints for:
+     - Audio files for tracks
+     - Cover artwork / profile images
+   - Use `multer` or a similar Express middleware for handling file uploads.
+   - After upload, store the remote URL in the database for the `audioUrl` or `coverImageUrl` fields.
+
+3. Frontend:
+   - Update the **track upload** form and **artist profile** form to:
+     - Allow selecting files
+     - Show progress / basic status
+     - Handle upload errors gracefully
+
+4. Permissions:
+   - Only allow **artist users** to upload tracks.
+   - Ensure file type and size validation (e.g., only audio: mp3/wav; max size; only images: jpg/png).
+
+5. Testing:
+   - Create a NEW artist account
+   - Upload a real audio file and cover image
+   - Confirm the track appears in discovery and plays via the persistent player using the uploaded URL.
+
+---
+
+## PHASE 3 – Stripe Payment Integration for Artist Tips/Support
+
+1. Set up Stripe integration:
+   - Use environment variables: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and webhook secret.
+   - Add a Stripe config module.
+
+2. Backend:
+   - Implement a `POST /api/support/create-checkout-session` or similar endpoint that:
+     - Accepts artistId, amount, and optional message
+     - Creates a Stripe Checkout Session or PaymentIntent
+     - Returns the checkout URL / client secret to the frontend.
+
+   - Add a **webhook endpoint**:
+     - Verify Stripe signatures
+     - On successful payment, create a `SupportTip` record and update the artist `Wallet` balance.
+
+3. Frontend:
+   - Wire the existing “Send Support” UI to call the new endpoint.
+   - Open Stripe Checkout or a payment modal.
+   - Show success/failure status and update the support history for the artist.
+
+4. Security:
+   - Validate that:
+     - The artist exists
+     - The user is logged in
+     - Amount is within allowed bounds
+
+5. Testing:
+   - Use Stripe’s **test mode**.
+   - Run a full test payment flow and confirm:
+     - Stripe logs show the payment
+     - Webhook records the tip and updates the artist balance
+     - Support history view shows the transaction.
+
+---
+
+## PHASE 4 – Email Verification for `.edu` Addresses
+
+1. Pick an email provider (e.g., SendGrid, Resend, or any transactional email service).
+   - Configure via env vars: `EMAIL_API_KEY`, `EMAIL_FROM_ADDRESS`.
+
+2. Backend:
+   - On sign-up:
+     - Create the user with `emailVerified = false`.
+     - Generate a signed verification token.
+     - Email a verification link (`/verify-email?token=...`).
+   - Add endpoint `GET /api/auth/verify-email` that:
+     - Validates the token
+     - Marks `emailVerified = true`
+     - Optionally redirects to a “Email verified successfully” page in the frontend.
+
+3. Frontend:
+   - After signup, show a “Check your email to verify” screen.
+   - Protect key features (e.g., upload, tipping) so they require `emailVerified = true` and show a friendly prompt if not verified.
+
+4. Ensure `.edu` requirement:
+   - Keep the `.edu` domain check for artists.
+   - Optionally allow listeners from any domain but still require verification.
+
+---
+
+## PHASE 5 – Security, DX, and Deployment Readiness
+
+1. Security / Auth:
+   - Ensure session or JWT cookies are **httpOnly**, secure in production, and have proper expiry.
+   - Add basic rate limiting for auth and upload routes.
+   - Validate all inputs via a schema validator (e.g., Zod or Joi).
+
+2. Error Handling:
+   - Add a global Express error handler that returns consistent JSON error shapes.
+   - In the frontend, show clear toast/error messages when APIs fail.
+
+3. Configuration & README:
+   - Centralize configuration (DB, Stripe, email, storage) and describe all required env vars in:
+     - `replit.md` or `README.md`
+   - Document:
+     - How to set up the DB
+     - How to run migrations and seeds
+     - How to configure Stripe, email, and storage in test and production modes
+     - How to run the app locally and in production.
+
+4. Final Manual QA:
+   - Full run-through of:
+     - New listener
+     - New artist (signup → verify → onboarding → upload → receive tips)
+     - Playing music, liking, playlists, follows, comments, and support.
+   - Confirm there are no server crashes, and console errors are minimal and non-breaking.
+
+---
+
+Work through these phases in order. After each phase, run the app, manually test the critical user journeys, and only then move on.
+
+At the very end, summarize in `replit.md`:
+- What changed,
+- Which external services are required (DB, storage, Stripe, email),
+- And how to set up everything from scratch for a fresh developer joining the project.

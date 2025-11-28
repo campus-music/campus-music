@@ -25,26 +25,39 @@ import {
   type Support,
   type InsertSupport,
   type ArtistWallet,
-  type InsertArtistWallet
+  type InsertArtistWallet,
+  users,
+  artistProfiles,
+  tracks,
+  playlists,
+  playlistTracks,
+  likes,
+  streams,
+  followers,
+  trackComments,
+  shares,
+  playlistMembers,
+  supports,
+  artistWallets,
+  userListeningHistory
 } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc, sql, ilike, or, and, inArray, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
-  // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
-  // Artist Profile methods
   getArtistProfile(userId: string): Promise<ArtistProfile | undefined>;
   getArtistProfileById(id: string): Promise<ArtistProfile | undefined>;
   createArtistProfile(profile: InsertArtistProfile): Promise<ArtistProfile>;
   updateArtistProfile(id: string, updates: Partial<ArtistProfile>): Promise<ArtistProfile | undefined>;
   getArtistsByUniversity(university: string): Promise<ArtistProfile[]>;
+  getAllArtists(): Promise<ArtistProfile[]>;
 
-  // Track methods
   getTrack(id: string): Promise<Track | undefined>;
   getTrackWithArtist(id: string): Promise<TrackWithArtist | undefined>;
   getTracksByArtist(artistId: string): Promise<Track[]>;
@@ -54,54 +67,46 @@ export interface IStorage {
   searchTracks(query: string): Promise<TrackWithArtist[]>;
   createTrack(track: InsertTrack): Promise<Track>;
 
-  // Playlist methods
   getPlaylist(id: string): Promise<Playlist | undefined>;
   getPlaylistsByUser(userId: string): Promise<Playlist[]>;
   createPlaylist(playlist: InsertPlaylist): Promise<Playlist>;
   addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack>;
   removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
+  getPlaylistTracks(playlistId: string): Promise<TrackWithArtist[]>;
 
-  // Like methods
   likeTrack(data: InsertLike): Promise<Like>;
   unlikeTrack(userId: string, trackId: string): Promise<void>;
   getLikedTracks(userId: string): Promise<TrackWithArtist[]>;
   isTrackLiked(userId: string, trackId: string): Promise<boolean>;
   getLikeCount(trackId: string): Promise<number>;
 
-  // Stream methods
   recordStream(data: InsertStream): Promise<Stream>;
   getStreamCount(trackId: string): Promise<number>;
   getArtistStats(artistId: string): Promise<{ totalPlays: number; totalLikes: number; trackCount: number }>;
 
-  // Follower methods
   followArtist(data: InsertFollower): Promise<Follower>;
   unfollowArtist(userId: string, followerId: string): Promise<void>;
   getFollowers(userId: string): Promise<User[]>;
   getFollowing(userId: string): Promise<User[]>;
   isFollowing(userId: string, followerId: string): Promise<boolean>;
 
-  // Comment methods
   addComment(data: InsertTrackComment): Promise<TrackComment>;
   getTrackComments(trackId: string): Promise<TrackComment[]>;
   deleteComment(commentId: string): Promise<void>;
 
-  // Share methods
   shareTrack(data: InsertShare): Promise<Share>;
   getShareCount(trackId: string): Promise<number>;
 
-  // Playlist Member methods
   addPlaylistMember(data: InsertPlaylistMember): Promise<PlaylistMember>;
   removePlaylistMember(playlistId: string, userId: string): Promise<void>;
   getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]>;
 
-  // Genre discovery methods
   getTracksByGenre(genre: string): Promise<TrackWithArtist[]>;
   getTopArtistsByGenre(genre: string, limit?: number): Promise<ArtistProfile[]>;
   getGenres(): Promise<string[]>;
   getUniversities(): Promise<string[]>;
   getPersonalizedRecommendations(userId: string, limit?: number): Promise<TrackWithArtist[]>;
 
-  // Advanced artist analytics
   getArtistAnalytics(artistId: string): Promise<{
     totalPlays: number;
     totalLikes: number;
@@ -111,7 +116,6 @@ export interface IStorage {
     listenerCountries: Map<string, number>;
   }>;
 
-  // Support system methods
   sendSupport(data: InsertSupport): Promise<Support>;
   getArtistSupports(artistId: string): Promise<Support[]>;
   getArtistWallet(artistId: string): Promise<ArtistWallet | undefined>;
@@ -119,118 +123,94 @@ export interface IStorage {
   updateArtistWallet(artistId: string, updates: Partial<ArtistWallet>): Promise<ArtistWallet | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private artistProfiles: Map<string, ArtistProfile>;
-  private tracks: Map<string, Track>;
-  private playlists: Map<string, Playlist>;
-  private playlistTracks: Map<string, PlaylistTrack>;
-  private likes: Map<string, Like>;
-  private streams: Map<string, Stream>;
-  private followers: Map<string, Follower>;
-  private comments: Map<string, TrackComment>;
-  private shares: Map<string, Share>;
-  private playlistMembers: Map<string, PlaylistMember>;
-  private supports: Map<string, Support>;
-  private artistWallets: Map<string, ArtistWallet>;
-
-  constructor() {
-    this.users = new Map();
-    this.artistProfiles = new Map();
-    this.tracks = new Map();
-    this.playlists = new Map();
-    this.playlistTracks = new Map();
-    this.likes = new Map();
-    this.streams = new Map();
-    this.followers = new Map();
-    this.comments = new Map();
-    this.shares = new Map();
-    this.playlistMembers = new Map();
-    this.supports = new Map();
-    this.artistWallets = new Map();
-  }
-
-  // User methods
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find((user) => user.email === email);
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
     const hashedPassword = await bcrypt.hash(insertUser.password, 10);
-    const user: User = {
-      ...insertUser,
-      id,
-      password: hashedPassword,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
+        password: hashedPassword,
+      })
+      .returning();
     return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated = { ...user, ...updates };
-    this.users.set(id, updated);
-    return updated;
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
   }
 
-  // Artist Profile methods
   async getArtistProfile(userId: string): Promise<ArtistProfile | undefined> {
-    return Array.from(this.artistProfiles.values()).find((profile) => profile.userId === userId);
+    const [profile] = await db.select().from(artistProfiles).where(eq(artistProfiles.userId, userId));
+    return profile || undefined;
   }
 
   async getArtistProfileById(id: string): Promise<ArtistProfile | undefined> {
-    return this.artistProfiles.get(id);
+    const [profile] = await db.select().from(artistProfiles).where(eq(artistProfiles.id, id));
+    return profile || undefined;
   }
 
   async createArtistProfile(insertProfile: InsertArtistProfile): Promise<ArtistProfile> {
-    const id = randomUUID();
-    const profile: ArtistProfile = {
-      ...insertProfile,
-      id,
-      createdAt: new Date(),
-    };
-    this.artistProfiles.set(id, profile);
+    const [profile] = await db
+      .insert(artistProfiles)
+      .values(insertProfile)
+      .returning();
     
-    // Update user role to artist
-    const user = await this.getUser(insertProfile.userId);
-    if (user) {
-      await this.updateUser(user.id, { role: 'artist' });
-    }
+    await db
+      .update(users)
+      .set({ role: 'artist' })
+      .where(eq(users.id, insertProfile.userId));
     
     return profile;
   }
 
   async updateArtistProfile(id: string, updates: Partial<ArtistProfile>): Promise<ArtistProfile | undefined> {
-    const profile = this.artistProfiles.get(id);
-    if (!profile) return undefined;
-    const updated = { ...profile, ...updates };
-    this.artistProfiles.set(id, updated);
-    return updated;
+    const [profile] = await db
+      .update(artistProfiles)
+      .set(updates)
+      .where(eq(artistProfiles.id, id))
+      .returning();
+    return profile || undefined;
   }
 
   async getArtistsByUniversity(university: string): Promise<ArtistProfile[]> {
-    const tracks = Array.from(this.tracks.values())
-      .filter(t => t.universityName.toLowerCase().includes(university.toLowerCase()));
+    const tracksByUniversity = await db
+      .select({ artistId: tracks.artistId })
+      .from(tracks)
+      .where(ilike(tracks.universityName, `%${university}%`));
     
-    const artistIds = new Set(tracks.map(t => t.artistId));
-    return Array.from(this.artistProfiles.values())
-      .filter(a => artistIds.has(a.id));
+    const artistIds = Array.from(new Set(tracksByUniversity.map(t => t.artistId)));
+    if (artistIds.length === 0) return [];
+    
+    return await db.select().from(artistProfiles).where(inArray(artistProfiles.id, artistIds));
   }
 
-  // Track methods
+  async getAllArtists(): Promise<ArtistProfile[]> {
+    return await db.select().from(artistProfiles).orderBy(desc(artistProfiles.createdAt));
+  }
+
   async getTrack(id: string): Promise<Track | undefined> {
-    return this.tracks.get(id);
+    const [track] = await db.select().from(tracks).where(eq(tracks.id, id));
+    return track || undefined;
   }
 
   async getTrackWithArtist(id: string): Promise<TrackWithArtist | undefined> {
-    const track = this.tracks.get(id);
+    const track = await this.getTrack(id);
     if (!track) return undefined;
     
     const artist = await this.getArtistProfileById(track.artistId);
@@ -240,14 +220,16 @@ export class MemStorage implements IStorage {
   }
 
   async getTracksByArtist(artistId: string): Promise<Track[]> {
-    return Array.from(this.tracks.values()).filter((track) => track.artistId === artistId);
+    return await db.select().from(tracks).where(eq(tracks.artistId, artistId)).orderBy(desc(tracks.createdAt));
   }
 
   async getLatestTracks(limit: number = 20): Promise<TrackWithArtist[]> {
-    const allTracks = Array.from(this.tracks.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
-    
+    const allTracks = await db
+      .select()
+      .from(tracks)
+      .orderBy(desc(tracks.createdAt))
+      .limit(limit);
+
     const tracksWithArtists: TrackWithArtist[] = [];
     for (const track of allTracks) {
       const artist = await this.getArtistProfileById(track.artistId);
@@ -259,32 +241,42 @@ export class MemStorage implements IStorage {
   }
 
   async getTrendingTracks(limit: number = 20): Promise<TrackWithArtist[]> {
-    const streamCounts = new Map<string, number>();
-    Array.from(this.streams.values()).forEach((stream) => {
-      const count = streamCounts.get(stream.trackId) || 0;
-      streamCounts.set(stream.trackId, count + 1);
-    });
-
-    const allTracks = Array.from(this.tracks.values())
-      .sort((a, b) => (streamCounts.get(b.id) || 0) - (streamCounts.get(a.id) || 0))
-      .slice(0, limit);
+    const streamCounts = await db
+      .select({ trackId: streams.trackId, count: count() })
+      .from(streams)
+      .groupBy(streams.trackId)
+      .orderBy(desc(count()))
+      .limit(limit);
 
     const tracksWithArtists: TrackWithArtist[] = [];
-    for (const track of allTracks) {
-      const artist = await this.getArtistProfileById(track.artistId);
-      if (artist) {
-        tracksWithArtists.push({ ...track, artist });
+    for (const { trackId } of streamCounts) {
+      const trackWithArtist = await this.getTrackWithArtist(trackId);
+      if (trackWithArtist) {
+        tracksWithArtists.push(trackWithArtist);
       }
     }
+
+    if (tracksWithArtists.length < limit) {
+      const existingIds = tracksWithArtists.map(t => t.id);
+      const latestTracks = await this.getLatestTracks(limit - tracksWithArtists.length);
+      for (const track of latestTracks) {
+        if (!existingIds.includes(track.id)) {
+          tracksWithArtists.push(track);
+        }
+      }
+    }
+
     return tracksWithArtists;
   }
 
   async getTracksByUniversity(university: string): Promise<TrackWithArtist[]> {
-    const tracks = Array.from(this.tracks.values())
-      .filter(t => t.universityName.toLowerCase().includes(university.toLowerCase()));
-    
+    const allTracks = await db
+      .select()
+      .from(tracks)
+      .where(ilike(tracks.universityName, `%${university}%`));
+
     const tracksWithArtists: TrackWithArtist[] = [];
-    for (const track of tracks) {
+    for (const track of allTracks) {
       const artist = await this.getArtistProfileById(track.artistId);
       if (artist) {
         tracksWithArtists.push({ ...track, artist });
@@ -294,332 +286,16 @@ export class MemStorage implements IStorage {
   }
 
   async searchTracks(query: string): Promise<TrackWithArtist[]> {
-    const lowerQuery = query.toLowerCase();
-    const tracks = Array.from(this.tracks.values()).filter(
-      (track) =>
-        track.title.toLowerCase().includes(lowerQuery) ||
-        track.genre.toLowerCase().includes(lowerQuery) ||
-        track.universityName.toLowerCase().includes(lowerQuery)
-    );
-
-    const tracksWithArtists: TrackWithArtist[] = [];
-    for (const track of tracks) {
-      const artist = await this.getArtistProfileById(track.artistId);
-      if (artist) {
-        tracksWithArtists.push({ ...track, artist });
-      }
-    }
-    return tracksWithArtists;
-  }
-
-  async createTrack(insertTrack: InsertTrack): Promise<Track> {
-    const id = randomUUID();
-    const track: Track = {
-      ...insertTrack,
-      id,
-      createdAt: new Date(),
-    };
-    this.tracks.set(id, track);
-    return track;
-  }
-
-  // Playlist methods
-  async getPlaylist(id: string): Promise<Playlist | undefined> {
-    return this.playlists.get(id);
-  }
-
-  async getPlaylistsByUser(userId: string): Promise<Playlist[]> {
-    return Array.from(this.playlists.values()).filter((playlist) => playlist.userId === userId);
-  }
-
-  async createPlaylist(insertPlaylist: InsertPlaylist): Promise<Playlist> {
-    const id = randomUUID();
-    const playlist: Playlist = {
-      ...insertPlaylist,
-      id,
-      createdAt: new Date(),
-    };
-    this.playlists.set(id, playlist);
-    return playlist;
-  }
-
-  async addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack> {
-    const id = randomUUID();
-    const playlistTrack: PlaylistTrack = {
-      ...data,
-      id,
-      addedAt: new Date(),
-    };
-    this.playlistTracks.set(id, playlistTrack);
-    return playlistTrack;
-  }
-
-  async removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
-    const toRemove = Array.from(this.playlistTracks.entries()).find(
-      ([_, pt]) => pt.playlistId === playlistId && pt.trackId === trackId
-    );
-    if (toRemove) {
-      this.playlistTracks.delete(toRemove[0]);
-    }
-  }
-
-  // Like methods
-  async likeTrack(data: InsertLike): Promise<Like> {
-    const id = randomUUID();
-    const like: Like = {
-      ...data,
-      id,
-      createdAt: new Date(),
-    };
-    this.likes.set(id, like);
-    return like;
-  }
-
-  async unlikeTrack(userId: string, trackId: string): Promise<void> {
-    const toRemove = Array.from(this.likes.entries()).find(
-      ([_, like]) => like.userId === userId && like.trackId === trackId
-    );
-    if (toRemove) {
-      this.likes.delete(toRemove[0]);
-    }
-  }
-
-  async getLikedTracks(userId: string): Promise<TrackWithArtist[]> {
-    const likedTrackIds = Array.from(this.likes.values())
-      .filter((like) => like.userId === userId)
-      .map((like) => like.trackId);
-
-    const tracksWithArtists: TrackWithArtist[] = [];
-    for (const trackId of likedTrackIds) {
-      const track = await this.getTrackWithArtist(trackId);
-      if (track) {
-        tracksWithArtists.push(track);
-      }
-    }
-    return tracksWithArtists;
-  }
-
-  async isTrackLiked(userId: string, trackId: string): Promise<boolean> {
-    return Array.from(this.likes.values()).some(
-      (like) => like.userId === userId && like.trackId === trackId
-    );
-  }
-
-  async getLikeCount(trackId: string): Promise<number> {
-    return Array.from(this.likes.values()).filter((like) => like.trackId === trackId).length;
-  }
-
-  // Stream methods
-  async recordStream(data: InsertStream): Promise<Stream> {
-    const id = randomUUID();
-    const stream: Stream = {
-      ...data,
-      id,
-      playedAt: new Date(),
-    };
-    this.streams.set(id, stream);
-    return stream;
-  }
-
-  async getStreamCount(trackId: string): Promise<number> {
-    return Array.from(this.streams.values()).filter((stream) => stream.trackId === trackId).length;
-  }
-
-  async getArtistStats(artistId: string): Promise<{ totalPlays: number; totalLikes: number; trackCount: number }> {
-    const artistTracks = await this.getTracksByArtist(artistId);
-    const trackIds = artistTracks.map(t => t.id);
-    
-    const totalPlays = Array.from(this.streams.values())
-      .filter(s => trackIds.includes(s.trackId))
-      .length;
-    
-    const totalLikes = Array.from(this.likes.values())
-      .filter(l => trackIds.includes(l.trackId))
-      .length;
-    
-    return {
-      totalPlays,
-      totalLikes,
-      trackCount: artistTracks.length,
-    };
-  }
-
-  // Follower methods
-  async followArtist(data: InsertFollower): Promise<Follower> {
-    const id = randomUUID();
-    const follower: Follower = {
-      ...data,
-      id,
-      followedAt: new Date(),
-    };
-    this.followers.set(id, follower);
-    return follower;
-  }
-
-  async unfollowArtist(userId: string, followerId: string): Promise<void> {
-    const toRemove = Array.from(this.followers.entries()).find(
-      ([_, f]) => f.userId === userId && f.followerId === followerId
-    );
-    if (toRemove) {
-      this.followers.delete(toRemove[0]);
-    }
-  }
-
-  async getFollowers(userId: string): Promise<User[]> {
-    const followerIds = Array.from(this.followers.values())
-      .filter(f => f.userId === userId)
-      .map(f => f.followerId);
-    
-    const followers: User[] = [];
-    for (const id of followerIds) {
-      const user = await this.getUser(id);
-      if (user) followers.push(user);
-    }
-    return followers;
-  }
-
-  async getFollowing(userId: string): Promise<User[]> {
-    const followingIds = Array.from(this.followers.values())
-      .filter(f => f.followerId === userId)
-      .map(f => f.userId);
-    
-    const following: User[] = [];
-    for (const id of followingIds) {
-      const user = await this.getUser(id);
-      if (user) following.push(user);
-    }
-    return following;
-  }
-
-  async isFollowing(userId: string, followerId: string): Promise<boolean> {
-    return Array.from(this.followers.values()).some(
-      f => f.userId === userId && f.followerId === followerId
-    );
-  }
-
-  // Comment methods
-  async addComment(data: InsertTrackComment): Promise<TrackComment> {
-    const id = randomUUID();
-    const comment: TrackComment = {
-      ...data,
-      id,
-      createdAt: new Date(),
-    };
-    this.comments.set(id, comment);
-    return comment;
-  }
-
-  async getTrackComments(trackId: string): Promise<TrackComment[]> {
-    return Array.from(this.comments.values())
-      .filter(c => c.trackId === trackId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }
-
-  async deleteComment(commentId: string): Promise<void> {
-    this.comments.delete(commentId);
-  }
-
-  // Share methods
-  async shareTrack(data: InsertShare): Promise<Share> {
-    const id = randomUUID();
-    const share: Share = {
-      ...data,
-      id,
-      sharedAt: new Date(),
-    };
-    this.shares.set(id, share);
-    return share;
-  }
-
-  async getShareCount(trackId: string): Promise<number> {
-    return Array.from(this.shares.values())
-      .filter(s => s.trackId === trackId)
-      .length;
-  }
-
-  // Playlist Member methods
-  async addPlaylistMember(data: InsertPlaylistMember): Promise<PlaylistMember> {
-    const id = randomUUID();
-    const member: PlaylistMember = {
-      ...data,
-      id,
-      joinedAt: new Date(),
-    };
-    this.playlistMembers.set(id, member);
-    return member;
-  }
-
-  async removePlaylistMember(playlistId: string, userId: string): Promise<void> {
-    const toRemove = Array.from(this.playlistMembers.entries()).find(
-      ([_, m]) => m.playlistId === playlistId && m.userId === userId
-    );
-    if (toRemove) {
-      this.playlistMembers.delete(toRemove[0]);
-    }
-  }
-
-  async getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]> {
-    return Array.from(this.playlistMembers.values())
-      .filter(m => m.playlistId === playlistId);
-  }
-
-  // Genre discovery methods
-  async getTracksByGenre(genre: string): Promise<TrackWithArtist[]> {
-    const tracks = Array.from(this.tracks.values())
-      .filter(t => t.genre.toLowerCase() === genre.toLowerCase());
-    
-    const tracksWithArtists: TrackWithArtist[] = [];
-    for (const track of tracks) {
-      const artist = await this.getArtistProfileById(track.artistId);
-      if (artist) {
-        tracksWithArtists.push({ ...track, artist });
-      }
-    }
-    return tracksWithArtists;
-  }
-
-  async getTopArtistsByGenre(genre: string, limit: number = 10): Promise<ArtistProfile[]> {
-    const genreArtists = new Map<string, number>();
-    Array.from(this.tracks.values())
-      .filter(t => t.genre.toLowerCase() === genre.toLowerCase())
-      .forEach(t => {
-        const count = genreArtists.get(t.artistId) || 0;
-        genreArtists.set(t.artistId, count + 1);
-      });
-
-    const sorted = Array.from(genreArtists.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit);
-
-    const artists: ArtistProfile[] = [];
-    for (const [artistId] of sorted) {
-      const artist = await this.getArtistProfileById(artistId);
-      if (artist) artists.push(artist);
-    }
-    return artists;
-  }
-
-  async getGenres(): Promise<string[]> {
-    const genres = new Set(Array.from(this.tracks.values()).map(t => t.genre));
-    return Array.from(genres).sort();
-  }
-
-  async getUniversities(): Promise<string[]> {
-    const universities = new Set(Array.from(this.tracks.values()).map(t => t.universityName));
-    return Array.from(universities).filter(u => u && u !== 'Unknown').sort();
-  }
-
-  async getPersonalizedRecommendations(userId: string, limit: number = 20): Promise<TrackWithArtist[]> {
-    const user = await this.getUser(userId);
-    if (!user) return [];
-
-    const likedTracks = await this.getLikedTracks(userId);
-    const likedGenres = new Set(likedTracks.map(t => t.genre));
-
-    const allTracks = Array.from(this.tracks.values())
-      .filter(t => likedGenres.has(t.genre) && !likedTracks.find(lt => lt.id === t.id))
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+    const allTracks = await db
+      .select()
+      .from(tracks)
+      .where(
+        or(
+          ilike(tracks.title, `%${query}%`),
+          ilike(tracks.genre, `%${query}%`),
+          ilike(tracks.universityName, `%${query}%`)
+        )
+      );
 
     const tracksWithArtists: TrackWithArtist[] = [];
     for (const track of allTracks) {
@@ -629,6 +305,364 @@ export class MemStorage implements IStorage {
       }
     }
     return tracksWithArtists;
+  }
+
+  async createTrack(insertTrack: InsertTrack): Promise<Track> {
+    const [track] = await db
+      .insert(tracks)
+      .values(insertTrack)
+      .returning();
+    return track;
+  }
+
+  async getPlaylist(id: string): Promise<Playlist | undefined> {
+    const [playlist] = await db.select().from(playlists).where(eq(playlists.id, id));
+    return playlist || undefined;
+  }
+
+  async getPlaylistsByUser(userId: string): Promise<Playlist[]> {
+    return await db.select().from(playlists).where(eq(playlists.userId, userId));
+  }
+
+  async createPlaylist(insertPlaylist: InsertPlaylist): Promise<Playlist> {
+    const [playlist] = await db
+      .insert(playlists)
+      .values(insertPlaylist)
+      .returning();
+    return playlist;
+  }
+
+  async addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack> {
+    const [playlistTrack] = await db
+      .insert(playlistTracks)
+      .values(data)
+      .returning();
+    return playlistTrack;
+  }
+
+  async removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+    await db
+      .delete(playlistTracks)
+      .where(and(eq(playlistTracks.playlistId, playlistId), eq(playlistTracks.trackId, trackId)));
+  }
+
+  async getPlaylistTracks(playlistId: string): Promise<TrackWithArtist[]> {
+    const pts = await db
+      .select()
+      .from(playlistTracks)
+      .where(eq(playlistTracks.playlistId, playlistId));
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const pt of pts) {
+      const trackWithArtist = await this.getTrackWithArtist(pt.trackId);
+      if (trackWithArtist) {
+        tracksWithArtists.push(trackWithArtist);
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async likeTrack(data: InsertLike): Promise<Like> {
+    const [like] = await db
+      .insert(likes)
+      .values(data)
+      .returning();
+    return like;
+  }
+
+  async unlikeTrack(userId: string, trackId: string): Promise<void> {
+    await db
+      .delete(likes)
+      .where(and(eq(likes.userId, userId), eq(likes.trackId, trackId)));
+  }
+
+  async getLikedTracks(userId: string): Promise<TrackWithArtist[]> {
+    const userLikes = await db
+      .select()
+      .from(likes)
+      .where(eq(likes.userId, userId));
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const like of userLikes) {
+      const trackWithArtist = await this.getTrackWithArtist(like.trackId);
+      if (trackWithArtist) {
+        tracksWithArtists.push(trackWithArtist);
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async isTrackLiked(userId: string, trackId: string): Promise<boolean> {
+    const [like] = await db
+      .select()
+      .from(likes)
+      .where(and(eq(likes.userId, userId), eq(likes.trackId, trackId)));
+    return !!like;
+  }
+
+  async getLikeCount(trackId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(likes)
+      .where(eq(likes.trackId, trackId));
+    return result?.count || 0;
+  }
+
+  async recordStream(data: InsertStream): Promise<Stream> {
+    const [stream] = await db
+      .insert(streams)
+      .values(data)
+      .returning();
+    
+    const track = await this.getTrack(data.trackId);
+    if (track) {
+      const existing = await db
+        .select()
+        .from(userListeningHistory)
+        .where(and(
+          eq(userListeningHistory.userId, data.userId),
+          eq(userListeningHistory.trackId, data.trackId)
+        ));
+
+      if (existing.length > 0) {
+        await db
+          .update(userListeningHistory)
+          .set({ 
+            listeningCount: sql`${userListeningHistory.listeningCount} + 1`,
+            lastPlayedAt: new Date()
+          })
+          .where(eq(userListeningHistory.id, existing[0].id));
+      } else {
+        await db
+          .insert(userListeningHistory)
+          .values({
+            userId: data.userId,
+            trackId: data.trackId,
+            genre: track.genre
+          });
+      }
+    }
+
+    return stream;
+  }
+
+  async getStreamCount(trackId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(streams)
+      .where(eq(streams.trackId, trackId));
+    return result?.count || 0;
+  }
+
+  async getArtistStats(artistId: string): Promise<{ totalPlays: number; totalLikes: number; trackCount: number }> {
+    const artistTracks = await this.getTracksByArtist(artistId);
+    const trackIds = artistTracks.map(t => t.id);
+    
+    if (trackIds.length === 0) {
+      return { totalPlays: 0, totalLikes: 0, trackCount: 0 };
+    }
+
+    const [playsResult] = await db
+      .select({ count: count() })
+      .from(streams)
+      .where(inArray(streams.trackId, trackIds));
+
+    const [likesResult] = await db
+      .select({ count: count() })
+      .from(likes)
+      .where(inArray(likes.trackId, trackIds));
+
+    return {
+      totalPlays: playsResult?.count || 0,
+      totalLikes: likesResult?.count || 0,
+      trackCount: artistTracks.length,
+    };
+  }
+
+  async followArtist(data: InsertFollower): Promise<Follower> {
+    const [follower] = await db
+      .insert(followers)
+      .values(data)
+      .returning();
+    return follower;
+  }
+
+  async unfollowArtist(userId: string, followerId: string): Promise<void> {
+    await db
+      .delete(followers)
+      .where(and(eq(followers.userId, userId), eq(followers.followerId, followerId)));
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    const followerRecords = await db
+      .select()
+      .from(followers)
+      .where(eq(followers.userId, userId));
+
+    const followerUsers: User[] = [];
+    for (const f of followerRecords) {
+      const user = await this.getUser(f.followerId);
+      if (user) followerUsers.push(user);
+    }
+    return followerUsers;
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    const followingRecords = await db
+      .select()
+      .from(followers)
+      .where(eq(followers.followerId, userId));
+
+    const followingUsers: User[] = [];
+    for (const f of followingRecords) {
+      const user = await this.getUser(f.userId);
+      if (user) followingUsers.push(user);
+    }
+    return followingUsers;
+  }
+
+  async isFollowing(userId: string, followerId: string): Promise<boolean> {
+    const [record] = await db
+      .select()
+      .from(followers)
+      .where(and(eq(followers.userId, userId), eq(followers.followerId, followerId)));
+    return !!record;
+  }
+
+  async addComment(data: InsertTrackComment): Promise<TrackComment> {
+    const [comment] = await db
+      .insert(trackComments)
+      .values(data)
+      .returning();
+    return comment;
+  }
+
+  async getTrackComments(trackId: string): Promise<TrackComment[]> {
+    return await db
+      .select()
+      .from(trackComments)
+      .where(eq(trackComments.trackId, trackId))
+      .orderBy(desc(trackComments.createdAt));
+  }
+
+  async deleteComment(commentId: string): Promise<void> {
+    await db.delete(trackComments).where(eq(trackComments.id, commentId));
+  }
+
+  async shareTrack(data: InsertShare): Promise<Share> {
+    const [share] = await db
+      .insert(shares)
+      .values(data)
+      .returning();
+    return share;
+  }
+
+  async getShareCount(trackId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(shares)
+      .where(eq(shares.trackId, trackId));
+    return result?.count || 0;
+  }
+
+  async addPlaylistMember(data: InsertPlaylistMember): Promise<PlaylistMember> {
+    const [member] = await db
+      .insert(playlistMembers)
+      .values(data)
+      .returning();
+    return member;
+  }
+
+  async removePlaylistMember(playlistId: string, userId: string): Promise<void> {
+    await db
+      .delete(playlistMembers)
+      .where(and(eq(playlistMembers.playlistId, playlistId), eq(playlistMembers.userId, userId)));
+  }
+
+  async getPlaylistMembers(playlistId: string): Promise<PlaylistMember[]> {
+    return await db
+      .select()
+      .from(playlistMembers)
+      .where(eq(playlistMembers.playlistId, playlistId));
+  }
+
+  async getTracksByGenre(genre: string): Promise<TrackWithArtist[]> {
+    const genreTracks = await db
+      .select()
+      .from(tracks)
+      .where(ilike(tracks.genre, genre));
+
+    const tracksWithArtists: TrackWithArtist[] = [];
+    for (const track of genreTracks) {
+      const artist = await this.getArtistProfileById(track.artistId);
+      if (artist) {
+        tracksWithArtists.push({ ...track, artist });
+      }
+    }
+    return tracksWithArtists;
+  }
+
+  async getTopArtistsByGenre(genre: string, limit: number = 10): Promise<ArtistProfile[]> {
+    const genreTracks = await db
+      .select()
+      .from(tracks)
+      .where(ilike(tracks.genre, genre));
+
+    const artistCounts = new Map<string, number>();
+    genreTracks.forEach(t => {
+      artistCounts.set(t.artistId, (artistCounts.get(t.artistId) || 0) + 1);
+    });
+
+    const sortedArtistIds = Array.from(artistCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => id);
+
+    const artistsList: ArtistProfile[] = [];
+    for (const artistId of sortedArtistIds) {
+      const artist = await this.getArtistProfileById(artistId);
+      if (artist) artistsList.push(artist);
+    }
+    return artistsList;
+  }
+
+  async getGenres(): Promise<string[]> {
+    const result = await db
+      .selectDistinct({ genre: tracks.genre })
+      .from(tracks);
+    return result.map(r => r.genre).filter(Boolean).sort();
+  }
+
+  async getUniversities(): Promise<string[]> {
+    const result = await db
+      .selectDistinct({ universityName: tracks.universityName })
+      .from(tracks);
+    return result.map(r => r.universityName).filter(u => u && u !== 'Unknown').sort();
+  }
+
+  async getPersonalizedRecommendations(userId: string, limit: number = 20): Promise<TrackWithArtist[]> {
+    const user = await this.getUser(userId);
+    if (!user) return [];
+
+    const likedTracks = await this.getLikedTracks(userId);
+    const likedTrackIds = likedTracks.map(t => t.id);
+    const likedGenres = Array.from(new Set(likedTracks.map(t => t.genre)));
+
+    if (likedGenres.length === 0) {
+      return this.getLatestTracks(limit);
+    }
+
+    const recommendations: TrackWithArtist[] = [];
+    for (const genre of likedGenres) {
+      const genreTracks = await this.getTracksByGenre(genre);
+      for (const track of genreTracks) {
+        if (!likedTrackIds.includes(track.id) && recommendations.length < limit) {
+          recommendations.push(track);
+        }
+      }
+    }
+
+    return recommendations.slice(0, limit);
   }
 
   async getArtistAnalytics(artistId: string): Promise<{
@@ -642,115 +676,128 @@ export class MemStorage implements IStorage {
     const artistTracks = await this.getTracksByArtist(artistId);
     const trackIds = artistTracks.map(t => t.id);
 
-    const streams = new Map<string, number>();
-    const listenerCountries = new Map<string, number>();
+    if (trackIds.length === 0) {
+      return {
+        totalPlays: 0,
+        totalLikes: 0,
+        trackCount: 0,
+        streams: new Map(),
+        topTracks: [],
+        listenerCountries: new Map(),
+      };
+    }
 
-    Array.from(this.streams.values())
-      .filter(s => trackIds.includes(s.trackId))
-      .forEach(s => {
-        const count = streams.get(s.trackId) || 0;
-        streams.set(s.trackId, count + 1);
-      });
+    const streamsData = await db
+      .select({ trackId: streams.trackId, count: count() })
+      .from(streams)
+      .where(inArray(streams.trackId, trackIds))
+      .groupBy(streams.trackId);
 
-    const topTracks = Array.from(streams.entries())
-      .map(([trackId, plays]) => ({ trackId, plays }))
+    const streamsMap = new Map<string, number>();
+    streamsData.forEach(s => streamsMap.set(s.trackId, s.count));
+
+    const topTracks = streamsData
+      .map(s => ({ trackId: s.trackId, plays: s.count }))
       .sort((a, b) => b.plays - a.plays)
       .slice(0, 10);
 
-    Array.from(this.users.values()).forEach(user => {
+    const [totalPlaysResult] = await db
+      .select({ count: count() })
+      .from(streams)
+      .where(inArray(streams.trackId, trackIds));
+
+    const [totalLikesResult] = await db
+      .select({ count: count() })
+      .from(likes)
+      .where(inArray(likes.trackId, trackIds));
+
+    const allUsers = await db.select().from(users);
+    const listenerCountries = new Map<string, number>();
+    allUsers.forEach(user => {
       if (user.country) {
-        const count = listenerCountries.get(user.country) || 0;
-        listenerCountries.set(user.country, count + 1);
+        listenerCountries.set(user.country, (listenerCountries.get(user.country) || 0) + 1);
       }
     });
 
-    const totalPlays = Array.from(this.streams.values())
-      .filter(s => trackIds.includes(s.trackId))
-      .length;
-
-    const totalLikes = Array.from(this.likes.values())
-      .filter(l => trackIds.includes(l.trackId))
-      .length;
-
     return {
-      totalPlays,
-      totalLikes,
+      totalPlays: totalPlaysResult?.count || 0,
+      totalLikes: totalLikesResult?.count || 0,
       trackCount: artistTracks.length,
-      streams,
+      streams: streamsMap,
       topTracks,
       listenerCountries,
     };
   }
 
-  // Support system methods
   async sendSupport(data: InsertSupport): Promise<Support> {
-    const id = randomUUID();
-    // Mocked payment processing - in production would connect to Stripe/PayPal/Mobile Money
     const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const support: Support = {
-      ...data,
-      id,
-      status: "completed",
-      transactionId,
-      createdAt: new Date(),
-    };
-    this.supports.set(id, support);
+    const [support] = await db
+      .insert(supports)
+      .values({
+        ...data,
+        status: "completed",
+        transactionId,
+      })
+      .returning();
 
-    // Update artist wallet
     const wallet = await this.getArtistWallet(data.artistId);
     if (wallet) {
-      const updated = {
-        ...wallet,
-        totalReceived: wallet.totalReceived + data.amount,
-        balance: wallet.balance + data.amount,
-      };
-      this.artistWallets.set(wallet.id, updated);
+      await db
+        .update(artistWallets)
+        .set({
+          totalReceived: sql`${artistWallets.totalReceived} + ${data.amount}`,
+          balance: sql`${artistWallets.balance} + ${data.amount}`,
+        })
+        .where(eq(artistWallets.artistId, data.artistId));
     }
 
     return support;
   }
 
   async getArtistSupports(artistId: string): Promise<Support[]> {
-    return Array.from(this.supports.values())
-      .filter(s => s.artistId === artistId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return await db
+      .select()
+      .from(supports)
+      .where(eq(supports.artistId, artistId))
+      .orderBy(desc(supports.createdAt));
   }
 
   async getArtistWallet(artistId: string): Promise<ArtistWallet | undefined> {
-    return Array.from(this.artistWallets.values()).find(w => w.artistId === artistId);
+    const [wallet] = await db
+      .select()
+      .from(artistWallets)
+      .where(eq(artistWallets.artistId, artistId));
+    return wallet || undefined;
   }
 
   async createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet> {
     const existing = await this.getArtistWallet(data.artistId);
     
     if (existing) {
-      const updated = { ...existing, ...data };
-      this.artistWallets.set(existing.id, updated);
+      const [updated] = await db
+        .update(artistWallets)
+        .set(data)
+        .where(eq(artistWallets.artistId, data.artistId))
+        .returning();
       return updated;
     }
 
-    const id = randomUUID();
-    const wallet: ArtistWallet = {
-      ...data,
-      id,
-      totalReceived: 0,
-      balance: 0,
-      lastPayoutAt: null,
-      createdAt: new Date(),
-    };
-    this.artistWallets.set(id, wallet);
+    const [wallet] = await db
+      .insert(artistWallets)
+      .values(data)
+      .returning();
     return wallet;
   }
 
   async updateArtistWallet(artistId: string, updates: Partial<ArtistWallet>): Promise<ArtistWallet | undefined> {
-    const wallet = await this.getArtistWallet(artistId);
-    if (!wallet) return undefined;
-    
-    const updated = { ...wallet, ...updates };
-    this.artistWallets.set(wallet.id, updated);
-    return updated;
+    const [wallet] = await db
+      .update(artistWallets)
+      .set(updates)
+      .where(eq(artistWallets.artistId, artistId))
+      .returning();
+    return wallet || undefined;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

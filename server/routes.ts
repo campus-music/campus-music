@@ -4,15 +4,10 @@ import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import { insertUserSchema, loginSchema, insertArtistProfileSchema, insertTrackSchema, insertPlaylistSchema } from "@shared/schema";
 
-// Seed data function
+// Seed data function - idempotent, will skip users that already exist
 async function seedData() {
-  // Check if already seeded
-  const existingUser = await storage.getUserByEmail("demo@stanford.edu");
-  if (existingUser) return;
+  console.log("Checking database seed status...");
 
-  console.log("Seeding database with demo data...");
-
-  // Create demo users and artists
   const universities = [
     { name: "Stanford University", country: "United States" },
     { name: "MIT", country: "United States" },
@@ -26,72 +21,95 @@ async function seedData() {
   const artistNames = ["Luna Echo", "The Campus Collective", "Digital Dreams", "Midnight Study", "Thesis Beats", "Blue Demon Beats"];
   const artistColors = ["7c3aed", "ec4899", "06b6d4", "f97316", "8b5cf6", "0ea5e9"];
 
+  let seededCount = 0;
+
   for (let i = 0; i < 6; i++) {
     const uni = universities[i];
-    const user = await storage.createUser({
-      email: `demo${i + 1}@${uni.name.toLowerCase().replace(/\s+/g, '')}.edu`,
-      password: "password123",
-      fullName: `Demo Artist ${i + 1}`,
-      universityName: uni.name,
-      country: uni.country,
-      role: "artist",
-    });
+    const email = `demo${i + 1}@${uni.name.toLowerCase().replace(/\s+/g, '')}.edu`;
+    
+    try {
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        continue;
+      }
 
-    const artistProfile = await storage.createArtistProfile({
-      userId: user.id,
-      stageName: artistNames[i],
-      bio: `Student artist from ${uni.name}, making music between classes and exams.`,
-      mainGenre: genres[i % genres.length],
-      socialLinks: `https://instagram.com/${artistNames[i].toLowerCase().replace(/\s+/g, '')}`,
-      profileImageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(artistNames[i])}&background=${artistColors[i]}&color=fff&size=200&bold=true`,
-    });
-
-    // Create 3-5 tracks per artist
-    const trackCount = 3 + Math.floor(Math.random() * 3);
-    for (let j = 0; j < trackCount; j++) {
-      const track = await storage.createTrack({
-        artistId: artistProfile.id,
-        title: `${genres[i % genres.length]} Track ${j + 1}`,
-        description: `An original track created during late-night study sessions at ${uni.name}.`,
-        audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // Demo audio
-        coverImageUrl: undefined,
-        genre: genres[(i + j) % genres.length],
+      const user = await storage.createUser({
+        email,
+        password: "password123",
+        fullName: `Demo Artist ${i + 1}`,
         universityName: uni.name,
         country: uni.country,
-        durationSeconds: 180 + Math.floor(Math.random() * 120),
+        role: "artist",
       });
 
-      // Add some streams and likes
-      const streamCount = Math.floor(Math.random() * 100);
-      for (let k = 0; k < streamCount; k++) {
-        await storage.recordStream({
-          userId: user.id,
-          trackId: track.id,
+      const artistProfile = await storage.createArtistProfile({
+        userId: user.id,
+        stageName: artistNames[i],
+        bio: `Student artist from ${uni.name}, making music between classes and exams.`,
+        mainGenre: genres[i % genres.length],
+        socialLinks: `https://instagram.com/${artistNames[i].toLowerCase().replace(/\s+/g, '')}`,
+        profileImageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(artistNames[i])}&background=${artistColors[i]}&color=fff&size=200&bold=true`,
+      });
+
+      const trackCount = 3 + Math.floor(Math.random() * 3);
+      for (let j = 0; j < trackCount; j++) {
+        const track = await storage.createTrack({
+          artistId: artistProfile.id,
+          title: `${genres[i % genres.length]} Track ${j + 1}`,
+          description: `An original track created during late-night study sessions at ${uni.name}.`,
+          audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+          coverImageUrl: undefined,
+          genre: genres[(i + j) % genres.length],
+          universityName: uni.name,
+          country: uni.country,
+          durationSeconds: 180 + Math.floor(Math.random() * 120),
         });
+
+        const streamCount = Math.floor(Math.random() * 100);
+        for (let k = 0; k < streamCount; k++) {
+          await storage.recordStream({
+            userId: user.id,
+            trackId: track.id,
+          });
+        }
       }
+      seededCount++;
+      console.log(`Seeded artist: ${artistNames[i]}`);
+    } catch (error) {
+      console.error(`Error seeding artist ${i + 1}:`, error);
     }
   }
 
-  // Create listener users - both with .edu and regular emails
-  await storage.createUser({
-    email: "listener@stanford.edu",
-    password: "password123",
-    fullName: "Demo Student Listener",
-    universityName: "Stanford University",
-    country: "United States",
-    role: "listener",
-  });
+  const listenerEmails = [
+    { email: "listener@stanford.edu", fullName: "Demo Student Listener", university: "Stanford University" },
+    { email: "regular.listener@gmail.com", fullName: "Demo Regular Listener", university: "Unknown" }
+  ];
 
-  await storage.createUser({
-    email: "regular.listener@gmail.com",
-    password: "password123",
-    fullName: "Demo Regular Listener",
-    universityName: "Unknown",
-    country: "United States",
-    role: "listener",
-  });
+  for (const listener of listenerEmails) {
+    try {
+      const existing = await storage.getUserByEmail(listener.email);
+      if (!existing) {
+        await storage.createUser({
+          email: listener.email,
+          password: "password123",
+          fullName: listener.fullName,
+          universityName: listener.university,
+          country: "United States",
+          role: "listener",
+        });
+        seededCount++;
+        console.log(`Seeded listener: ${listener.fullName}`);
+      }
+    } catch (error) {
+      console.error(`Error seeding listener ${listener.email}:`, error);
+    }
+  }
 
-  console.log("Database seeded successfully!");
+  if (seededCount > 0) {
+    console.log(`Database seeding completed! Added ${seededCount} new records.`);
+  } else {
+    console.log("Database already fully seeded.");
+  }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -625,32 +643,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/search/artists", async (req, res) => {
-    const { query } = req.query;
-    if (!query || typeof query !== 'string') {
-      return res.json([]);
+    try {
+      const { query } = req.query;
+      if (!query || typeof query !== 'string') {
+        return res.json([]);
+      }
+      const lowerQuery = query.toLowerCase();
+      const allArtists = await storage.getAllArtists();
+      const filtered = allArtists.filter((a) =>
+        a.stageName.toLowerCase().includes(lowerQuery) ||
+        a.mainGenre.toLowerCase().includes(lowerQuery)
+      );
+      res.json(filtered);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
-    const lowerQuery = query.toLowerCase();
-    const allArtists = Array.from((storage as any).artistProfiles.values());
-    const filtered = allArtists.filter((a: any) =>
-      a.stageName.toLowerCase().includes(lowerQuery) ||
-      a.mainGenre.toLowerCase().includes(lowerQuery)
-    );
-    res.json(filtered);
   });
 
   // Get all artists with metadata for browse page
   app.get("/api/artists", async (req, res) => {
     try {
-      const allArtists = Array.from((storage as any).artistProfiles.values());
-      const allTracks = Array.from((storage as any).tracks.values());
-      const allStreams = Array.from((storage as any).streams.values());
+      const allArtists = await storage.getAllArtists();
       
-      const artists = allArtists.map((artist: any) => {
-        const artistTracks = allTracks.filter((t: any) => t.artistId === artist.id);
-        const artistStreams = allStreams.filter((s: any) => 
-          artistTracks.some((t: any) => t.id === s.trackId)
-        );
-        const user: any = Array.from((storage as any).users.values()).find((u: any) => u.id === artist.userId);
+      const artists = await Promise.all(allArtists.map(async (artist) => {
+        const artistTracks = await storage.getTracksByArtist(artist.id);
+        const stats = await storage.getArtistStats(artist.id);
+        const user = await storage.getUser(artist.userId);
         
         return {
           id: artist.id,
@@ -660,10 +678,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileImageUrl: artist.profileImageUrl,
           universityName: user?.universityName || "Unknown",
           trackCount: artistTracks.length,
-          streams: artistStreams.length,
+          streams: stats.totalPlays,
           createdAt: artist.createdAt,
         };
-      });
+      }));
       
       res.json(artists);
     } catch (error: any) {
@@ -686,12 +704,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const support = await storage.sendSupport({
-        supporterId: req.session.userId,
+        supporterId: req.session.userId!,
         artistId,
         amount,
         paymentMethod,
         message: message || undefined,
-        status: "completed",
       });
 
       res.json(support);
