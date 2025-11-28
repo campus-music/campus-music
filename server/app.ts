@@ -8,10 +8,9 @@ import express, {
 } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { runMigrations } from 'stripe-replit-sync';
 
 import { registerRoutes } from "./routes";
-import { getStripeSync } from "./stripeClient";
+import { isStripeConfigured } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 
 declare module "express-session" {
@@ -39,51 +38,28 @@ declare module 'http' {
   }
 }
 
-async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (!databaseUrl) {
-    console.log('DATABASE_URL not set, skipping Stripe initialization');
+function initStripe() {
+  if (!isStripeConfigured()) {
+    console.log('Stripe not configured - payment features will be disabled');
+    console.log('Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY to enable payments');
     return;
   }
 
-  try {
-    console.log('Initializing Stripe schema...');
-    await runMigrations({ 
-      databaseUrl,
-      schema: 'stripe'
-    });
-    console.log('Stripe schema ready');
-
-    const stripeSync = await getStripeSync();
-
-    console.log('Setting up managed webhook...');
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
-    const { webhook, uuid } = await stripeSync.findOrCreateManagedWebhook(
-      `${webhookBaseUrl}/api/stripe/webhook`,
-      {
-        enabled_events: ['*'],
-        description: 'Campus Music Stripe webhook',
-      }
-    );
-    console.log(`Webhook configured: ${webhook.url} (UUID: ${uuid})`);
-
-    stripeSync.syncBackfill()
-      .then(() => {
-        console.log('Stripe data synced');
-      })
-      .catch((err: any) => {
-        console.error('Error syncing Stripe data:', err);
-      });
-  } catch (error) {
-    console.error('Failed to initialize Stripe:', error);
+  console.log('Stripe configured successfully');
+  
+  const appUrl = process.env.APP_URL;
+  if (appUrl) {
+    console.log(`Webhook endpoint: ${appUrl}/api/stripe/webhook`);
+    console.log('Configure this URL in your Stripe Dashboard -> Webhooks');
+  } else {
+    console.log('Warning: APP_URL not set - webhook URL cannot be determined');
   }
 }
 
-await initStripe();
+initStripe();
 
 app.post(
-  '/api/stripe/webhook/:uuid',
+  '/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
     const signature = req.headers['stripe-signature'];
@@ -100,8 +76,7 @@ app.post(
         return res.status(500).json({ error: 'Webhook processing error' });
       }
 
-      const { uuid } = req.params;
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig, uuid);
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
 
       res.status(200).json({ received: true });
     } catch (error: any) {

@@ -836,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "imageURL must be a string" });
       }
 
-      if (!imageURL.startsWith('https://storage.googleapis.com/')) {
+      if (!imageURL.startsWith('https://') && !imageURL.startsWith('/objects/')) {
         return res.status(400).json({ error: "Invalid image URL format" });
       }
 
@@ -1035,8 +1035,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Stripe publishable key for frontend
   app.get("/api/stripe/config", async (_req, res) => {
     try {
-      const { getStripePublishableKey } = await import("./stripeClient");
-      const publishableKey = await getStripePublishableKey();
+      const { getStripePublishableKey, isStripeConfigured } = await import("./stripeClient");
+      if (!isStripeConfigured()) {
+        return res.status(503).json({ error: "Stripe is not configured" });
+      }
+      const publishableKey = getStripePublishableKey();
       res.json({ publishableKey });
     } catch (error: any) {
       console.error("Error getting Stripe config:", error);
@@ -1068,10 +1071,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const { getUncachableStripeClient } = await import("./stripeClient");
-      const stripe = await getUncachableStripeClient();
+      const { stripe, isStripeConfigured } = await import("./stripeClient");
+      if (!isStripeConfigured() || !stripe) {
+        return res.status(503).json({ error: "Payment system is not configured" });
+      }
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const baseUrl = process.env.APP_URL || `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],

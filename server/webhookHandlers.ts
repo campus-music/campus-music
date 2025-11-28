@@ -1,10 +1,11 @@
-import { getStripeSync } from './stripeClient';
+import { stripe, getStripeWebhookSecret } from './stripeClient';
 import { db } from './db';
 import { supports, artistWallets } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
+import Stripe from 'stripe';
 
 export class WebhookHandlers {
-  static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
+  static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
         'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
@@ -14,24 +15,33 @@ export class WebhookHandlers {
       );
     }
 
-    const sync = await getStripeSync();
-    await sync.processWebhook(payload, signature, uuid);
+    if (!stripe) {
+      throw new Error('Stripe is not configured');
+    }
 
-    const event = JSON.parse(payload.toString());
+    const webhookSecret = getStripeWebhookSecret();
+    
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } catch (err: any) {
+      throw new Error(`Webhook signature verification failed: ${err.message}`);
+    }
+
     await WebhookHandlers.handleEvent(event);
   }
 
-  private static async handleEvent(event: any): Promise<void> {
+  private static async handleEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
       case 'checkout.session.completed':
-        await WebhookHandlers.handleCheckoutCompleted(event.data.object);
+        await WebhookHandlers.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
         break;
       default:
         break;
     }
   }
 
-  private static async handleCheckoutCompleted(session: any): Promise<void> {
+  private static async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
     try {
       const metadata = session.metadata || {};
       

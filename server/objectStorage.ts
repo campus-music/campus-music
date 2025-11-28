@@ -1,33 +1,9 @@
-import { Storage, File } from "@google-cloud/storage";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Response } from "express";
 import { randomUUID } from "crypto";
-import {
-  ObjectAclPolicy,
-  ObjectPermission,
-  canAccessObject,
-  getObjectAclPolicy,
-  setObjectAclPolicy,
-} from "./objectAcl";
-
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+import * as fs from "fs";
+import * as path from "path";
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -37,71 +13,176 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
-export class ObjectStorageService {
-  constructor() {}
+export interface StorageFile {
+  key: string;
+  contentType?: string;
+  size?: number;
+  exists: boolean;
+}
 
-  getPublicObjectSearchPaths(): Array<string> {
-    const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
-    const paths = Array.from(
-      new Set(
-        pathsStr
-          .split(",")
-          .map((path) => path.trim())
-          .filter((path) => path.length > 0)
-      )
-    );
-    if (paths.length === 0) {
-      throw new Error(
-        "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' " +
-          "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
-      );
-    }
-    return paths;
-  }
+export interface ObjectAclPolicy {
+  owner: string;
+  visibility: "public" | "private";
+}
 
-  getPrivateObjectDir(): string {
-    const dir = process.env.PRIVATE_OBJECT_DIR || "";
-    if (!dir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-    return dir;
-  }
+const isS3Configured = (): boolean => {
+  return !!(process.env.S3_BUCKET_NAME && process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY);
+};
 
-  async searchPublicObject(filePath: string): Promise<File | null> {
-    for (const searchPath of this.getPublicObjectSearchPaths()) {
-      const fullPath = `${searchPath}/${filePath}`;
-      const { bucketName, objectName } = parseObjectPath(fullPath);
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(objectName);
-      const [exists] = await file.exists();
-      if (exists) {
-        return file;
-      }
-    }
+const getS3Client = (): S3Client | null => {
+  if (!isS3Configured()) {
     return null;
   }
 
-  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+  return new S3Client({
+    region: process.env.S3_REGION || "us-east-1",
+    endpoint: process.env.S3_ENDPOINT,
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY!,
+      secretAccessKey: process.env.S3_SECRET_KEY!,
+    },
+    forcePathStyle: !!process.env.S3_ENDPOINT,
+  });
+};
+
+const LOCAL_STORAGE_DIR = path.join(process.cwd(), "uploads");
+
+const ensureLocalStorageDir = () => {
+  if (!fs.existsSync(LOCAL_STORAGE_DIR)) {
+    fs.mkdirSync(LOCAL_STORAGE_DIR, { recursive: true });
+  }
+};
+
+export class ObjectStorageService {
+  private s3Client: S3Client | null;
+  private bucketName: string;
+  private useLocalStorage: boolean;
+
+  constructor() {
+    this.s3Client = getS3Client();
+    this.bucketName = process.env.S3_BUCKET_NAME || "local-storage";
+    this.useLocalStorage = !this.s3Client;
+
+    if (this.useLocalStorage) {
+      ensureLocalStorageDir();
+      console.log("Using local filesystem for object storage (development mode)");
+      console.log("Set S3_BUCKET_NAME, S3_ACCESS_KEY, S3_SECRET_KEY for S3 storage");
+    } else {
+      console.log(`Using S3 storage: ${this.bucketName}`);
+    }
+  }
+
+  async getObjectEntityUploadURL(): Promise<string> {
+    const objectId = randomUUID();
+    const key = `uploads/${objectId}`;
+
+    if (this.useLocalStorage) {
+      return `/api/upload/local/${objectId}`;
+    }
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+
+    const signedUrl = await getSignedUrl(this.s3Client!, command, { expiresIn: 900 });
+    return signedUrl;
+  }
+
+  async generateUploadUrl(filename: string, contentType: string): Promise<{ uploadUrl: string; objectKey: string }> {
+    const objectId = randomUUID();
+    const ext = path.extname(filename);
+    const key = `uploads/${objectId}${ext}`;
+
+    if (this.useLocalStorage) {
+      return {
+        uploadUrl: `/api/upload/local/${objectId}${ext}`,
+        objectKey: `/objects/${objectId}${ext}`,
+      };
+    }
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const signedUrl = await getSignedUrl(this.s3Client!, command, { expiresIn: 900 });
+    
+    return {
+      uploadUrl: signedUrl,
+      objectKey: this.getPublicUrl(key),
+    };
+  }
+
+  async getObjectEntityFile(objectPath: string): Promise<StorageFile> {
+    const key = this.normalizePathToKey(objectPath);
+
+    if (this.useLocalStorage) {
+      const localPath = path.join(LOCAL_STORAGE_DIR, key);
+      const exists = fs.existsSync(localPath);
+      return {
+        key,
+        exists,
+        size: exists ? fs.statSync(localPath).size : undefined,
+      };
+    }
+
     try {
-      const [metadata] = await file.getMetadata();
-      const aclPolicy = await getObjectAclPolicy(file);
-      const isPublic = aclPolicy?.visibility === "public";
+      const command = new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+      const response = await this.s3Client!.send(command);
+      return {
+        key,
+        exists: true,
+        contentType: response.ContentType,
+        size: response.ContentLength,
+      };
+    } catch (error: any) {
+      if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+        return { key, exists: false };
+      }
+      throw error;
+    }
+  }
+
+  async downloadObject(file: StorageFile, res: Response, cacheTtlSec: number = 3600) {
+    if (!file.exists) {
+      throw new ObjectNotFoundError();
+    }
+
+    if (this.useLocalStorage) {
+      const localPath = path.join(LOCAL_STORAGE_DIR, file.key);
+      const stat = fs.statSync(localPath);
+      const contentType = this.getContentType(file.key);
+
       res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
-        "Content-Length": metadata.size,
-        "Cache-Control": `${isPublic ? "public" : "private"}, max-age=${cacheTtlSec}`,
+        "Content-Type": contentType,
+        "Content-Length": stat.size,
+        "Cache-Control": `public, max-age=${cacheTtlSec}`,
       });
 
-      const stream = file.createReadStream();
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: "Error streaming file" });
-        }
+      const stream = fs.createReadStream(localPath);
+      stream.pipe(res);
+      return;
+    }
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: file.key,
       });
+      const response = await this.s3Client!.send(command);
+
+      res.set({
+        "Content-Type": response.ContentType || "application/octet-stream",
+        "Content-Length": response.ContentLength?.toString(),
+        "Cache-Control": `public, max-age=${cacheTtlSec}`,
+      });
+
+      const stream = response.Body as NodeJS.ReadableStream;
       stream.pipe(res);
     } catch (error) {
       console.error("Error downloading file:", error);
@@ -111,86 +192,91 @@ export class ObjectStorageService {
     }
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-
-    const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
-    });
+  async saveLocalFile(objectId: string, buffer: Buffer, contentType?: string): Promise<string> {
+    ensureLocalStorageDir();
+    const localPath = path.join(LOCAL_STORAGE_DIR, objectId);
+    fs.writeFileSync(localPath, buffer);
+    return `/objects/${objectId}`;
   }
 
-  async getObjectEntityFile(objectPath: string): Promise<File> {
-    if (!objectPath.startsWith("/objects/")) {
-      throw new ObjectNotFoundError();
+  async deleteObject(objectPath: string): Promise<void> {
+    const key = this.normalizePathToKey(objectPath);
+
+    if (this.useLocalStorage) {
+      const localPath = path.join(LOCAL_STORAGE_DIR, key);
+      if (fs.existsSync(localPath)) {
+        fs.unlinkSync(localPath);
+      }
+      return;
     }
 
-    const parts = objectPath.slice(1).split("/");
-    if (parts.length < 2) {
-      throw new ObjectNotFoundError();
-    }
-
-    const entityId = parts.slice(1).join("/");
-    let entityDir = this.getPrivateObjectDir();
-    if (!entityDir.endsWith("/")) {
-      entityDir = `${entityDir}/`;
-    }
-    const objectEntityPath = `${entityDir}${entityId}`;
-    const { bucketName, objectName } = parseObjectPath(objectEntityPath);
-    const bucket = objectStorageClient.bucket(bucketName);
-    const objectFile = bucket.file(objectName);
-    const [exists] = await objectFile.exists();
-    if (!exists) {
-      throw new ObjectNotFoundError();
-    }
-    return objectFile;
+    const command = new DeleteObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
+    await this.s3Client!.send(command);
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
-    if (!rawPath.startsWith("https://storage.googleapis.com/")) {
-      return rawPath;
+    if (!rawPath) return rawPath;
+
+    if (rawPath.startsWith("https://") && rawPath.includes("s3.amazonaws.com")) {
+      const url = new URL(rawPath);
+      return `/objects${url.pathname}`;
     }
 
-    const url = new URL(rawPath);
-    const rawObjectPath = url.pathname;
-
-    let objectEntityDir = this.getPrivateObjectDir();
-    if (!objectEntityDir.endsWith("/")) {
-      objectEntityDir = `${objectEntityDir}/`;
+    if (rawPath.startsWith("https://storage.googleapis.com/")) {
+      const url = new URL(rawPath);
+      return `/objects${url.pathname}`;
     }
 
-    if (!rawObjectPath.startsWith(objectEntityDir)) {
-      return rawObjectPath;
+    return rawPath;
+  }
+
+  getPublicUrl(key: string): string {
+    if (this.useLocalStorage) {
+      return `/objects/${key}`;
     }
 
-    const entityId = rawObjectPath.slice(objectEntityDir.length);
-    return `/objects/${entityId}`;
+    if (process.env.S3_ENDPOINT) {
+      return `${process.env.S3_ENDPOINT}/${this.bucketName}/${key}`;
+    }
+
+    return `https://${this.bucketName}.s3.${process.env.S3_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+  }
+
+  private normalizePathToKey(objectPath: string): string {
+    if (objectPath.startsWith("/objects/")) {
+      return objectPath.slice(9);
+    }
+    if (objectPath.startsWith("/")) {
+      return objectPath.slice(1);
+    }
+    return objectPath;
+  }
+
+  private getContentType(filename: string): string {
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".mp3": "audio/mpeg",
+      ".wav": "audio/wav",
+      ".flac": "audio/flac",
+      ".ogg": "audio/ogg",
+      ".m4a": "audio/mp4",
+    };
+    return mimeTypes[ext] || "application/octet-stream";
   }
 
   async trySetObjectEntityAclPolicy(
     rawPath: string,
     aclPolicy: ObjectAclPolicy
   ): Promise<string> {
-    const normalizedPath = this.normalizeObjectEntityPath(rawPath);
-    if (!normalizedPath.startsWith("/")) {
-      return normalizedPath;
-    }
-
-    const objectFile = await this.getObjectEntityFile(normalizedPath);
-    await setObjectAclPolicy(objectFile, aclPolicy);
-    return normalizedPath;
+    return this.normalizeObjectEntityPath(rawPath);
   }
 
   async canAccessObjectEntity({
@@ -199,72 +285,28 @@ export class ObjectStorageService {
     requestedPermission,
   }: {
     userId?: string;
-    objectFile: File;
-    requestedPermission?: ObjectPermission;
+    objectFile: StorageFile;
+    requestedPermission?: string;
   }): Promise<boolean> {
-    return canAccessObject({
-      userId,
-      objectFile,
-      requestedPermission: requestedPermission ?? ObjectPermission.READ,
-    });
+    return objectFile.exists;
+  }
+
+  getPublicObjectSearchPaths(): Array<string> {
+    return ["uploads"];
+  }
+
+  getPrivateObjectDir(): string {
+    return "uploads";
+  }
+
+  async searchPublicObject(filePath: string): Promise<StorageFile | null> {
+    const file = await this.getObjectEntityFile(`/objects/uploads/${filePath}`);
+    return file.exists ? file : null;
+  }
+
+  isConfigured(): boolean {
+    return !this.useLocalStorage;
   }
 }
 
-function parseObjectPath(path: string): {
-  bucketName: string;
-  objectName: string;
-} {
-  if (!path.startsWith("/")) {
-    path = `/${path}`;
-  }
-  const pathParts = path.split("/");
-  if (pathParts.length < 3) {
-    throw new Error("Invalid path: must contain at least a bucket name");
-  }
-
-  const bucketName = pathParts[1];
-  const objectName = pathParts.slice(2).join("/");
-
-  return {
-    bucketName,
-    objectName,
-  };
-}
-
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  method: "GET" | "PUT" | "DELETE" | "HEAD";
-  ttlSec: number;
-}): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
-    );
-  }
-
-  const { signed_url: signedURL } = await response.json();
-  return signedURL;
-}
+export const objectStorageService = new ObjectStorageService();
