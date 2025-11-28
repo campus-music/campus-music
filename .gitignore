@@ -1,6 +1,70 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+server/public/
 *.tar.gz
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor and IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+vite.config.ts.*
+
+# Replit-specific (should not go to GitHub)
+.replit
+.cache/
+.config/
+.upm/
+replit.nix
+.breakpoints
+.local/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Drizzle migrations (using push instead)
+drizzle/
+
+# Attached assets (development uploads)
+attached_assets/
