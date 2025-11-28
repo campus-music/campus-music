@@ -24,6 +24,7 @@ async function seedData() {
 
   const genres = ["Pop", "Hip-Hop", "Electronic", "Rock", "R&B", "Indie", "Jazz"];
   const artistNames = ["Luna Echo", "The Campus Collective", "Digital Dreams", "Midnight Study", "Thesis Beats", "Blue Demon Beats"];
+  const artistColors = ["7c3aed", "ec4899", "06b6d4", "f97316", "8b5cf6", "0ea5e9"];
 
   for (let i = 0; i < 6; i++) {
     const uni = universities[i];
@@ -42,7 +43,7 @@ async function seedData() {
       bio: `Student artist from ${uni.name}, making music between classes and exams.`,
       mainGenre: genres[i % genres.length],
       socialLinks: `https://instagram.com/${artistNames[i].toLowerCase().replace(/\s+/g, '')}`,
-      profileImageUrl: undefined,
+      profileImageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(artistNames[i])}&background=${artistColors[i]}&color=fff&size=200&bold=true`,
     });
 
     // Create 3-5 tracks per artist
