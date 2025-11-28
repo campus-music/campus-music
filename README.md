@@ -28,10 +28,11 @@ A dark-themed music streaming platform exclusively for university students. Disc
 - **PostgreSQL** database
 - **Express Session** for authentication
 
-### Integrations (Replit-Optimized)
-- **Stripe** via Replit connector for payment processing (artist tips)
-- **Replit Object Storage** for file uploads (audio, images)
-- **PostgreSQL** via Replit's built-in database
+### Integrations
+- **Stripe** for payment processing (artist tips)
+- **S3-Compatible Storage** for file uploads (audio, images)
+  - Supports AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2
+  - Falls back to local filesystem in development
 
 ## Getting Started
 
@@ -40,7 +41,7 @@ A dark-themed music streaming platform exclusively for university students. Disc
 - Node.js 18+ and npm
 - PostgreSQL database
 - Stripe account (for payments)
-- Google Cloud Storage bucket (for file uploads)
+- S3-compatible storage bucket (for file uploads in production)
 
 ### Installation
 
@@ -62,8 +63,8 @@ A dark-themed music streaming platform exclusively for university students. Disc
    Edit `.env` and fill in your values:
    - `DATABASE_URL` - PostgreSQL connection string
    - `SESSION_SECRET` - Random secret for session encryption
-   - Stripe keys (for payments)
-   - GCS credentials (for file uploads)
+   - `STRIPE_SECRET_KEY` - Stripe API key (for payments)
+   - `S3_*` - S3 storage credentials (optional in development)
 
 4. **Push database schema**
    ```bash
@@ -105,70 +106,62 @@ campus-music/
 │   ├── storage.ts         # Database operations
 │   ├── db.ts              # Database connection
 │   ├── stripeClient.ts    # Stripe integration
+│   ├── objectStorage.ts   # S3 storage abstraction
 │   └── webhookHandlers.ts # Stripe webhooks
 ├── shared/                 # Shared code
 │   └── schema.ts          # Drizzle schema & types
+├── render.yaml            # Render deployment config
 └── package.json
 ```
 
 ## Deployment
 
-### Replit Deployment
+### One-Click Render Deployment
 
-This project is optimized for Replit with built-in integrations for:
-- **Stripe**: Uses Replit's Stripe connector for automatic webhook management
-- **Object Storage**: Uses Replit's Object Storage for file uploads
-- **PostgreSQL**: Uses Replit's built-in database
+This project includes a `render.yaml` for easy deployment:
 
-To deploy on Replit, simply use the "Publish" feature.
+1. Fork this repository to your GitHub account
+2. Create a new **Blueprint** on [Render](https://render.com)
+3. Connect your forked repository
+4. Render will automatically create:
+   - A web service for the application
+   - A PostgreSQL database
+5. Configure the following environment variables manually:
+   - `APP_URL` - Your Render app URL (e.g., `https://campus-music.onrender.com`)
+   - `STRIPE_SECRET_KEY` - From Stripe Dashboard
+   - `STRIPE_PUBLISHABLE_KEY` - From Stripe Dashboard
+   - `STRIPE_WEBHOOK_SECRET` - After setting up webhooks
+   - `S3_BUCKET_NAME`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` - Your S3 storage
 
-### Render / Other Platforms
+### Manual Deployment
 
-> **Important**: This codebase uses Replit-specific integrations that must be adapted for other platforms.
-
-When deploying outside Replit, you'll need to modify the following files:
-
-#### Required Code Changes
-
-1. **`server/stripeClient.ts`** - Replace Replit Stripe connector:
-   ```typescript
-   // Replace with standard Stripe initialization
-   import Stripe from 'stripe';
-   export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-   ```
-
-2. **`server/objectStorage.ts`** - Replace Replit Object Storage:
-   - Currently uses Replit sidecar on `http://127.0.0.1:1106`
-   - Replace with `@google-cloud/storage` SDK or S3-compatible storage
-
-3. **`server/routes.ts` & `server/app.ts`** - Replace REPLIT_DOMAINS:
-   - Change `process.env.REPLIT_DOMAINS?.split(',')[0]` to `process.env.APP_URL`
-
-#### Deployment Steps
-
-1. **Create a new Web Service on [Render](https://render.com)**
-2. **Connect your GitHub repository**
-3. **Configure build settings**:
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
-4. **Add a PostgreSQL database** on Render
-5. **Configure environment variables** (see below)
-6. **Set up Stripe webhooks** manually at dashboard.stripe.com
+1. **Create a PostgreSQL database** on your hosting provider
+2. **Set up S3-compatible storage**:
+   - Create a bucket on AWS S3, DigitalOcean Spaces, or similar
+   - Get access credentials
+3. **Configure Stripe webhooks**:
+   - Go to [Stripe Dashboard > Webhooks](https://dashboard.stripe.com/webhooks)
+   - Add endpoint: `https://your-domain.com/api/stripe/webhook`
+   - Select events: `checkout.session.completed`
+   - Copy the webhook signing secret
 
 ### Environment Variables for Production
 
-Ensure these are set in your hosting platform:
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `SESSION_SECRET` | Secure random string (32+ chars) |
-| `NODE_ENV` | Set to `production` |
-| `PORT` | Server port (default: 5000) |
-| `APP_URL` | Your app's public URL (for webhooks) |
-| `STRIPE_SECRET_KEY` | Stripe API secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCS service account JSON |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `SESSION_SECRET` | Yes | Secure random string (32+ chars) |
+| `NODE_ENV` | Yes | Set to `production` |
+| `PORT` | No | Server port (default: 5000) |
+| `APP_URL` | Yes | Your app's public URL |
+| `STRIPE_SECRET_KEY` | Yes | Stripe API secret key |
+| `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe API publishable key |
+| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret |
+| `S3_BUCKET_NAME` | Yes | S3 bucket name |
+| `S3_ACCESS_KEY` | Yes | S3 access key |
+| `S3_SECRET_KEY` | Yes | S3 secret key |
+| `S3_REGION` | No | S3 region (default: us-east-1) |
+| `S3_ENDPOINT` | No | Custom S3 endpoint for non-AWS |
 
 ## Demo Accounts
 
@@ -176,6 +169,20 @@ The database seeds with demo data including:
 
 - **Listener**: `listener@stanford.edu` / `password123`
 - **Artist**: `elena.martinez@stanford.edu` / `password123`
+
+## Development Notes
+
+### Local Storage Fallback
+
+In development, if S3 credentials are not configured:
+- File uploads use the local `uploads/` directory
+- Files are served via `/objects/` route
+- This is for development only - configure S3 for production
+
+### Stripe Testing
+
+- Use Stripe test mode keys during development
+- Test card: `4242 4242 4242 4242` with any future expiry and CVC
 
 ## Contributing
 
