@@ -50,7 +50,7 @@ export default function Landing() {
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center overflow-hidden">
-        <div className="text-center flex flex-col items-center">
+        <div className="text-center flex flex-col items-center -translate-y-24">
           {/* Logo */}
           <img 
             src={logoUrl} 
