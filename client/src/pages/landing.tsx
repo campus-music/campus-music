@@ -19,7 +19,11 @@ export default function Landing() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center">
+        <div 
+          className="flex items-center cursor-pointer"
+          onClick={() => navigate('/landing')}
+          data-testid="link-header-logo"
+        >
           <img 
             src={logoUrl} 
             alt="Campus Music Logo"
