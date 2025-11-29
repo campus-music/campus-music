@@ -1,16 +1,11 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { AuthModal } from '@/components/auth-modal';
-import { useAuth } from '@/lib/auth-context';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import notationUrl from '@assets/musical notations symbols_1764118955236.png';
 
 export default function Landing() {
-  const [, navigate] = useLocation();
-  const { user, logout } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
 
@@ -22,15 +17,6 @@ export default function Landing() {
   const openSignup = () => {
     setAuthModalTab('signup');
     setAuthModalOpen(true);
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
@@ -62,50 +48,21 @@ export default function Landing() {
         </div>
         
         <div className="flex items-center gap-3">
-          {user ? (
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/')}
-                className="text-slate-300 hover:text-white text-sm"
-                data-testid="button-go-home"
-              >
-                Go to App
-              </Button>
-              <button
-                type="button"
-                onClick={() => navigate('/profile')}
-                className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-slate-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
-                data-testid="user-avatar-link"
-                aria-label={`View profile for ${user.fullName}`}
-              >
-                <Avatar className="h-8 w-8 border border-slate-600">
-                  <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                    {getInitials(user.fullName)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-slate-300 hidden sm:block">{user.fullName}</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                onClick={openLogin}
-                data-testid="button-header-login"
-                className="text-slate-300 hover:text-white text-sm"
-              >
-                Log In
-              </Button>
-              <Button
-                onClick={openSignup}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
-                data-testid="button-header-signup"
-              >
-                Sign Up
-              </Button>
-            </>
-          )}
+          <Button
+            variant="ghost"
+            onClick={openLogin}
+            data-testid="button-header-login"
+            className="text-slate-300 hover:text-white text-sm"
+          >
+            Log In
+          </Button>
+          <Button
+            onClick={openSignup}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
+            data-testid="button-header-signup"
+          >
+            Sign Up
+          </Button>
         </div>
       </header>
 
@@ -137,7 +94,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-6">
             <Button
               size="sm"
-              onClick={() => navigate('/browse')}
+              onClick={openSignup}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-start-listening"
             >
@@ -148,7 +105,7 @@ export default function Landing() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => navigate('/artist-browse')}
+              onClick={openSignup}
               className="border-slate-500 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-browse-artists"
             >
