@@ -224,14 +224,56 @@ export class ObjectStorageService {
   normalizeObjectEntityPath(rawPath: string): string {
     if (!rawPath) return rawPath;
 
-    if (rawPath.startsWith("https://") && rawPath.includes("s3.amazonaws.com")) {
-      const url = new URL(rawPath);
-      return `/objects${url.pathname}`;
+    // Already normalized
+    if (rawPath.startsWith('/objects/')) {
+      return rawPath;
     }
 
+    // Handle S3 URLs (various formats):
+    // - https://bucket.s3.region.amazonaws.com/key
+    // - https://bucket.s3.amazonaws.com/key
+    // - https://s3.region.amazonaws.com/bucket/key
+    if (rawPath.startsWith("https://") && rawPath.includes("amazonaws.com")) {
+      try {
+        const url = new URL(rawPath);
+        const pathname = url.pathname;
+        
+        // Virtual-hosted style: bucket is in hostname, pathname is the key
+        if (url.hostname.includes('.s3.')) {
+          return `/objects${pathname}`;
+        }
+        
+        // Path style: bucket is first part of pathname
+        // /bucket-name/key -> /objects/key
+        const parts = pathname.split('/').filter(Boolean);
+        if (parts.length >= 2) {
+          return `/objects/${parts.slice(1).join('/')}`;
+        }
+        
+        return `/objects${pathname}`;
+      } catch (e) {
+        console.error("Error parsing S3 URL:", e);
+      }
+    }
+
+    // Handle Google Cloud Storage URLs
     if (rawPath.startsWith("https://storage.googleapis.com/")) {
-      const url = new URL(rawPath);
-      return `/objects${url.pathname}`;
+      try {
+        const url = new URL(rawPath);
+        return `/objects${url.pathname}`;
+      } catch (e) {
+        console.error("Error parsing GCS URL:", e);
+      }
+    }
+
+    // Handle DigitalOcean Spaces and other S3-compatible URLs
+    if (rawPath.startsWith("https://") && rawPath.includes("digitaloceanspaces.com")) {
+      try {
+        const url = new URL(rawPath);
+        return `/objects${url.pathname}`;
+      } catch (e) {
+        console.error("Error parsing Spaces URL:", e);
+      }
     }
 
     return rawPath;
