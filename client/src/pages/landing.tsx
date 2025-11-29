@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { AuthModal } from '@/components/auth-modal';
+import { useAuth } from '@/lib/auth-context';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import notationUrl from '@assets/musical notations symbols_1764118955236.png';
 
 export default function Landing() {
+  const [, navigate] = useLocation();
+  const { user } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const openLogin = () => {
     setAuthModalTab('login');

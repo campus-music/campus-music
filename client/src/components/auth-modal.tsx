@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,6 @@ interface AuthModalProps {
 export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModalProps) {
   const { login, signup } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>(defaultTab);
   const [signupType, setSignupType] = useState<'listener' | 'artist' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +62,6 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
         description: 'You have been logged in successfully.',
       });
       handleOpenChange(false);
-      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Login failed',
@@ -98,7 +95,6 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
         description: 'Your account has been created successfully.',
       });
       handleOpenChange(false);
-      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Signup failed',
