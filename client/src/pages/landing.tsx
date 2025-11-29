@@ -66,14 +66,21 @@ export default function Landing() {
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center overflow-hidden relative z-20">
         <div className="w-full px-6 text-center flex flex-col items-center justify-center">
-          {/* Logo */}
-          <div className="flex justify-center flex-shrink-0 mb-4">
-            <img 
-              src={logoUrl} 
-              alt="Campus Music" 
-              className="h-32 w-32 object-contain"
-              data-testid="img-landing-logo"
-            />
+          {/* Logo with glow effect */}
+          <div className="flex justify-center flex-shrink-0 mb-6 relative">
+            {/* Glow backdrop */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-56 h-56 rounded-full bg-gradient-to-r from-pink-500/20 via-blue-500/20 to-cyan-500/20 blur-3xl"></div>
+            </div>
+            {/* Logo */}
+            <div className="relative p-4 rounded-full bg-white/10 backdrop-blur-sm shadow-2xl shadow-blue-500/20">
+              <img 
+                src={logoUrl} 
+                alt="Campus Music" 
+                className="h-40 w-40 object-contain drop-shadow-lg"
+                data-testid="img-landing-logo"
+              />
+            </div>
           </div>
 
           {/* Main Content */}
