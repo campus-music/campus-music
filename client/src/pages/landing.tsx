@@ -91,7 +91,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-6">
             <Button
               size="sm"
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/browse')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-start-listening"
             >
@@ -102,7 +102,7 @@ export default function Landing() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/artist-browse')}
               className="border-slate-500 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-browse-artists"
             >
