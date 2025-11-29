@@ -49,34 +49,30 @@ export default function Landing() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="min-h-full w-full px-6 py-8 text-center flex flex-col items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center flex flex-col items-center">
           {/* Logo */}
-          <div className="flex justify-center mb-2">
-            <img 
-              src={logoUrl} 
-              alt="Campus Music" 
-              className="h-[28rem] w-[28rem] object-contain"
-              data-testid="img-landing-logo"
-            />
-          </div>
+          <img 
+            src={logoUrl} 
+            alt="Campus Music" 
+            className="h-44 w-44 object-contain"
+            data-testid="img-landing-logo"
+          />
 
-          {/* Main Content */}
-          <div className="space-y-2 max-w-2xl">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Campus Music
-            </h1>
-            
-            <p className="text-base md:text-lg text-gray-600">
-              Discover incredible music from student artists across campuses. Support the next generation of creators.
-            </p>
-          </div>
+          {/* Title and Description */}
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mt-8">
+            Campus Music
+          </h1>
+          
+          <p className="text-base text-gray-500 mt-3 max-w-md">
+            Discover incredible music from student artists across campuses. Support the next generation of creators.
+          </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+          <div className="flex flex-row gap-4 items-center mt-6">
             <Button
               onClick={() => navigate('/browse')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full font-medium"
               data-testid="button-start-listening"
             >
               Start Listening
@@ -84,9 +80,9 @@ export default function Landing() {
             </Button>
 
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => navigate('/artist-browse')}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100 px-8 py-3 rounded-full font-semibold"
+              className="text-gray-700 hover:text-gray-900 font-medium"
               data-testid="button-browse-artists"
             >
               Browse Artists
