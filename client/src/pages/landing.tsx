@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
-import notationUrl from '@assets/musical notations symbols_1764118955236.png';
 
 export default function Landing() {
   const [, navigate] = useLocation();
@@ -17,31 +16,17 @@ export default function Landing() {
   }, [user, navigate]);
 
   return (
-    <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
-      {/* Floating Musical Notation Background */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-        <img 
-          src={notationUrl}
-          alt="Musical notations"
-          className="absolute top-1/4 left-1/2 transform -translate-x-1/2 h-96 w-full object-cover animate-float-slow"
-        />
-        <img 
-          src={notationUrl}
-          alt="Musical notations"
-          className="absolute bottom-1/4 -right-1/4 h-72 w-96 object-cover animate-float-reverse"
-        />
-      </div>
-
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-slate-700/50 flex-shrink-0 relative z-10">
+      <header className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-2">
           <img 
             src={logoUrl} 
             alt="Campus Music Logo"
-            className="h-8 w-8 object-contain"
+            className="h-10 w-10 object-contain"
             data-testid="img-header-logo"
           />
-          <span className="text-xl font-bold text-white">Campus Music</span>
+          <span className="text-xl font-bold text-gray-900">Campus Music</span>
         </div>
         
         <div className="flex items-center gap-3">
@@ -49,7 +34,7 @@ export default function Landing() {
             variant="ghost"
             onClick={() => navigate('/login')}
             data-testid="button-header-login"
-            className="text-slate-300 hover:text-white text-sm"
+            className="text-gray-600 hover:text-gray-900 text-sm"
           >
             Log In
           </Button>
@@ -64,42 +49,34 @@ export default function Landing() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden relative z-20">
+      <div className="flex-1 flex items-center justify-center overflow-hidden">
         <div className="w-full px-6 text-center flex flex-col items-center justify-center">
-          {/* Logo with glow effect */}
-          <div className="flex justify-center flex-shrink-0 mb-6 relative">
-            {/* Glow backdrop */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-56 h-56 rounded-full bg-gradient-to-r from-pink-500/20 via-blue-500/20 to-cyan-500/20 blur-3xl"></div>
-            </div>
-            {/* Logo */}
-            <div className="relative p-4 rounded-full bg-white/10 backdrop-blur-sm shadow-2xl shadow-blue-500/20">
-              <img 
-                src={logoUrl} 
-                alt="Campus Music" 
-                className="h-40 w-40 object-contain drop-shadow-lg"
-                data-testid="img-landing-logo"
-              />
-            </div>
+          {/* Logo */}
+          <div className="flex justify-center flex-shrink-0 mb-8">
+            <img 
+              src={logoUrl} 
+              alt="Campus Music" 
+              className="h-56 w-56 object-contain"
+              data-testid="img-landing-logo"
+            />
           </div>
 
           {/* Main Content */}
-          <div className="space-y-3 max-w-2xl flex-shrink-0">
-            <h1 className="text-4xl md:text-5xl font-bold text-white">
+          <div className="space-y-4 max-w-2xl flex-shrink-0">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
               Campus Music
             </h1>
             
-            <p className="text-sm md:text-base text-slate-400">
+            <p className="text-base md:text-lg text-gray-600">
               Discover incredible music from student artists across campuses. Support the next generation of creators.
             </p>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-8">
             <Button
-              size="sm"
               onClick={() => navigate('/browse')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold"
               data-testid="button-start-listening"
             >
               Start Listening
@@ -107,10 +84,9 @@ export default function Landing() {
             </Button>
 
             <Button
-              size="sm"
               variant="outline"
               onClick={() => navigate('/artist-browse')}
-              className="border-slate-500 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-semibold text-sm"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100 px-8 py-3 rounded-full font-semibold"
               data-testid="button-browse-artists"
             >
               Browse Artists
@@ -120,25 +96,25 @@ export default function Landing() {
       </div>
 
       {/* Features Footer */}
-      <div className="flex-shrink-0 border-t border-slate-700/50 bg-slate-900/50 py-3 px-6 relative z-10">
-        <div className="grid grid-cols-3 gap-2 max-w-2xl mx-auto">
-          <div className="text-center space-y-0.5">
-            <h3 className="text-2xs font-semibold text-white">Discover Music</h3>
-            <p className="text-2xs text-slate-400 line-clamp-1">
+      <div className="flex-shrink-0 border-t border-gray-200 bg-gray-50 py-4 px-6">
+        <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
+          <div className="text-center space-y-1">
+            <h3 className="text-sm font-semibold text-gray-900">Discover Music</h3>
+            <p className="text-xs text-gray-500">
               Browse student artists
             </p>
           </div>
 
-          <div className="text-center space-y-0.5">
-            <h3 className="text-2xs font-semibold text-white">Support Artists</h3>
-            <p className="text-2xs text-slate-400 line-clamp-1">
+          <div className="text-center space-y-1">
+            <h3 className="text-sm font-semibold text-gray-900">Support Artists</h3>
+            <p className="text-xs text-gray-500">
               Reach their audience
             </p>
           </div>
 
-          <div className="text-center space-y-0.5">
-            <h3 className="text-2xs font-semibold text-white">Share & Connect</h3>
-            <p className="text-2xs text-slate-400 line-clamp-1">
+          <div className="text-center space-y-1">
+            <h3 className="text-sm font-semibold text-gray-900">Share & Connect</h3>
+            <p className="text-xs text-gray-500">
               Create playlists
             </p>
           </div>
