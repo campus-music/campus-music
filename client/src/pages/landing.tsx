@@ -49,10 +49,10 @@ export default function Landing() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden">
-        <div className="w-full px-6 text-center flex flex-col items-center justify-center">
+      <div className="flex-1 overflow-y-auto">
+        <div className="min-h-full w-full px-6 py-8 text-center flex flex-col items-center justify-center">
           {/* Logo */}
-          <div className="flex justify-center flex-shrink-0 mb-8">
+          <div className="flex justify-center mb-2">
             <img 
               src={logoUrl} 
               alt="Campus Music" 
@@ -62,7 +62,7 @@ export default function Landing() {
           </div>
 
           {/* Main Content */}
-          <div className="space-y-4 max-w-2xl flex-shrink-0">
+          <div className="space-y-2 max-w-2xl">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
               Campus Music
             </h1>
@@ -73,7 +73,7 @@ export default function Landing() {
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-8">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
             <Button
               onClick={() => navigate('/browse')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold"
