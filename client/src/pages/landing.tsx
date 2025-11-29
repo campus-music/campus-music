@@ -19,14 +19,13 @@ export default function Landing() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <img 
             src={logoUrl} 
             alt="Campus Music Logo"
             className="h-10 w-10 object-contain"
             data-testid="img-header-logo"
           />
-          <span className="text-xl font-bold text-gray-900">Campus Music</span>
         </div>
         
         <div className="flex items-center gap-3">
