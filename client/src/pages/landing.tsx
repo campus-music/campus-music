@@ -60,7 +60,7 @@ export default function Landing() {
           />
 
           {/* Title and Description */}
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 -mt-16">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 -mt-24">
             Campus Music
           </h1>
           
