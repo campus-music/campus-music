@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { AuthModal } from '@/components/auth-modal';
 import { useAuth } from '@/lib/auth-context';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import notationUrl from '@assets/musical notations symbols_1764118955236.png';
@@ -10,24 +9,12 @@ import notationUrl from '@assets/musical notations symbols_1764118955236.png';
 export default function Landing() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
     if (user) {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
-
-  const openLogin = () => {
-    setAuthModalTab('login');
-    setAuthModalOpen(true);
-  };
-
-  const openSignup = () => {
-    setAuthModalTab('signup');
-    setAuthModalOpen(true);
-  };
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
@@ -60,14 +47,14 @@ export default function Landing() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={openLogin}
+            onClick={() => navigate('/login')}
             data-testid="button-header-login"
             className="text-slate-300 hover:text-white text-sm"
           >
             Log In
           </Button>
           <Button
-            onClick={openSignup}
+            onClick={() => navigate('/signup')}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
             data-testid="button-header-signup"
           >
@@ -104,7 +91,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center flex-shrink-0 mt-6">
             <Button
               size="sm"
-              onClick={openSignup}
+              onClick={() => navigate('/signup')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-start-listening"
             >
@@ -115,7 +102,7 @@ export default function Landing() {
             <Button
               size="sm"
               variant="outline"
-              onClick={openSignup}
+              onClick={() => navigate('/signup')}
               className="border-slate-500 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-semibold text-sm"
               data-testid="button-browse-artists"
             >
@@ -165,13 +152,6 @@ export default function Landing() {
           </div>
         </div>
       </div>
-
-      {/* Auth Modal */}
-      <AuthModal 
-        open={authModalOpen} 
-        onOpenChange={setAuthModalOpen}
-        defaultTab={authModalTab}
-      />
     </div>
   );
 }
