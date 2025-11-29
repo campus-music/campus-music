@@ -4,11 +4,23 @@
  */
 
 const BASE_URL = process.env.TEST_URL || 'http://localhost:5000';
+const isProduction = process.env.NODE_ENV === 'production';
 
 interface TestResult {
   name: string;
   success: boolean;
   details: string;
+}
+
+// In production mode, we need to simulate being behind a proxy (like Render)
+// by adding the X-Forwarded-Proto header so secure cookies work correctly
+function getHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (isProduction) {
+    // Simulate Render's reverse proxy
+    headers['X-Forwarded-Proto'] = 'https';
+  }
+  return headers;
 }
 
 async function testSignupFlow(): Promise<TestResult> {
@@ -23,7 +35,7 @@ async function testSignupFlow(): Promise<TestResult> {
     console.log('1. POST /api/auth/signup...');
     const signupRes = await fetch(`${BASE_URL}/api/auth/signup`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         email: testEmail,
         password: testPassword,
@@ -54,7 +66,7 @@ async function testSignupFlow(): Promise<TestResult> {
     // Step 2: Call /api/auth/me
     console.log('2. GET /api/auth/me with cookie...');
     const meRes = await fetch(`${BASE_URL}/api/auth/me`, {
-      headers: { 'Cookie': sessionCookie },
+      headers: getHeaders({ 'Cookie': sessionCookie }),
     });
     
     const meData = await meRes.json();
@@ -83,7 +95,7 @@ async function testLoginFlow(): Promise<TestResult> {
     console.log('1. Creating test user via signup...');
     const signupRes = await fetch(`${BASE_URL}/api/auth/signup`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         email: testEmail,
         password: testPassword,
@@ -102,7 +114,7 @@ async function testLoginFlow(): Promise<TestResult> {
     console.log('2. POST /api/auth/login...');
     const loginRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         email: testEmail,
         password: testPassword,
@@ -128,7 +140,7 @@ async function testLoginFlow(): Promise<TestResult> {
     // Step 3: Call /api/auth/me
     console.log('3. GET /api/auth/me with login cookie...');
     const meRes = await fetch(`${BASE_URL}/api/auth/me`, {
-      headers: { 'Cookie': sessionCookie },
+      headers: getHeaders({ 'Cookie': sessionCookie }),
     });
     
     const meData = await meRes.json();
@@ -153,7 +165,7 @@ async function testCookieAttributes(): Promise<TestResult> {
     
     const signupRes = await fetch(`${BASE_URL}/api/auth/signup`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         email: testEmail,
         password: 'TestPassword123!',
@@ -170,15 +182,12 @@ async function testCookieAttributes(): Promise<TestResult> {
     const hasSameSite = cookies.toLowerCase().includes('samesite=lax');
     const hasPath = cookies.includes('Path=/');
     const hasMaxAge = cookies.toLowerCase().includes('max-age') || cookies.toLowerCase().includes('expires');
+    const hasSecure = cookies.toLowerCase().includes('secure');
     
     console.log(`   HttpOnly: ${hasHttpOnly ? '✓' : '✗'}`);
     console.log(`   SameSite=Lax: ${hasSameSite ? '✓' : '✗'}`);
     console.log(`   Path=/: ${hasPath ? '✓' : '✗'}`);
     console.log(`   Max-Age/Expires: ${hasMaxAge ? '✓' : '✗'}`);
-    
-    // Check if secure is present based on NODE_ENV
-    const isProduction = process.env.NODE_ENV === 'production';
-    const hasSecure = cookies.toLowerCase().includes('secure');
     
     if (isProduction) {
       console.log(`   Secure (production): ${hasSecure ? '✓' : '✗'}`);
@@ -186,10 +195,10 @@ async function testCookieAttributes(): Promise<TestResult> {
         return { name: 'Cookie Attributes', success: false, details: 'Secure flag missing in production mode' };
       }
     } else {
-      console.log(`   Secure (development): ${hasSecure ? 'Present (may cause issues)' : 'Not set ✓'}`);
+      console.log(`   Secure (development): ${hasSecure ? 'Present' : 'Not set ✓'}`);
     }
     
-    if (hasHttpOnly && hasSameSite && hasPath) {
+    if (hasHttpOnly && hasSameSite && hasPath && cookies) {
       return { name: 'Cookie Attributes', success: true, details: 'All required cookie attributes present' };
     } else {
       return { name: 'Cookie Attributes', success: false, details: 'Missing required cookie attributes' };
@@ -205,6 +214,9 @@ async function main() {
   console.log('='.repeat(60));
   console.log(`Target: ${BASE_URL}`);
   console.log(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+  if (isProduction) {
+    console.log(`Simulating proxy: X-Forwarded-Proto: https`);
+  }
   console.log('='.repeat(60));
   
   const results: TestResult[] = [];
@@ -230,7 +242,10 @@ async function main() {
   if (allPassed) {
     console.log('\n🎉 ALL TESTS PASSED!\n');
     console.log('Sessions are persisting correctly.');
-    console.log('The app should work on Render with the current configuration.');
+    if (isProduction) {
+      console.log('Production mode tested successfully with simulated proxy headers.');
+      console.log('The app should work on Render with the current configuration.');
+    }
     process.exit(0);
   } else {
     console.log('\n💥 SOME TESTS FAILED!\n');
