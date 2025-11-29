@@ -139,8 +139,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(data);
       req.session.userId = user.id;
       
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Explicitly save session to database before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -162,8 +169,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       req.session.userId = user.id;
       
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Explicitly save session to database before responding
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ error: "Session error" });
+        }
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
