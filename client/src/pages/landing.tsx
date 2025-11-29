@@ -31,16 +31,15 @@ export default function Landing() {
         
         <div className="flex items-center gap-3">
           <Button
-            variant="ghost"
             onClick={() => navigate('/login')}
             data-testid="button-header-login"
-            className="text-gray-600 hover:text-gray-900 text-sm"
+            className="bg-transparent hover:bg-[#E84A5F] text-gray-700 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-gray-300 hover:border-[#E84A5F] focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
           >
             Log In
           </Button>
           <Button
             onClick={() => navigate('/signup')}
-            className="bg-[#E84A5F] hover:bg-[#D43D50] text-white rounded-full px-4 py-2 text-sm focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 border-0 outline-none"
+            className="bg-transparent hover:bg-[#E84A5F] text-gray-700 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-gray-300 hover:border-[#E84A5F] focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 outline-none"
             data-testid="button-header-signup"
           >
             Sign Up
