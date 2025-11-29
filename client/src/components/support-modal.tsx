@@ -16,6 +16,7 @@ import { Heart, CreditCard, ExternalLink } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth-context';
+import { AuthPromptModal } from '@/components/auth-prompt-modal';
 
 interface SupportModalProps {
   artistId: string;
@@ -28,6 +29,7 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
   const [, navigate] = useLocation();
   const search = useSearch();
   const [open, setOpen] = useState(false);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [amount, setAmount] = useState('5');
   const [message, setMessage] = useState('');
 
@@ -78,16 +80,20 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
     },
   });
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen && !user) {
+      setAuthPromptOpen(true);
+      return;
+    }
+    setOpen(newOpen);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
-      toast({
-        title: 'Sign in required',
-        description: 'Please sign in to support artists.',
-        variant: 'destructive',
-      });
-      navigate('/login');
+      setOpen(false);
+      setAuthPromptOpen(true);
       return;
     }
 
@@ -114,7 +120,8 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
   const presetAmounts = [1, 5, 10, 25, 50];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -223,5 +230,12 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
         </form>
       </DialogContent>
     </Dialog>
+    
+    <AuthPromptModal
+      open={authPromptOpen}
+      onOpenChange={setAuthPromptOpen}
+      action="tip"
+    />
+    </>
   );
 }

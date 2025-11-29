@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
 import type { TrackWithArtist } from '@shared/schema';
+import { useAuth } from './auth-context';
+
+const PREVIEW_DURATION = 30; // 30 seconds preview for guests
 
 interface AudioPlayerContextType {
   currentTrack: TrackWithArtist | null;
@@ -7,6 +10,8 @@ interface AudioPlayerContextType {
   currentTime: number;
   duration: number;
   volume: number;
+  isPreviewMode: boolean;
+  previewEnded: boolean;
   playTrack: (track: TrackWithArtist) => void;
   togglePlayPause: () => void;
   seekTo: (time: number) => void;
@@ -15,18 +20,23 @@ interface AudioPlayerContextType {
   previousTrack: () => void;
   queue: TrackWithArtist[];
   setQueue: (tracks: TrackWithArtist[]) => void;
+  resetPreviewEnded: () => void;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | null>(null);
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [currentTrack, setCurrentTrack] = useState<TrackWithArtist | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.7);
   const [queue, setQueue] = useState<TrackWithArtist[]>([]);
+  const [previewEnded, setPreviewEnded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const isPreviewMode = !user;
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -36,7 +46,16 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
     const audio = audioRef.current;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      
+      // Stop at 30 seconds for preview mode (guests)
+      if (isPreviewMode && audio.currentTime >= PREVIEW_DURATION) {
+        audio.pause();
+        setIsPlaying(false);
+        setPreviewEnded(true);
+      }
+    };
     const handleDurationChange = () => setDuration(audio.duration);
     const handleEnded = () => {
       setIsPlaying(false);
@@ -52,15 +71,20 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [queue]);
+  }, [queue, isPreviewMode]);
 
   const playTrack = (track: TrackWithArtist) => {
     if (audioRef.current) {
       setCurrentTrack(track);
+      setPreviewEnded(false);
       audioRef.current.src = track.audioUrl;
       audioRef.current.play();
       setIsPlaying(true);
     }
+  };
+  
+  const resetPreviewEnded = () => {
+    setPreviewEnded(false);
   };
 
   const togglePlayPause = () => {
@@ -112,6 +136,8 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         currentTime,
         duration,
         volume,
+        isPreviewMode,
+        previewEnded,
         playTrack,
         togglePlayPause,
         seekTo,
@@ -120,6 +146,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         previousTrack,
         queue,
         setQueue,
+        resetPreviewEnded,
       }}
     >
       {children}

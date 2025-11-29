@@ -203,25 +203,17 @@ function Router() {
         </AppLayout>
       )} />
       
-      <Route path="/new-releases">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <NewReleases />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/new-releases" component={() => (
+        <AppLayout isPublic>
+          <NewReleases />
+        </AppLayout>
+      )} />
       
-      <Route path="/trending">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <Trending />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/trending" component={() => (
+        <AppLayout isPublic>
+          <Trending />
+        </AppLayout>
+      )} />
       
       <Route path="/discover" component={() => (
         <AppLayout isPublic>
@@ -299,15 +291,11 @@ function Router() {
         )}
       </Route>
 
-      <Route path="/artist/:id">
-        {() => (
-          <ProtectedRoute component={() => (
-            <AppLayout>
-              <ArtistDetail />
-            </AppLayout>
-          )} />
-        )}
-      </Route>
+      <Route path="/artist/:id" component={() => (
+        <AppLayout isPublic>
+          <ArtistDetail />
+        </AppLayout>
+      )} />
 
       <Route path="/all-trending" component={() => (
         <AppLayout isPublic>
