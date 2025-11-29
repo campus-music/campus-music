@@ -40,7 +40,7 @@ export default function Landing() {
           </Button>
           <Button
             onClick={() => navigate('/signup')}
-            className="bg-[#E84A5F] hover:bg-[#D43D50] text-white rounded-full px-4 py-2 text-sm"
+            className="bg-[#E84A5F] hover:bg-[#D43D50] text-white rounded-full px-4 py-2 text-sm focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 border-0 outline-none"
             data-testid="button-header-signup"
           >
             Sign Up
@@ -73,7 +73,7 @@ export default function Landing() {
           <div className="flex flex-row gap-4 items-center mt-4">
             <Button
               onClick={() => navigate('/browse')}
-              className="bg-[#E84A5F] hover:bg-[#D43D50] text-white px-6 py-2.5 rounded-full font-medium"
+              className="bg-[#E84A5F] hover:bg-[#D43D50] text-white px-6 py-2.5 rounded-full font-medium focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 border-0 outline-none"
               data-testid="button-start-listening"
             >
               Start Listening
