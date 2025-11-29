@@ -60,12 +60,13 @@ export default function Landing() {
           />
 
           {/* Title and Description */}
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 -mt-24">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 -mt-32">
             Campus Music
           </h1>
           
-          <p className="text-base text-gray-500 mt-2 max-w-md">
-            Discover incredible music from student artists across campuses. Support the next generation of creators.
+          <p className="text-base text-gray-500 mt-3 text-center">
+            <span className="block">Discover incredible music from student artists across campuses. Support the</span>
+            <span className="block">next generation of creators.</span>
           </p>
 
           {/* CTA Buttons */}
