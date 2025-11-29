@@ -56,7 +56,7 @@ export default function Landing() {
             <img 
               src={logoUrl} 
               alt="Campus Music" 
-              className="h-56 w-56 object-contain"
+              className="h-[28rem] w-[28rem] object-contain"
               data-testid="img-landing-logo"
             />
           </div>
