@@ -7,7 +7,8 @@ import express, {
   NextFunction,
 } from "express";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 
 import { registerRoutes } from "./routes";
 import { isStripeConfigured } from "./stripeClient";
@@ -86,20 +87,33 @@ app.post(
   }
 );
 
-const SessionStore = MemoryStore(session);
+// Trust proxy for Render and other reverse proxies (required for secure cookies)
+app.set("trust proxy", 1);
+
+// Create PostgreSQL session store
+const PgStore = connectPgSimple(session);
+const pgPool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('neon.tech') 
+    ? { rejectUnauthorized: false } 
+    : undefined,
+});
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "campus-music-secret-key-development",
-    store: new SessionStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+    store: new PgStore({
+      pool: pgPool,
+      tableName: "session", // Will auto-create this table
+      createTableIfMissing: true,
     }),
+    secret: process.env.SESSION_SECRET || "campus-music-secret-key-development",
     resave: false,
     saveUninitialized: false,
     cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     },
   })
 );
