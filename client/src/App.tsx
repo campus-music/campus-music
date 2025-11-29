@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { AudioPlayerProvider } from "@/lib/audio-player-context";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AudioPlayer } from "@/components/audio-player";
+import { AuthModal } from "@/components/auth-modal";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Home from "@/pages/home";
@@ -78,9 +81,30 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
 function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic?: boolean }) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
+  };
+
+  const openLogin = () => {
+    setAuthModalTab('login');
+    setAuthModalOpen(true);
+  };
+
+  const openSignup = () => {
+    setAuthModalTab('signup');
+    setAuthModalOpen(true);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -90,26 +114,43 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-40">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            {isPublic && !user && (
-              <div className="flex items-center gap-3 ml-auto">
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate('/login')}
-                  data-testid="button-header-login"
-                  size="sm"
+            <div className="flex items-center gap-3 ml-auto">
+              {user ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center gap-2 hover-elevate rounded-full px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  data-testid="user-avatar-header"
+                  aria-label={`View profile for ${user.fullName}`}
                 >
-                  Log In
-                </Button>
-                <Button
-                  onClick={() => navigate('/signup')}
-                  size="sm"
-                  className="rounded-full"
-                  data-testid="button-header-signup"
-                >
-                  Sign Up
-                </Button>
-              </div>
-            )}
+                  <Avatar className="h-8 w-8 border border-border">
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                      {getInitials(user.fullName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm hidden sm:block">{user.fullName}</span>
+                </button>
+              ) : isPublic ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={openLogin}
+                    data-testid="button-header-login"
+                    size="sm"
+                  >
+                    Log In
+                  </Button>
+                  <Button
+                    onClick={openSignup}
+                    size="sm"
+                    className="rounded-full"
+                    data-testid="button-header-signup"
+                  >
+                    Sign Up
+                  </Button>
+                </>
+              ) : null}
+            </div>
           </header>
           <main className="flex-1 overflow-y-auto">
             <div className="container mx-auto p-6">
@@ -119,6 +160,11 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
         </div>
       </div>
       <AudioPlayer />
+      <AuthModal 
+        open={authModalOpen} 
+        onOpenChange={setAuthModalOpen}
+        defaultTab={authModalTab}
+      />
     </SidebarProvider>
   );
 }

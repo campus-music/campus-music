@@ -1,11 +1,37 @@
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { AuthModal } from '@/components/auth-modal';
+import { useAuth } from '@/lib/auth-context';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import notationUrl from '@assets/musical notations symbols_1764118955236.png';
 
 export default function Landing() {
   const [, navigate] = useLocation();
+  const { user, logout } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
+
+  const openLogin = () => {
+    setAuthModalTab('login');
+    setAuthModalOpen(true);
+  };
+
+  const openSignup = () => {
+    setAuthModalTab('signup');
+    setAuthModalOpen(true);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex flex-col overflow-hidden relative">
@@ -36,21 +62,50 @@ export default function Landing() {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/login')}
-            data-testid="button-header-login"
-            className="text-slate-300 hover:text-white text-sm"
-          >
-            Log In
-          </Button>
-          <Button
-            onClick={() => navigate('/signup')}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
-            data-testid="button-header-signup"
-          >
-            Sign Up
-          </Button>
+          {user ? (
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/')}
+                className="text-slate-300 hover:text-white text-sm"
+                data-testid="button-go-home"
+              >
+                Go to App
+              </Button>
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-slate-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
+                data-testid="user-avatar-link"
+                aria-label={`View profile for ${user.fullName}`}
+              >
+                <Avatar className="h-8 w-8 border border-slate-600">
+                  <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                    {getInitials(user.fullName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-slate-300 hidden sm:block">{user.fullName}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                onClick={openLogin}
+                data-testid="button-header-login"
+                className="text-slate-300 hover:text-white text-sm"
+              >
+                Log In
+              </Button>
+              <Button
+                onClick={openSignup}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm"
+                data-testid="button-header-signup"
+              >
+                Sign Up
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -107,7 +162,11 @@ export default function Landing() {
       <div className="flex-shrink-0 border-t border-slate-700/50 bg-slate-900/50 py-3 px-6 relative z-10">
         <div className="grid grid-cols-3 gap-2 max-w-2xl mx-auto">
           <div className="text-center space-y-0.5">
-            <div className="text-sm">🎵</div>
+            <div className="text-sm text-slate-400">
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+            </div>
             <h3 className="text-2xs font-semibold text-white">Discover Music</h3>
             <p className="text-2xs text-slate-400 line-clamp-1">
               Browse student artists
@@ -115,7 +174,11 @@ export default function Landing() {
           </div>
 
           <div className="text-center space-y-0.5">
-            <div className="text-sm">👥</div>
+            <div className="text-sm text-slate-400">
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
             <h3 className="text-2xs font-semibold text-white">Support Artists</h3>
             <p className="text-2xs text-slate-400 line-clamp-1">
               Reach their audience
@@ -123,7 +186,11 @@ export default function Landing() {
           </div>
 
           <div className="text-center space-y-0.5">
-            <div className="text-sm">🎧</div>
+            <div className="text-sm text-slate-400">
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
+              </svg>
+            </div>
             <h3 className="text-2xs font-semibold text-white">Share & Connect</h3>
             <p className="text-2xs text-slate-400 line-clamp-1">
               Create playlists
@@ -131,6 +198,13 @@ export default function Landing() {
           </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        open={authModalOpen} 
+        onOpenChange={setAuthModalOpen}
+        defaultTab={authModalTab}
+      />
     </div>
   );
 }
