@@ -111,6 +111,32 @@ export default function Landing() {
           </div>
         </div>
       </div>
+
+      {/* Features Footer */}
+      <div className="flex-shrink-0 border-t border-slate-700/50 bg-slate-900/50 py-3 px-6 relative z-10">
+        <div className="grid grid-cols-3 gap-2 max-w-2xl mx-auto">
+          <div className="text-center space-y-0.5">
+            <h3 className="text-2xs font-semibold text-white">Discover Music</h3>
+            <p className="text-2xs text-slate-400 line-clamp-1">
+              Browse student artists
+            </p>
+          </div>
+
+          <div className="text-center space-y-0.5">
+            <h3 className="text-2xs font-semibold text-white">Support Artists</h3>
+            <p className="text-2xs text-slate-400 line-clamp-1">
+              Reach their audience
+            </p>
+          </div>
+
+          <div className="text-center space-y-0.5">
+            <h3 className="text-2xs font-semibold text-white">Share & Connect</h3>
+            <p className="text-2xs text-slate-400 line-clamp-1">
+              Create playlists
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
