@@ -111,47 +111,6 @@ export default function Landing() {
           </div>
         </div>
       </div>
-
-      {/* Features Footer */}
-      <div className="flex-shrink-0 border-t border-slate-700/50 bg-slate-900/50 py-3 px-6 relative z-10">
-        <div className="grid grid-cols-3 gap-2 max-w-2xl mx-auto">
-          <div className="text-center space-y-0.5">
-            <div className="text-sm text-slate-400">
-              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-              </svg>
-            </div>
-            <h3 className="text-2xs font-semibold text-white">Discover Music</h3>
-            <p className="text-2xs text-slate-400 line-clamp-1">
-              Browse student artists
-            </p>
-          </div>
-
-          <div className="text-center space-y-0.5">
-            <div className="text-sm text-slate-400">
-              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <h3 className="text-2xs font-semibold text-white">Support Artists</h3>
-            <p className="text-2xs text-slate-400 line-clamp-1">
-              Reach their audience
-            </p>
-          </div>
-
-          <div className="text-center space-y-0.5">
-            <div className="text-sm text-slate-400">
-              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 0112.728 0" />
-              </svg>
-            </div>
-            <h3 className="text-2xs font-semibold text-white">Share & Connect</h3>
-            <p className="text-2xs text-slate-400 line-clamp-1">
-              Create playlists
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
