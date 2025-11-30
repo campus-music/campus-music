@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import type { ArtistProfile } from "@shared/schema";
 import { AudioPlayerProvider } from "@/lib/audio-player-context";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -88,6 +89,11 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
     "--sidebar-width-icon": "3rem",
   };
 
+  const { data: artistProfile } = useQuery<ArtistProfile>({
+    queryKey: ['/api/artist/profile'],
+    enabled: !!user && user.role === 'artist',
+  });
+
   const openLogin = () => {
     setAuthModalTab('login');
     setAuthModalOpen(true);
@@ -107,6 +113,8 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
       .slice(0, 2);
   };
 
+  const profileImageUrl = artistProfile?.profileImageUrl;
+
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
@@ -124,6 +132,7 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
                   aria-label={`View profile for ${user.fullName}`}
                 >
                   <Avatar className="h-8 w-8 border border-border">
+                    <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
                     <AvatarFallback className="bg-primary/20 text-primary text-xs">
                       {getInitials(user.fullName)}
                     </AvatarFallback>
