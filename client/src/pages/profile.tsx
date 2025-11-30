@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
-import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Volume2, Bell, Shield, HardDrive } from 'lucide-react';
+import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Bell, Shield, HardDrive } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -337,7 +337,6 @@ function SettingsPage() {
     <div className="space-y-6">
       <AppearanceSettings />
       <PlaybackSettings />
-      <AudioQualitySettings />
       <NotificationSettings />
       <PrivacySettings />
       <StorageSettings />
@@ -437,80 +436,6 @@ function PlaybackSettings() {
           description="Remove silence between tracks in albums"
           checked={gapless}
           onCheckedChange={setGapless}
-        />
-      </CardContent>
-    </Card>
-  );
-}
-
-function AudioQualitySettings() {
-  const [streamingQuality, setStreamingQuality] = useState("high");
-  const [downloadQuality, setDownloadQuality] = useState("very-high");
-  const [dataSaver, setDataSaver] = useState(false);
-
-  const qualityOptions = [
-    { value: "low", label: "Low", description: "~24 kbps" },
-    { value: "normal", label: "Normal", description: "~96 kbps" },
-    { value: "high", label: "High", description: "~160 kbps" },
-    { value: "very-high", label: "Very High", description: "~320 kbps" },
-  ];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Volume2 className="h-5 w-5 text-primary" />
-          Audio Quality
-        </CardTitle>
-        <CardDescription>Manage streaming and download quality</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Streaming Quality</Label>
-          <p className="text-xs text-muted-foreground">Higher quality uses more data</p>
-          <Select value={streamingQuality} onValueChange={setStreamingQuality}>
-            <SelectTrigger data-testid="select-streaming-quality">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {qualityOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex items-center justify-between w-full gap-4">
-                    <span>{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Download Quality</Label>
-          <p className="text-xs text-muted-foreground">Quality for offline listening</p>
-          <Select value={downloadQuality} onValueChange={setDownloadQuality}>
-            <SelectTrigger data-testid="select-download-quality">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {qualityOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex items-center justify-between w-full gap-4">
-                    <span>{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <SettingsToggle
-          id="data-saver"
-          label="Data Saver"
-          description="Reduce data usage when on mobile network"
-          checked={dataSaver}
-          onCheckedChange={setDataSaver}
         />
       </CardContent>
     </Card>
