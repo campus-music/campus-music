@@ -175,8 +175,12 @@ Preferred communication style: Simple, everyday language.
 - Real-time webhook processing for payment events
 - Frontend SupportModal with preset amounts and Stripe checkout redirect
 
-**Phase 4: Email Verification (PENDING)**
-- Email sending and verification workflow
+**Phase 4: Email Verification (PENDING - Pre-Deployment)**
+- Email sending and verification workflow for .edu artist accounts
+- Recommended service: Resend (modern, developer-friendly)
+- Implementation: Send verification code on artist signup, require verification before artist features
+- Database already has `emailVerified` and `verificationToken` fields ready
+- Consider adding social login (Google, Apple) for listeners in future
 
 **Phase 5: Security & Deployment (PENDING)**
 - Rate limiting, input validation, error handling
