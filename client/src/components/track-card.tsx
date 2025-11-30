@@ -72,18 +72,16 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
             </Button>
           )}
         </div>
-        <div className="p-4">
-          <h3 className="font-semibold truncate" data-testid={`text-track-title-${track.id}`}>
+        <div className="p-3 space-y-1">
+          <h3 className="font-semibold truncate text-sm" data-testid={`text-track-title-${track.id}`}>
             {track.title}
           </h3>
-          <p className="text-sm text-muted-foreground truncate" data-testid={`text-artist-name-${track.id}`}>
+          <p className="text-xs text-muted-foreground truncate" data-testid={`text-artist-name-${track.id}`}>
             {track.artist.stageName}
           </p>
-          <div className="mt-2">
-            <Badge variant="secondary" className="text-xs max-w-full truncate">
-              {track.universityName}
-            </Badge>
-          </div>
+          <p className="text-xs text-muted-foreground/70 truncate">
+            {track.universityName}
+          </p>
         </div>
       </Card>
       
