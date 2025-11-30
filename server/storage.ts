@@ -260,10 +260,11 @@ export class DatabaseStorage implements IStorage {
 
     if (tracksWithArtists.length < limit) {
       const existingIds = tracksWithArtists.map(t => t.id);
-      const latestTracks = await this.getLatestTracks(limit - tracksWithArtists.length);
+      const latestTracks = await this.getLatestTracks(limit);
       for (const track of latestTracks) {
         if (!existingIds.includes(track.id)) {
           tracksWithArtists.push(track);
+          if (tracksWithArtists.length >= limit) break;
         }
       }
     }

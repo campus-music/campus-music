@@ -99,8 +99,8 @@ export default function Home() {
               <Skeleton key={i} className="h-16 w-full rounded-md" />
             ))
           ) : filteredTrendingTracks.length > 0 ? (
-            filteredTrendingTracks.slice(0, 8).map((track, index) => (
-              <TrackListItem key={track.id} track={track} index={index + 1} />
+            filteredTrendingTracks.slice(0, 10).map((track, index) => (
+              <TrackListItem key={track.id} track={track} index={index} />
             ))
           ) : (
             <div className="text-center py-12 text-muted-foreground">
