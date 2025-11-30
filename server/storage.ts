@@ -32,6 +32,12 @@ import {
   type InsertArtistMessage,
   type ArtistConnectionWithProfiles,
   type ConversationPreview,
+  type UserConnection,
+  type InsertUserConnection,
+  type DirectMessage,
+  type InsertDirectMessage,
+  type UserConnectionWithUsers,
+  type UserConversationPreview,
   users,
   artistProfiles,
   tracks,
@@ -47,7 +53,9 @@ import {
   artistWallets,
   userListeningHistory,
   artistConnections,
-  artistMessages
+  artistMessages,
+  userConnections,
+  directMessages
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, ilike, or, and, inArray, count } from "drizzle-orm";
@@ -146,6 +154,24 @@ export interface IStorage {
   markMessagesAsRead(connectionId: string, readerId: string): Promise<void>;
   getUnreadMessageCount(artistId: string): Promise<number>;
   getConversations(artistId: string): Promise<ConversationPreview[]>;
+
+  // User connections (social chat for all users)
+  createUserConnection(data: InsertUserConnection): Promise<UserConnection>;
+  getUserConnection(id: string): Promise<UserConnection | undefined>;
+  getUserConnectionBetweenUsers(userId1: string, userId2: string): Promise<UserConnection | undefined>;
+  updateUserConnectionStatus(id: string, status: string): Promise<UserConnection | undefined>;
+  getPendingUserConnectionRequests(userId: string): Promise<UserConnectionWithUsers[]>;
+  getAcceptedUserConnections(userId: string): Promise<UserConnectionWithUsers[]>;
+  getSentUserConnectionRequests(userId: string): Promise<UserConnectionWithUsers[]>;
+  deleteUserConnection(id: string): Promise<void>;
+  getAllUsers(): Promise<User[]>;
+
+  // Direct messages
+  sendDirectMessage(data: InsertDirectMessage): Promise<DirectMessage>;
+  getDirectMessages(connectionId: string, limit?: number): Promise<DirectMessage[]>;
+  markDirectMessagesAsRead(connectionId: string, readerId: string): Promise<void>;
+  getUnreadDirectMessageCount(userId: string): Promise<number>;
+  getUserConversations(userId: string): Promise<UserConversationPreview[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1037,6 +1063,221 @@ export class DatabaseStorage implements IStorage {
       conversations.push({
         connection: conn,
         otherArtist,
+        lastMessage: lastMessage || undefined,
+        unreadCount: unreadResult?.count || 0,
+      });
+    }
+
+    conversations.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt?.getTime() || a.connection.createdAt?.getTime() || 0;
+      const bTime = b.lastMessage?.createdAt?.getTime() || b.connection.createdAt?.getTime() || 0;
+      return bTime - aTime;
+    });
+
+    return conversations;
+  }
+
+  // User connections (social chat for all users)
+  async createUserConnection(data: InsertUserConnection): Promise<UserConnection> {
+    const [connection] = await db
+      .insert(userConnections)
+      .values(data)
+      .returning();
+    return connection;
+  }
+
+  async getUserConnection(id: string): Promise<UserConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(userConnections)
+      .where(eq(userConnections.id, id));
+    return connection || undefined;
+  }
+
+  async getUserConnectionBetweenUsers(userId1: string, userId2: string): Promise<UserConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(userConnections)
+      .where(
+        or(
+          and(
+            eq(userConnections.requesterId, userId1),
+            eq(userConnections.receiverId, userId2)
+          ),
+          and(
+            eq(userConnections.requesterId, userId2),
+            eq(userConnections.receiverId, userId1)
+          )
+        )
+      );
+    return connection || undefined;
+  }
+
+  async updateUserConnectionStatus(id: string, status: string): Promise<UserConnection | undefined> {
+    const [connection] = await db
+      .update(userConnections)
+      .set({ status, respondedAt: new Date() })
+      .where(eq(userConnections.id, id))
+      .returning();
+    return connection || undefined;
+  }
+
+  async getPendingUserConnectionRequests(userId: string): Promise<UserConnectionWithUsers[]> {
+    const connections = await db
+      .select()
+      .from(userConnections)
+      .where(
+        and(
+          eq(userConnections.receiverId, userId),
+          eq(userConnections.status, "pending")
+        )
+      );
+
+    const result: UserConnectionWithUsers[] = [];
+    for (const conn of connections) {
+      const requester = await this.getUser(conn.requesterId);
+      const receiver = await this.getUser(conn.receiverId);
+      if (requester && receiver) {
+        result.push({ ...conn, requester, receiver });
+      }
+    }
+    return result;
+  }
+
+  async getAcceptedUserConnections(userId: string): Promise<UserConnectionWithUsers[]> {
+    const connections = await db
+      .select()
+      .from(userConnections)
+      .where(
+        and(
+          or(
+            eq(userConnections.requesterId, userId),
+            eq(userConnections.receiverId, userId)
+          ),
+          eq(userConnections.status, "accepted")
+        )
+      );
+
+    const result: UserConnectionWithUsers[] = [];
+    for (const conn of connections) {
+      const requester = await this.getUser(conn.requesterId);
+      const receiver = await this.getUser(conn.receiverId);
+      if (requester && receiver) {
+        result.push({ ...conn, requester, receiver });
+      }
+    }
+    return result;
+  }
+
+  async getSentUserConnectionRequests(userId: string): Promise<UserConnectionWithUsers[]> {
+    const connections = await db
+      .select()
+      .from(userConnections)
+      .where(
+        and(
+          eq(userConnections.requesterId, userId),
+          eq(userConnections.status, "pending")
+        )
+      );
+
+    const result: UserConnectionWithUsers[] = [];
+    for (const conn of connections) {
+      const requester = await this.getUser(conn.requesterId);
+      const receiver = await this.getUser(conn.receiverId);
+      if (requester && receiver) {
+        result.push({ ...conn, requester, receiver });
+      }
+    }
+    return result;
+  }
+
+  async deleteUserConnection(id: string): Promise<void> {
+    await db.delete(userConnections).where(eq(userConnections.id, id));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  // Direct messages
+  async sendDirectMessage(data: InsertDirectMessage): Promise<DirectMessage> {
+    const [message] = await db
+      .insert(directMessages)
+      .values(data)
+      .returning();
+    return message;
+  }
+
+  async getDirectMessages(connectionId: string, limit: number = 50): Promise<DirectMessage[]> {
+    return await db
+      .select()
+      .from(directMessages)
+      .where(eq(directMessages.connectionId, connectionId))
+      .orderBy(desc(directMessages.createdAt))
+      .limit(limit);
+  }
+
+  async markDirectMessagesAsRead(connectionId: string, readerId: string): Promise<void> {
+    await db
+      .update(directMessages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(directMessages.connectionId, connectionId),
+          sql`${directMessages.senderId} != ${readerId}`,
+          eq(directMessages.isRead, false)
+        )
+      );
+  }
+
+  async getUnreadDirectMessageCount(userId: string): Promise<number> {
+    const connections = await this.getAcceptedUserConnections(userId);
+    let total = 0;
+    
+    for (const conn of connections) {
+      const [result] = await db
+        .select({ count: count() })
+        .from(directMessages)
+        .where(
+          and(
+            eq(directMessages.connectionId, conn.id),
+            sql`${directMessages.senderId} != ${userId}`,
+            eq(directMessages.isRead, false)
+          )
+        );
+      total += result?.count || 0;
+    }
+    return total;
+  }
+
+  async getUserConversations(userId: string): Promise<UserConversationPreview[]> {
+    const connections = await this.getAcceptedUserConnections(userId);
+    const conversations: UserConversationPreview[] = [];
+
+    for (const conn of connections) {
+      const otherUser = conn.requesterId === userId ? conn.receiver : conn.requester;
+      
+      const [lastMessage] = await db
+        .select()
+        .from(directMessages)
+        .where(eq(directMessages.connectionId, conn.id))
+        .orderBy(desc(directMessages.createdAt))
+        .limit(1);
+
+      const [unreadResult] = await db
+        .select({ count: count() })
+        .from(directMessages)
+        .where(
+          and(
+            eq(directMessages.connectionId, conn.id),
+            sql`${directMessages.senderId} != ${userId}`,
+            eq(directMessages.isRead, false)
+          )
+        );
+
+      conversations.push({
+        connection: conn,
+        otherUser,
         lastMessage: lastMessage || undefined,
         unreadCount: unreadResult?.count || 0,
       });

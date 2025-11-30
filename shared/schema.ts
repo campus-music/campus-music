@@ -156,6 +156,26 @@ export const artistMessages = pgTable("artist_messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// User connections for social chat - friend system between all users (listeners and artists)
+export const userConnections = pgTable("user_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // "pending", "accepted", "rejected"
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  respondedAt: timestamp("responded_at"),
+});
+
+// Direct messages between connected users
+export const directMessages = pgTable("direct_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => userConnections.id, { onDelete: "cascade" }),
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email('Please enter a valid email address'),
@@ -247,6 +267,21 @@ export const insertArtistMessageSchema = createInsertSchema(artistMessages, {
   isRead: true 
 });
 
+export const insertUserConnectionSchema = createInsertSchema(userConnections).omit({ 
+  id: true, 
+  createdAt: true,
+  respondedAt: true,
+  status: true 
+});
+
+export const insertDirectMessageSchema = createInsertSchema(directMessages, {
+  content: z.string().min(1, 'Message cannot be empty'),
+}).omit({ 
+  id: true, 
+  createdAt: true,
+  isRead: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -299,6 +334,12 @@ export type ArtistConnection = typeof artistConnections.$inferSelect;
 export type InsertArtistMessage = z.infer<typeof insertArtistMessageSchema>;
 export type ArtistMessage = typeof artistMessages.$inferSelect;
 
+export type InsertUserConnection = z.infer<typeof insertUserConnectionSchema>;
+export type UserConnection = typeof userConnections.$inferSelect;
+
+export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
+export type DirectMessage = typeof directMessages.$inferSelect;
+
 export type Login = z.infer<typeof loginSchema>;
 
 // Extended types for joined data
@@ -323,5 +364,22 @@ export type ConversationPreview = {
   connection: ArtistConnection;
   otherArtist: ArtistProfile;
   lastMessage?: ArtistMessage;
+  unreadCount: number;
+};
+
+// User connection types for social chat
+export type UserConnectionWithUsers = UserConnection & {
+  requester: User;
+  receiver: User;
+};
+
+export type DirectMessageWithSender = DirectMessage & {
+  sender: User;
+};
+
+export type UserConversationPreview = {
+  connection: UserConnection;
+  otherUser: User;
+  lastMessage?: DirectMessage;
   unreadCount: number;
 };
