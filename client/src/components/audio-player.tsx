@@ -54,16 +54,14 @@ export function AudioPlayer() {
                 <AvatarImage src={currentTrack.coverImageUrl || undefined} alt={currentTrack.title} />
                 <AvatarFallback className="rounded-md">{currentTrack.title[0]}</AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="font-medium truncate" data-testid="text-current-track-title">{currentTrack.title}</p>
                 <p className="text-sm text-muted-foreground truncate" data-testid="text-current-artist-name">
                   {currentTrack.artist.stageName}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {currentTrack.universityName}
-                  </Badge>
-                </div>
+                <p className="text-xs text-muted-foreground/70 truncate">
+                  {currentTrack.universityName}
+                </p>
               </div>
             </div>
 
