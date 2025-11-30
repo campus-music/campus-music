@@ -41,7 +41,7 @@ export default function AllArtists() {
           sortedArtists.map((artist) => (
             <Link key={artist.id} href={`/artist/${artist.id}`}>
               <Card 
-                className="overflow-hidden hover-elevate transition-all p-6 text-center space-y-4 cursor-pointer h-full flex flex-col items-center justify-center"
+                className="overflow-hidden hover-elevate transition-all p-6 text-center space-y-4 cursor-pointer h-full flex flex-col items-center"
                 data-testid={`card-artist-${artist.id}`}
               >
                 <Avatar className="h-28 w-28">
@@ -50,9 +50,9 @@ export default function AllArtists() {
                     <Music className="h-10 w-10" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 space-y-1">
+                <div className="min-w-0 w-full space-y-1">
                   <h3 className="font-semibold truncate">{artist.stageName}</h3>
-                  <p className="text-sm text-muted-foreground">{artist.mainGenre}</p>
+                  <p className="text-sm text-muted-foreground truncate">{artist.mainGenre}</p>
                   <p className="text-xs text-muted-foreground">{artist.trackCount} tracks</p>
                 </div>
               </Card>
