@@ -239,6 +239,52 @@ Changes made to prepare for GitHub:
 - [ ] Set up S3 bucket and credentials for file uploads
 - [ ] Add production error monitoring (Sentry, etc.)
 
+## Future Roadmap: Mobile App Features
+
+### Campus Creators (TikTok-style UGC Platform)
+
+A social content creation layer where fans interact with artist music through user-generated content.
+
+**Core Features:**
+1. **Vocal Remixes** - Listeners record verses over artist songs, AI synchronizes vocals with original track
+2. **Dance Videos** - Users film dance content to songs and share
+3. **Swipe Feed** - TikTok/Reels-style vertical feed for discovering fan-created content
+4. **Creator Attribution** - Both artists and content creators (dancers, vocalists) get recognition and credit
+
+**Technical Requirements:**
+- Video recording (in-app camera, clip editing)
+- AI audio synchronization (AssemblyAI or ElevenLabs)
+- Video hosting service (Mux or AWS IVS)
+- Processing pipeline (queue system for rendering remixes)
+- Vertical swipe feed UI with engagement features
+- Expanded S3 storage for video content
+
+**MVP Approach:**
+- 60-second video uploads (pre-recorded, not in-app)
+- Basic audio mixing without AI sync
+- Simple swipe feed with likes
+- Artist attribution and lineage tracking
+
+**Full Vision:**
+- In-app recording with filters/effects
+- AI-powered vocal synchronization
+- Duet chains and collaboration features
+- Comments, shares, reaction videos
+- Creator monetization and revenue splits
+- Moderation queue for content review
+
+**Recommended Services:**
+- Video: Mux or AWS IVS
+- AI Audio: AssemblyAI or ElevenLabs
+- Processing: AWS Step Functions/SQS or Temporal
+- CDN: CloudFront for video delivery
+
+**Integration Points:**
+- UGC references original Track IDs for attribution
+- Extends audio-player context for UGC playback
+- Analytics dashboard shows derivative engagement metrics
+- Artist consent workflow for remix permissions
+
 ## Recent Updates
 
 - **GitHub Push & Render Deployment Preparation** (November 2025):
