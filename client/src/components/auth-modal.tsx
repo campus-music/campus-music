@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
-import { Headphones, Mic2, ArrowLeft, Music } from 'lucide-react';
+import { Headphones, Mic2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 interface AuthModalProps {
   open: boolean;
@@ -122,13 +123,15 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#E84A5F]/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
           
           <div className="relative z-10 p-8 pt-10">
-            {/* Logo/Icon */}
+            {/* Logo */}
             <div className="flex justify-center mb-6">
               <div className="relative group">
-                <div className="absolute -inset-2 bg-[#E84A5F]/30 rounded-2xl blur-xl opacity-60" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E84A5F] to-[#E84A5F]/70 shadow-lg shadow-[#E84A5F]/25">
-                  <Music className="h-8 w-8 text-white" />
-                </div>
+                <div className="absolute -inset-3 bg-[#E84A5F]/20 rounded-full blur-xl opacity-60" />
+                <img 
+                  src={logoUrl} 
+                  alt="Campus Music" 
+                  className="relative h-20 w-20 object-contain drop-shadow-lg"
+                />
               </div>
             </div>
             
