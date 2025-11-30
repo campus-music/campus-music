@@ -119,7 +119,7 @@ export default function Search() {
                             </div>
                           </div>
                         </div>
-                        <SupportModal artistId={artist.id} artistName={artist.stageName} />
+                        <SupportModal artistId={artist.id} artistName={artist.stageName} artistImageUrl={artist.profileImageUrl} />
                       </div>
                     </Link>
                   </Card>

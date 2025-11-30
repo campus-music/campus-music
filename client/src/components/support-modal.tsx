@@ -21,9 +21,10 @@ import { AuthPromptModal } from '@/components/auth-prompt-modal';
 interface SupportModalProps {
   artistId: string;
   artistName: string;
+  artistImageUrl?: string | null;
 }
 
-export function SupportModal({ artistId, artistName }: SupportModalProps) {
+export function SupportModal({ artistId, artistName, artistImageUrl }: SupportModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -235,6 +236,10 @@ export function SupportModal({ artistId, artistName }: SupportModalProps) {
       open={authPromptOpen}
       onOpenChange={setAuthPromptOpen}
       action="tip"
+      artist={{
+        imageUrl: artistImageUrl,
+        name: artistName,
+      }}
     />
     </>
   );

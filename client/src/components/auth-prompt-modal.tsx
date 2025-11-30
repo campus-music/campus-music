@@ -13,11 +13,17 @@ interface TrackInfo {
   artistName?: string;
 }
 
+interface ArtistInfo {
+  imageUrl?: string | null;
+  name?: string;
+}
+
 interface AuthPromptModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   action: ActionType;
   track?: TrackInfo;
+  artist?: ArtistInfo;
 }
 
 const actionConfig: Record<ActionType, { icon: typeof Music; title: string; description: string }> = {
@@ -48,11 +54,12 @@ const actionConfig: Record<ActionType, { icon: typeof Music; title: string; desc
   },
 };
 
-export function AuthPromptModal({ open, onOpenChange, action, track }: AuthPromptModalProps) {
+export function AuthPromptModal({ open, onOpenChange, action, track, artist }: AuthPromptModalProps) {
   const [, navigate] = useLocation();
   const config = actionConfig[action];
   const Icon = config.icon;
   const hasCoverArt = track?.coverImageUrl;
+  const hasArtistImage = artist?.imageUrl;
 
   const handleSignup = () => {
     onOpenChange(false);
@@ -130,6 +137,50 @@ export function AuthPromptModal({ open, onOpenChange, action, track }: AuthPromp
                   data-testid="button-auth-prompt-login"
                 >
                   Already have an account? <span className="underline ml-1">Log In</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : hasArtistImage ? (
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#E84A5F]/20 via-background to-background" />
+            
+            <div className="relative z-10 p-8 text-center">
+              <div className="relative mx-auto mb-6 group">
+                <div className="absolute -inset-3 bg-[#E84A5F]/20 rounded-full blur-xl opacity-60" />
+                <img 
+                  src={artist.imageUrl || undefined}
+                  alt={artist.name || 'Artist'}
+                  className="relative w-24 h-24 rounded-full object-cover shadow-xl ring-2 ring-[#E84A5F]/30 mx-auto"
+                />
+              </div>
+              
+              {artist.name && (
+                <p className="text-muted-foreground text-sm mb-2">{artist.name}</p>
+              )}
+              
+              <h2 className="text-2xl font-bold mb-2" data-testid="text-auth-prompt-title">
+                {config.title}
+              </h2>
+              <p className="text-muted-foreground mb-6" data-testid="text-auth-prompt-description">
+                {config.description}
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={handleSignup}
+                  className="bg-[#E84A5F] hover:bg-[#D43D50] text-white w-full h-12 text-base font-semibold shadow-lg shadow-[#E84A5F]/25"
+                  data-testid="button-auth-prompt-signup"
+                >
+                  Sign Up Free
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleLogin}
+                  className="w-full"
+                  data-testid="button-auth-prompt-login"
+                >
+                  Already have an account? Log In
                 </Button>
               </div>
             </div>

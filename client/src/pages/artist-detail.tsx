@@ -85,7 +85,7 @@ export default function ArtistDetail() {
             )}
 
             <div className="flex gap-3 flex-wrap">
-              <SupportModal artistId={artist.id} artistName={artist.stageName} />
+              <SupportModal artistId={artist.id} artistName={artist.stageName} artistImageUrl={artist.profileImageUrl} />
             </div>
 
             {/* Quick Stats */}

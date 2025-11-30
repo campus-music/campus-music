@@ -87,7 +87,7 @@ export default function ArtistBrowse() {
             >
               Follow
             </Button>
-            <SupportModal artistId={artist.id} artistName={artist.stageName} />
+            <SupportModal artistId={artist.id} artistName={artist.stageName} artistImageUrl={artist.profileImageUrl} />
           </div>
         </div>
       </Card>
