@@ -20,9 +20,9 @@ import {
   Clock,
   Check,
   X,
-  Music,
   GraduationCap
 } from 'lucide-react';
+import logoUrl from '@assets/campus music logo_1764112870484.png';
 import type { UserConnectionWithUsers, User } from '@shared/schema';
 
 type SafeUser = {
@@ -417,7 +417,7 @@ function FriendCard({
             <h3 className="font-semibold">{user.fullName}</h3>
             {user.role === 'artist' && (
               <Badge variant="secondary" className="text-xs">
-                <Music className="h-3 w-3 mr-1" />
+                <img src={logoUrl} alt="" className="h-3 w-3 mr-1" />
                 Artist
               </Badge>
             )}
@@ -482,7 +482,7 @@ function RequestCard({
             <h3 className="font-semibold">{user.fullName}</h3>
             {user.role === 'artist' && (
               <Badge variant="secondary" className="text-xs">
-                <Music className="h-3 w-3 mr-1" />
+                <img src={logoUrl} alt="" className="h-3 w-3 mr-1" />
                 Artist
               </Badge>
             )}
@@ -544,7 +544,7 @@ function SentRequestCard({
             <h3 className="font-semibold">{user.fullName}</h3>
             {user.role === 'artist' && (
               <Badge variant="secondary" className="text-xs">
-                <Music className="h-3 w-3 mr-1" />
+                <img src={logoUrl} alt="" className="h-3 w-3 mr-1" />
                 Artist
               </Badge>
             )}
@@ -599,7 +599,7 @@ function DiscoverCard({
             <h3 className="font-semibold">{user.fullName}</h3>
             {user.role === 'artist' && (
               <Badge variant="secondary" className="text-xs">
-                <Music className="h-3 w-3 mr-1" />
+                <img src={logoUrl} alt="" className="h-3 w-3 mr-1" />
                 Artist
               </Badge>
             )}
