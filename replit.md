@@ -22,9 +22,18 @@ Preferred communication style: Simple, everyday language.
 - **Database**: Drizzle ORM, PostgreSQL (via Neon serverless driver), schema-first approach with shared TypeScript types (`shared/schema.ts`).
 
 ### Data Architecture
-- **Core Models**: Users (.edu email required), Artist Profiles (linked to users), Tracks (audio content with metadata), Playlists, Likes & Streams, Artist Connections, Artist Messages.
-- **Artist Collaboration**: Features like artist discovery, friend requests, and direct messaging between connected artists.
+- **Core Models**: Users (.edu email required), Artist Profiles (linked to users), Tracks (audio content with metadata), Playlists, Likes & Streams.
+- **Artist Collaboration**: Artist discovery, friend requests, and direct messaging between connected artists (artist_connections, artist_messages tables - uses artist profile IDs).
+- **Universal Social**: User connections and direct messaging for all users including listeners (user_connections, direct_messages tables - uses user IDs).
 - **Type Safety**: Shared TypeScript types, Drizzle Zod integration for runtime validation.
+
+### Social Features
+- **Two Messaging Systems**:
+  1. Artist Collaboration Network - For verified artists only, uses artist profile IDs
+  2. Universal Social Chat - For all logged-in users (listeners and artists), uses user IDs
+- **User Connections**: Friend requests, accept/reject, unfriend functionality
+- **Direct Messages**: Real-time chat between connected friends with read receipts
+- **Routes**: /social (discovery and friend management), /chat (direct messaging)
 
 ### File Storage
 - **Abstraction**: S3-compatible storage (AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2) with local filesystem fallback for development.
