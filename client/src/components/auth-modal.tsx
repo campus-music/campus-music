@@ -3,11 +3,11 @@ import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
-import { Headphones, Mic2, ArrowLeft } from 'lucide-react';
+import { Headphones, Mic2, ArrowLeft, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface AuthModalProps {
   open: boolean;
@@ -22,7 +22,6 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
   const [signupType, setSignupType] = useState<'listener' | 'artist' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Sync activeTab when defaultTab prop changes (e.g., when opening modal)
   useEffect(() => {
     if (open) {
       setActiveTab(defaultTab);
@@ -108,184 +107,238 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl">Campus Music</DialogTitle>
-          <DialogDescription className="text-center">
-            Music platform for university students
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-0 bg-transparent [&>button]:text-white [&>button]:opacity-100 [&>button]:z-50">
+        <VisuallyHidden>
+          <DialogTitle>{activeTab === 'login' ? 'Log In' : 'Sign Up'}</DialogTitle>
+          <DialogDescription>
+            {activeTab === 'login' ? 'Log in to your Campus Music account' : 'Create a new Campus Music account'}
           </DialogDescription>
-        </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as 'login' | 'signup'); setSignupType(null); }}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login" data-testid="tab-login">Log In</TabsTrigger>
-            <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="login" className="mt-4">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
-                <Input
-                  id="login-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                  required
-                  data-testid="input-modal-login-email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  required
-                  data-testid="input-modal-login-password"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-                data-testid="button-modal-login"
-              >
-                {isLoading ? 'Signing in...' : 'Sign in'}
-              </Button>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="signup" className="mt-4">
-            {!signupType ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground text-center">Choose how you want to join</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <Card 
-                    className="hover-elevate cursor-pointer" 
-                    onClick={() => setSignupType('listener')}
-                    data-testid="card-modal-listener"
-                  >
-                    <CardContent className="pt-4 pb-4">
-                      <div className="text-center space-y-2">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          <Headphones className="h-5 w-5 text-primary" />
-                        </div>
-                        <h3 className="text-sm font-semibold">Listener</h3>
-                        <p className="text-xs text-muted-foreground">Any email</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="hover-elevate cursor-pointer" 
-                    onClick={() => setSignupType('artist')}
-                    data-testid="card-modal-artist"
-                  >
-                    <CardContent className="pt-4 pb-4">
-                      <div className="text-center space-y-2">
-                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          <Mic2 className="h-5 w-5 text-primary" />
-                        </div>
-                        <h3 className="text-sm font-semibold">Artist</h3>
-                        <p className="text-xs text-muted-foreground">.edu email</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+        </VisuallyHidden>
+        
+        <div className="relative">
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-900 to-[#E84A5F]/20" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#E84A5F]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#E84A5F]/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="relative z-10 p-8 pt-10">
+            {/* Logo/Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="relative group">
+                <div className="absolute -inset-2 bg-[#E84A5F]/30 rounded-2xl blur-xl opacity-60" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E84A5F] to-[#E84A5F]/70 shadow-lg shadow-[#E84A5F]/25">
+                  <Music className="h-8 w-8 text-white" />
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => setSignupType(null)}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                  data-testid="button-modal-back"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </button>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-1">
+              {activeTab === 'login' ? 'Welcome back' : 'Join Campus Music'}
+            </h2>
+            <p className="text-white/60 text-center text-sm mb-6">
+              {activeTab === 'login' 
+                ? 'Sign in to continue to your music' 
+                : 'Discover music from student artists worldwide'}
+            </p>
 
-                <form onSubmit={handleSignup} className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={signupData.fullName}
-                      onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                      required
-                      data-testid="input-modal-signup-name"
-                    />
+            {/* Tab Switcher */}
+            <div className="flex gap-2 p-1 bg-white/5 rounded-lg mb-6">
+              <button
+                onClick={() => { setActiveTab('login'); setSignupType(null); }}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'login' 
+                    ? 'bg-[#E84A5F] text-white shadow-lg shadow-[#E84A5F]/25' 
+                    : 'text-white/60 hover:text-white'
+                }`}
+                data-testid="tab-login"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => { setActiveTab('signup'); setSignupType(null); }}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'signup' 
+                    ? 'bg-[#E84A5F] text-white shadow-lg shadow-[#E84A5F]/25' 
+                    : 'text-white/60 hover:text-white'
+                }`}
+                data-testid="tab-signup"
+              >
+                Sign Up
+              </button>
+            </div>
+
+            {activeTab === 'login' ? (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email" className="text-white/80">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                    data-testid="input-modal-login-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password" className="text-white/80">Password</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                    data-testid="input-modal-login-password"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-[#E84A5F] hover:bg-[#D43D50] text-white h-11 text-base font-semibold shadow-lg shadow-[#E84A5F]/25"
+                  disabled={isLoading}
+                  data-testid="button-modal-login"
+                >
+                  {isLoading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
+            ) : (
+              <>
+                {!signupType ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-white/60 text-center">Choose how you want to join</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card 
+                        className="bg-white/5 border-white/10 hover:bg-white/10 hover:border-[#E84A5F]/50 cursor-pointer transition-all" 
+                        onClick={() => setSignupType('listener')}
+                        data-testid="card-modal-listener"
+                      >
+                        <CardContent className="pt-6 pb-6">
+                          <div className="text-center space-y-3">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#E84A5F]/20">
+                              <Headphones className="h-6 w-6 text-[#E84A5F]" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white">Listener</h3>
+                            <p className="text-xs text-white/50">Any email</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card 
+                        className="bg-white/5 border-white/10 hover:bg-white/10 hover:border-[#E84A5F]/50 cursor-pointer transition-all" 
+                        onClick={() => setSignupType('artist')}
+                        data-testid="card-modal-artist"
+                      >
+                        <CardContent className="pt-6 pb-6">
+                          <div className="text-center space-y-3">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#E84A5F]/20">
+                              <Mic2 className="h-6 w-6 text-[#E84A5F]" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-white">Artist</h3>
+                            <p className="text-xs text-white/50">.edu email</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder={signupType === 'artist' ? 'you@university.edu' : 'you@example.com'}
-                      value={signupData.email}
-                      onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                      required
-                      data-testid="input-modal-signup-email"
-                    />
-                    {signupType === 'artist' && (
-                      <p className="text-xs text-muted-foreground">Must use a .edu email</p>
-                    )}
+                ) : (
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={() => setSignupType(null)}
+                      className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors"
+                      data-testid="button-modal-back"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </button>
+
+                    <form onSubmit={handleSignup} className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name" className="text-white/80">Full Name</Label>
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={signupData.fullName}
+                          onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                          required
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                          data-testid="input-modal-signup-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email" className="text-white/80">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder={signupType === 'artist' ? 'you@university.edu' : 'you@example.com'}
+                          value={signupData.email}
+                          onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                          required
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                          data-testid="input-modal-signup-email"
+                        />
+                        {signupType === 'artist' && (
+                          <p className="text-xs text-[#E84A5F]/80">Must use a .edu email</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-university" className="text-white/80">University</Label>
+                        <Input
+                          id="signup-university"
+                          type="text"
+                          placeholder="Stanford University"
+                          value={signupData.universityName}
+                          onChange={(e) => setSignupData({ ...signupData, universityName: e.target.value })}
+                          required
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                          data-testid="input-modal-signup-university"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-country" className="text-white/80">Country</Label>
+                        <Input
+                          id="signup-country"
+                          type="text"
+                          placeholder="United States"
+                          value={signupData.country}
+                          onChange={(e) => setSignupData({ ...signupData, country: e.target.value })}
+                          required
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                          data-testid="input-modal-signup-country"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password" className="text-white/80">Password</Label>
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          placeholder="At least 8 characters"
+                          value={signupData.password}
+                          onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                          required
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                          data-testid="input-modal-signup-password"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full bg-[#E84A5F] hover:bg-[#D43D50] text-white h-11 text-base font-semibold shadow-lg shadow-[#E84A5F]/25"
+                        disabled={isLoading}
+                        data-testid="button-modal-signup"
+                      >
+                        {isLoading ? 'Creating account...' : 'Create Account'}
+                      </Button>
+                    </form>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-university">University</Label>
-                    <Input
-                      id="signup-university"
-                      type="text"
-                      placeholder="Stanford University"
-                      value={signupData.universityName}
-                      onChange={(e) => setSignupData({ ...signupData, universityName: e.target.value })}
-                      required
-                      data-testid="input-modal-signup-university"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-country">Country</Label>
-                    <Input
-                      id="signup-country"
-                      type="text"
-                      placeholder="United States"
-                      value={signupData.country}
-                      onChange={(e) => setSignupData({ ...signupData, country: e.target.value })}
-                      required
-                      data-testid="input-modal-signup-country"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="At least 8 characters"
-                      value={signupData.password}
-                      onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                      required
-                      data-testid="input-modal-signup-password"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                    data-testid="button-modal-signup"
-                  >
-                    {isLoading ? 'Creating account...' : 'Create account'}
-                  </Button>
-                </form>
-              </div>
+                )}
+              </>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
