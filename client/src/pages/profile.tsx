@@ -12,8 +12,11 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
-import { Camera, Music, Sun, Moon, Monitor } from 'lucide-react';
+import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Volume2, Bell, Shield, HardDrive } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ArtistProfile } from '@shared/schema';
 
 export default function Profile() {
@@ -322,24 +325,27 @@ export default function Profile() {
         )}
 
         <TabsContent value="settings" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Settings</CardTitle>
-              <CardDescription>Customize your app experience</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <ThemeSettings />
-              </div>
-            </CardContent>
-          </Card>
+          <SettingsPage />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function ThemeSettings() {
+function SettingsPage() {
+  return (
+    <div className="space-y-6">
+      <AppearanceSettings />
+      <PlaybackSettings />
+      <AudioQualitySettings />
+      <NotificationSettings />
+      <PrivacySettings />
+      <StorageSettings />
+    </div>
+  );
+}
+
+function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
   
   const themes = [
@@ -349,39 +355,369 @@ function ThemeSettings() {
   ] as const;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label className="text-base font-medium">Theme</Label>
-        <p className="text-sm text-muted-foreground mt-1">
-          Select how you'd like Campus Music to look
-        </p>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {themes.map(({ value, label, icon: Icon, description }) => (
-          <button
-            key={value}
-            onClick={() => setTheme(value)}
-            className={`flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all ${
-              theme === value 
-                ? "border-primary bg-primary/5" 
-                : "border-border hover:border-primary/50 hover:bg-muted/50"
-            }`}
-            data-testid={`button-theme-${value}`}
-          >
-            <div className={`p-3 rounded-full ${
-              theme === value 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-muted text-muted-foreground"
-            }`}>
-              <Icon className="h-5 w-5" />
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Palette className="h-5 w-5 text-primary" />
+          Appearance
+        </CardTitle>
+        <CardDescription>Customize how Campus Music looks</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label className="text-sm font-medium">Theme</Label>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+            Select your preferred color scheme
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {themes.map(({ value, label, icon: Icon, description }) => (
+              <button
+                key={value}
+                onClick={() => setTheme(value)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                  theme === value 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                }`}
+                data-testid={`button-theme-${value}`}
+              >
+                <div className={`p-2 rounded-full ${
+                  theme === value 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-xs">{label}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlaybackSettings() {
+  const [autoplay, setAutoplay] = useState(true);
+  const [crossfade, setCrossfade] = useState(false);
+  const [crossfadeSeconds, setCrossfadeSeconds] = useState(5);
+  const [gapless, setGapless] = useState(true);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Play className="h-5 w-5 text-primary" />
+          Playback
+        </CardTitle>
+        <CardDescription>Control how music plays</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <SettingsToggle
+          id="autoplay"
+          label="Autoplay"
+          description="Keep playing similar tracks when your music ends"
+          checked={autoplay}
+          onCheckedChange={setAutoplay}
+        />
+        
+        <div className="space-y-3">
+          <SettingsToggle
+            id="crossfade"
+            label="Crossfade"
+            description="Blend tracks together for seamless transitions"
+            checked={crossfade}
+            onCheckedChange={setCrossfade}
+          />
+          {crossfade && (
+            <div className="pl-4 border-l-2 border-primary/20 ml-2">
+              <Label className="text-xs text-muted-foreground">Crossfade duration: {crossfadeSeconds}s</Label>
+              <Slider
+                value={[crossfadeSeconds]}
+                onValueChange={(v) => setCrossfadeSeconds(v[0])}
+                min={1}
+                max={12}
+                step={1}
+                className="mt-2"
+                data-testid="slider-crossfade"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>1s</span>
+                <span>12s</span>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="font-medium text-sm">{label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+          )}
+        </div>
+
+        <SettingsToggle
+          id="gapless"
+          label="Gapless Playback"
+          description="Remove silence between tracks in albums"
+          checked={gapless}
+          onCheckedChange={setGapless}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function AudioQualitySettings() {
+  const [streamingQuality, setStreamingQuality] = useState("high");
+  const [downloadQuality, setDownloadQuality] = useState("very-high");
+  const [dataSaver, setDataSaver] = useState(false);
+
+  const qualityOptions = [
+    { value: "low", label: "Low", description: "~24 kbps" },
+    { value: "normal", label: "Normal", description: "~96 kbps" },
+    { value: "high", label: "High", description: "~160 kbps" },
+    { value: "very-high", label: "Very High", description: "~320 kbps" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Volume2 className="h-5 w-5 text-primary" />
+          Audio Quality
+        </CardTitle>
+        <CardDescription>Manage streaming and download quality</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Streaming Quality</Label>
+          <p className="text-xs text-muted-foreground">Higher quality uses more data</p>
+          <Select value={streamingQuality} onValueChange={setStreamingQuality}>
+            <SelectTrigger data-testid="select-streaming-quality">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {qualityOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex items-center justify-between w-full gap-4">
+                    <span>{option.label}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Download Quality</Label>
+          <p className="text-xs text-muted-foreground">Quality for offline listening</p>
+          <Select value={downloadQuality} onValueChange={setDownloadQuality}>
+            <SelectTrigger data-testid="select-download-quality">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {qualityOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex items-center justify-between w-full gap-4">
+                    <span>{option.label}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <SettingsToggle
+          id="data-saver"
+          label="Data Saver"
+          description="Reduce data usage when on mobile network"
+          checked={dataSaver}
+          onCheckedChange={setDataSaver}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function NotificationSettings() {
+  const [newMusic, setNewMusic] = useState(true);
+  const [artistUpdates, setArtistUpdates] = useState(true);
+  const [playlistUpdates, setPlaylistUpdates] = useState(false);
+  const [emailDigest, setEmailDigest] = useState(true);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Bell className="h-5 w-5 text-primary" />
+          Notifications
+        </CardTitle>
+        <CardDescription>Choose what updates you receive</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <SettingsToggle
+          id="new-music"
+          label="New Music"
+          description="Get notified when artists you follow release new tracks"
+          checked={newMusic}
+          onCheckedChange={setNewMusic}
+        />
+
+        <SettingsToggle
+          id="artist-updates"
+          label="Artist Updates"
+          description="News and announcements from artists you follow"
+          checked={artistUpdates}
+          onCheckedChange={setArtistUpdates}
+        />
+
+        <SettingsToggle
+          id="playlist-updates"
+          label="Playlist Updates"
+          description="When playlists you follow are updated"
+          checked={playlistUpdates}
+          onCheckedChange={setPlaylistUpdates}
+        />
+
+        <SettingsToggle
+          id="email-digest"
+          label="Weekly Email Digest"
+          description="Receive a weekly summary of new music and recommendations"
+          checked={emailDigest}
+          onCheckedChange={setEmailDigest}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PrivacySettings() {
+  const [listeningActivity, setListeningActivity] = useState(true);
+  const [publicProfile, setPublicProfile] = useState(true);
+  const [showPlaylists, setShowPlaylists] = useState(true);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          Privacy
+        </CardTitle>
+        <CardDescription>Control your visibility and data sharing</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <SettingsToggle
+          id="listening-activity"
+          label="Share Listening Activity"
+          description="Let others see what you're currently playing"
+          checked={listeningActivity}
+          onCheckedChange={setListeningActivity}
+        />
+
+        <SettingsToggle
+          id="public-profile"
+          label="Public Profile"
+          description="Allow others to view your profile and music taste"
+          checked={publicProfile}
+          onCheckedChange={setPublicProfile}
+        />
+
+        <SettingsToggle
+          id="show-playlists"
+          label="Show Playlists on Profile"
+          description="Display your public playlists on your profile"
+          checked={showPlaylists}
+          onCheckedChange={setShowPlaylists}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function StorageSettings() {
+  const [cacheSize] = useState("1.2 GB");
+  const { toast } = useToast();
+
+  const handleClearCache = () => {
+    toast({ title: "Cache cleared", description: "All cached data has been removed" });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <HardDrive className="h-5 w-5 text-primary" />
+          Storage
+        </CardTitle>
+        <CardDescription>Manage cached data and storage</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm font-medium">Cache Size</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Temporary files for faster loading
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">{cacheSize}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleClearCache}
+              data-testid="button-clear-cache"
+            >
+              Clear Cache
+            </Button>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm font-medium text-destructive">Delete Account</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Permanently remove your account and all data
+              </p>
             </div>
-          </button>
-        ))}
+            <Button 
+              variant="destructive" 
+              size="sm"
+              data-testid="button-delete-account"
+            >
+              Delete Account
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SettingsToggle({ 
+  id, 
+  label, 
+  description, 
+  checked, 
+  onCheckedChange 
+}: { 
+  id: string;
+  label: string; 
+  description: string; 
+  checked: boolean; 
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex-1 pr-4">
+        <Label htmlFor={id} className="text-sm font-medium cursor-pointer">{label}</Label>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
       </div>
+      <Switch 
+        id={id}
+        checked={checked} 
+        onCheckedChange={onCheckedChange}
+        data-testid={`switch-${id}`}
+      />
     </div>
   );
 }
