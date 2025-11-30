@@ -12,6 +12,7 @@ import type { PlaylistWithTracks } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import playlistPlaceholder from '@assets/generated_images/coral_music_note_playlist_placeholder.png';
 
 export default function Playlists() {
   const { toast } = useToast();
@@ -195,8 +196,12 @@ export default function Playlists() {
                   onClick={() => setSelectedPlaylistId(playlist.id)}
                   data-testid={`card-playlist-${playlist.id}`}
                 >
-                  <div className="aspect-square bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 relative">
-                    <Music className="h-16 w-16 text-muted-foreground" />
+                  <div className="aspect-square flex-shrink-0 relative">
+                    <img 
+                      src={playlistPlaceholder} 
+                      alt="Playlist cover" 
+                      className="w-full h-full object-cover"
+                    />
                     <Button
                       size="sm"
                       variant="destructive"
