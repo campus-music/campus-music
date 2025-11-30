@@ -39,6 +39,8 @@ import AllArtists from "@/pages/all-artists";
 import BestOfCampus from "@/pages/best-of-campus";
 import ArtistFriends from "@/pages/artist-friends";
 import ArtistMessages from "@/pages/artist-messages";
+import Social from "@/pages/social";
+import Chat from "@/pages/chat";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -360,6 +362,36 @@ function Router() {
           <ProtectedRoute component={() => (
             <AppLayout>
               <ArtistMessages />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/social">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Social />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/chat">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Chat />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/chat/:connectionId">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Chat />
             </AppLayout>
           )} />
         )}

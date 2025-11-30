@@ -34,7 +34,12 @@ const libraryItems = [
 
 const artistCollabItems = [
   { title: "Artist Friends", url: "/friends", icon: Users },
-  { title: "Messages", url: "/messages", icon: MessageCircle },
+  { title: "Artist Messages", url: "/messages", icon: MessageCircle },
+];
+
+const socialItems = [
+  { title: "Connect", url: "/social", icon: Users },
+  { title: "Chat", url: "/chat", icon: MessageCircle },
 ];
 
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
@@ -107,7 +112,25 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
             </SidebarGroup>
 
             <SidebarGroup>
-              <SidebarGroupLabel>Collaborate</SidebarGroupLabel>
+              <SidebarGroupLabel>Social</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {socialItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={location === item.url || location.startsWith(item.url + '/')}>
+                        <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Artist Collaboration</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {artistCollabItems.map((item) => (

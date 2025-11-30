@@ -1556,6 +1556,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================================
+  // User Connections & Direct Messages (Social Chat)
+  // =====================================================
+
+  // Get all users (for discover/search)
+  app.get("/api/users/all", requireAuth, async (_req: any, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const usersWithProfiles = await Promise.all(
+        allUsers.map(async (u) => {
+          const artistProfile = await storage.getArtistProfile(u.id);
+          return {
+            id: u.id,
+            email: u.email,
+            fullName: u.fullName,
+            universityName: u.universityName,
+            profileImageUrl: artistProfile?.profileImageUrl || null,
+            role: u.role,
+          };
+        })
+      );
+      res.json(usersWithProfiles);
+    } catch (error: any) {
+      console.error("Error getting all users:", error);
+      res.status(500).json({ error: error.message || "Failed to get users" });
+    }
+  });
+
+  // Send a friend request (user connections)
+  app.post("/api/social/connect/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const myUserId = req.session.userId;
+
+      if (myUserId === targetUserId) {
+        return res.status(400).json({ error: "Cannot connect with yourself" });
+      }
+
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const existing = await storage.getUserConnectionBetweenUsers(myUserId, targetUserId);
+      if (existing) {
+        return res.status(400).json({ error: "Connection already exists", status: existing.status });
+      }
+
+      const connection = await storage.createUserConnection({
+        requesterId: myUserId,
+        receiverId: targetUserId,
+      });
+
+      res.json(connection);
+    } catch (error: any) {
+      console.error("Error creating user connection:", error);
+      res.status(500).json({ error: error.message || "Failed to send connection request" });
+    }
+  });
+
+  // Accept a friend request
+  app.post("/api/social/:connectionId/accept", requireAuth, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myUserId = req.session.userId;
+
+      const connection = await storage.getUserConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection request not found" });
+      }
+
+      if (connection.receiverId !== myUserId) {
+        return res.status(403).json({ error: "Only the recipient can accept this request" });
+      }
+
+      if (connection.status !== "pending") {
+        return res.status(400).json({ error: "This request has already been processed" });
+      }
+
+      const updated = await storage.updateUserConnectionStatus(connectionId, "accepted");
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error accepting user connection:", error);
+      res.status(500).json({ error: error.message || "Failed to accept request" });
+    }
+  });
+
+  // Reject a friend request
+  app.post("/api/social/:connectionId/reject", requireAuth, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myUserId = req.session.userId;
+
+      const connection = await storage.getUserConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection request not found" });
+      }
+
+      if (connection.receiverId !== myUserId) {
+        return res.status(403).json({ error: "Only the recipient can reject this request" });
+      }
+
+      if (connection.status !== "pending") {
+        return res.status(400).json({ error: "This request has already been processed" });
+      }
+
+      const updated = await storage.updateUserConnectionStatus(connectionId, "rejected");
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error rejecting user connection:", error);
+      res.status(500).json({ error: error.message || "Failed to reject request" });
+    }
+  });
+
+  // Delete a connection (unfriend)
+  app.delete("/api/social/:connectionId", requireAuth, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myUserId = req.session.userId;
+
+      const connection = await storage.getUserConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myUserId && connection.receiverId !== myUserId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.deleteUserConnection(connectionId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting user connection:", error);
+      res.status(500).json({ error: error.message || "Failed to remove connection" });
+    }
+  });
+
+  // Get pending friend requests (received)
+  app.get("/api/social/pending", requireAuth, async (req: any, res) => {
+    try {
+      const requests = await storage.getPendingUserConnectionRequests(req.session.userId);
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Error getting pending user connections:", error);
+      res.status(500).json({ error: error.message || "Failed to get pending requests" });
+    }
+  });
+
+  // Get sent friend requests
+  app.get("/api/social/sent", requireAuth, async (req: any, res) => {
+    try {
+      const requests = await storage.getSentUserConnectionRequests(req.session.userId);
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Error getting sent user connections:", error);
+      res.status(500).json({ error: error.message || "Failed to get sent requests" });
+    }
+  });
+
+  // Get accepted connections (friends list)
+  app.get("/api/social/friends", requireAuth, async (req: any, res) => {
+    try {
+      const connections = await storage.getAcceptedUserConnections(req.session.userId);
+      res.json(connections);
+    } catch (error: any) {
+      console.error("Error getting user connections:", error);
+      res.status(500).json({ error: error.message || "Failed to get friends" });
+    }
+  });
+
+  // Get connection status with a specific user
+  app.get("/api/social/status/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const { userId: targetUserId } = req.params;
+      const myUserId = req.session.userId;
+
+      const connection = await storage.getUserConnectionBetweenUsers(myUserId, targetUserId);
+      
+      if (!connection) {
+        return res.json({ status: "none" });
+      }
+
+      res.json({
+        status: connection.status,
+        connectionId: connection.id,
+        isRequester: connection.requesterId === myUserId,
+      });
+    } catch (error: any) {
+      console.error("Error getting user connection status:", error);
+      res.status(500).json({ error: error.message || "Failed to get status" });
+    }
+  });
+
+  // =====================================================
+  // Direct Messages (Social Chat Messages)
+  // =====================================================
+
+  // Get all conversations
+  app.get("/api/dm/conversations", requireAuth, async (req: any, res) => {
+    try {
+      const conversations = await storage.getUserConversations(req.session.userId);
+      res.json(conversations);
+    } catch (error: any) {
+      console.error("Error getting user conversations:", error);
+      res.status(500).json({ error: error.message || "Failed to get conversations" });
+    }
+  });
+
+  // Get messages for a connection
+  app.get("/api/dm/:connectionId", requireAuth, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myUserId = req.session.userId;
+
+      const connection = await storage.getUserConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myUserId && connection.receiverId !== myUserId) {
+        return res.status(403).json({ error: "Not authorized to view these messages" });
+      }
+
+      if (connection.status !== "accepted") {
+        return res.status(403).json({ error: "Connection must be accepted to view messages" });
+      }
+
+      const messages = await storage.getDirectMessages(connectionId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error getting direct messages:", error);
+      res.status(500).json({ error: error.message || "Failed to get messages" });
+    }
+  });
+
+  // Send a direct message
+  app.post("/api/dm/:connectionId", requireAuth, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const { content } = req.body;
+      const myUserId = req.session.userId;
+
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      const connection = await storage.getUserConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myUserId && connection.receiverId !== myUserId) {
+        return res.status(403).json({ error: "Not authorized to send messages here" });
+      }
+
+      if (connection.status !== "accepted") {
+        return res.status(403).json({ error: "Connection must be accepted to send messages" });
+      }
+
+      const message = await storage.sendDirectMessage({
+        connectionId,
+        senderId: myUserId,
+        content: content.trim(),
+      });
+
+      res.json(message);
+    } catch (error: any) {
+      console.error("Error sending direct message:", error);
+      res.status(500).json({ error: error.message || "Failed to send message" });
+    }
+  });
+
+  // Get unread direct message count
+  app.get("/api/dm/unread/count", requireAuth, async (req: any, res) => {
+    try {
+      const count = await storage.getUnreadDirectMessageCount(req.session.userId);
+      res.json({ count });
+    } catch (error: any) {
+      console.error("Error getting unread DM count:", error);
+      res.status(500).json({ error: error.message || "Failed to get unread count" });
+    }
+  });
+
+  // Mark direct messages as read
+  app.post("/api/dm/:connectionId/read", requireAuth, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myUserId = req.session.userId;
+
+      const connection = await storage.getUserConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myUserId && connection.receiverId !== myUserId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.markDirectMessagesAsRead(connectionId, myUserId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error marking DMs as read:", error);
+      res.status(500).json({ error: error.message || "Failed to mark as read" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 
