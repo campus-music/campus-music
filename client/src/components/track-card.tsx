@@ -79,12 +79,9 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
           <p className="text-sm text-muted-foreground truncate" data-testid={`text-artist-name-${track.id}`}>
             {track.artist.stageName}
           </p>
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          <div className="mt-2">
             <Badge variant="secondary" className="text-xs max-w-full truncate">
               {track.universityName}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {track.genre}
             </Badge>
           </div>
         </div>
