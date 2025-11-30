@@ -1,4 +1,4 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
@@ -30,6 +30,11 @@ const libraryItems = [
   { title: "My Library", url: "/library", icon: Library },
   { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
   { title: "Profile", url: "/profile", icon: User },
+];
+
+const artistCollabItems = [
+  { title: "Artist Friends", url: "/friends", icon: Users },
+  { title: "Messages", url: "/messages", icon: MessageCircle },
 ];
 
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
@@ -90,6 +95,24 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
                   {discoveryItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={location === item.url}>
+                        <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Collaborate</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {artistCollabItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={location === item.url || location.startsWith(item.url + '/')}>
                         <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>

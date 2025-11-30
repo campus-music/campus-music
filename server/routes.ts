@@ -1253,6 +1253,309 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ARTIST CONNECTIONS (FRIENDS) ROUTES =====
+
+  // Require artist profile middleware
+  const requireArtistProfile = async (req: any, res: any, next: any) => {
+    const artistProfile = await storage.getArtistProfile(req.session.userId!);
+    if (!artistProfile) {
+      return res.status(403).json({ error: "Artist profile required" });
+    }
+    req.artistProfile = artistProfile;
+    next();
+  };
+
+  // Send connection request
+  app.post("/api/connections/request/:artistId", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { artistId } = req.params;
+      const myArtistProfile = req.artistProfile;
+
+      if (artistId === myArtistProfile.id) {
+        return res.status(400).json({ error: "Cannot connect with yourself" });
+      }
+
+      const targetArtist = await storage.getArtistProfileById(artistId);
+      if (!targetArtist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+
+      const existing = await storage.getConnectionBetweenArtists(myArtistProfile.id, artistId);
+      if (existing) {
+        return res.status(400).json({ 
+          error: existing.status === "pending" ? "Connection request already sent" :
+                 existing.status === "accepted" ? "Already connected" : "Connection request rejected"
+        });
+      }
+
+      const connection = await storage.createConnection({
+        requesterId: myArtistProfile.id,
+        receiverId: artistId,
+      });
+
+      res.json(connection);
+    } catch (error: any) {
+      console.error("Error sending connection request:", error);
+      res.status(500).json({ error: error.message || "Failed to send connection request" });
+    }
+  });
+
+  // Accept connection request
+  app.post("/api/connections/:connectionId/accept", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myArtistProfile = req.artistProfile;
+
+      const connection = await storage.getConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection request not found" });
+      }
+
+      if (connection.receiverId !== myArtistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to accept this request" });
+      }
+
+      if (connection.status !== "pending") {
+        return res.status(400).json({ error: "Connection request already processed" });
+      }
+
+      const updated = await storage.updateConnectionStatus(connectionId, "accepted");
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error accepting connection:", error);
+      res.status(500).json({ error: error.message || "Failed to accept connection" });
+    }
+  });
+
+  // Reject connection request
+  app.post("/api/connections/:connectionId/reject", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myArtistProfile = req.artistProfile;
+
+      const connection = await storage.getConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection request not found" });
+      }
+
+      if (connection.receiverId !== myArtistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to reject this request" });
+      }
+
+      if (connection.status !== "pending") {
+        return res.status(400).json({ error: "Connection request already processed" });
+      }
+
+      const updated = await storage.updateConnectionStatus(connectionId, "rejected");
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error rejecting connection:", error);
+      res.status(500).json({ error: error.message || "Failed to reject connection" });
+    }
+  });
+
+  // Cancel/delete connection (for sender) or unfriend (for both parties)
+  app.delete("/api/connections/:connectionId", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myArtistProfile = req.artistProfile;
+
+      const connection = await storage.getConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myArtistProfile.id && connection.receiverId !== myArtistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to delete this connection" });
+      }
+
+      await storage.deleteConnection(connectionId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting connection:", error);
+      res.status(500).json({ error: error.message || "Failed to delete connection" });
+    }
+  });
+
+  // Get pending connection requests (received)
+  app.get("/api/connections/pending", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const requests = await storage.getPendingConnectionRequests(req.artistProfile.id);
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Error getting pending connections:", error);
+      res.status(500).json({ error: error.message || "Failed to get pending requests" });
+    }
+  });
+
+  // Get sent connection requests (pending)
+  app.get("/api/connections/sent", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const requests = await storage.getSentConnectionRequests(req.artistProfile.id);
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Error getting sent connections:", error);
+      res.status(500).json({ error: error.message || "Failed to get sent requests" });
+    }
+  });
+
+  // Get accepted connections (friends list)
+  app.get("/api/connections", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const connections = await storage.getAcceptedConnections(req.artistProfile.id);
+      res.json(connections);
+    } catch (error: any) {
+      console.error("Error getting connections:", error);
+      res.status(500).json({ error: error.message || "Failed to get connections" });
+    }
+  });
+
+  // Check connection status with another artist
+  app.get("/api/connections/status/:artistId", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { artistId } = req.params;
+      const connection = await storage.getConnectionBetweenArtists(req.artistProfile.id, artistId);
+      
+      if (!connection) {
+        return res.json({ status: "none" });
+      }
+
+      res.json({
+        status: connection.status,
+        connectionId: connection.id,
+        isRequester: connection.requesterId === req.artistProfile.id,
+      });
+    } catch (error: any) {
+      console.error("Error checking connection status:", error);
+      res.status(500).json({ error: error.message || "Failed to check connection status" });
+    }
+  });
+
+  // ===== ARTIST MESSAGES (CHAT) ROUTES =====
+
+  // Get conversations list
+  app.get("/api/messages/conversations", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const conversations = await storage.getConversations(req.artistProfile.id);
+      res.json(conversations);
+    } catch (error: any) {
+      console.error("Error getting conversations:", error);
+      res.status(500).json({ error: error.message || "Failed to get conversations" });
+    }
+  });
+
+  // Get messages for a connection
+  app.get("/api/messages/:connectionId", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myArtistProfile = req.artistProfile;
+
+      const connection = await storage.getConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myArtistProfile.id && connection.receiverId !== myArtistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to view these messages" });
+      }
+
+      if (connection.status !== "accepted") {
+        return res.status(403).json({ error: "Connection must be accepted to view messages" });
+      }
+
+      const messages = await storage.getMessages(connectionId);
+      
+      await storage.markMessagesAsRead(connectionId, myArtistProfile.id);
+
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error getting messages:", error);
+      res.status(500).json({ error: error.message || "Failed to get messages" });
+    }
+  });
+
+  // Send a message
+  app.post("/api/messages/:connectionId", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const { content } = req.body;
+      const myArtistProfile = req.artistProfile;
+
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      const connection = await storage.getConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myArtistProfile.id && connection.receiverId !== myArtistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to send messages here" });
+      }
+
+      if (connection.status !== "accepted") {
+        return res.status(403).json({ error: "Connection must be accepted to send messages" });
+      }
+
+      const message = await storage.sendMessage({
+        connectionId,
+        senderId: myArtistProfile.id,
+        content: content.trim(),
+      });
+
+      res.json(message);
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ error: error.message || "Failed to send message" });
+    }
+  });
+
+  // Get unread message count
+  app.get("/api/messages/unread/count", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const count = await storage.getUnreadMessageCount(req.artistProfile.id);
+      res.json({ count });
+    } catch (error: any) {
+      console.error("Error getting unread count:", error);
+      res.status(500).json({ error: error.message || "Failed to get unread count" });
+    }
+  });
+
+  // Mark messages as read
+  app.post("/api/messages/:connectionId/read", requireAuth, requireArtistProfile, async (req: any, res) => {
+    try {
+      const { connectionId } = req.params;
+      const myArtistProfile = req.artistProfile;
+
+      const connection = await storage.getConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      if (connection.requesterId !== myArtistProfile.id && connection.receiverId !== myArtistProfile.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.markMessagesAsRead(connectionId, myArtistProfile.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error marking messages as read:", error);
+      res.status(500).json({ error: error.message || "Failed to mark as read" });
+    }
+  });
+
+  // Get all artists (for search/discover)
+  app.get("/api/artists/all", async (_req, res) => {
+    try {
+      const artists = await storage.getAllArtists();
+      res.json(artists);
+    } catch (error: any) {
+      console.error("Error getting all artists:", error);
+      res.status(500).json({ error: error.message || "Failed to get artists" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 

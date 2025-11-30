@@ -26,6 +26,12 @@ import {
   type InsertSupport,
   type ArtistWallet,
   type InsertArtistWallet,
+  type ArtistConnection,
+  type InsertArtistConnection,
+  type ArtistMessage,
+  type InsertArtistMessage,
+  type ArtistConnectionWithProfiles,
+  type ConversationPreview,
   users,
   artistProfiles,
   tracks,
@@ -39,7 +45,9 @@ import {
   playlistMembers,
   supports,
   artistWallets,
-  userListeningHistory
+  userListeningHistory,
+  artistConnections,
+  artistMessages
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, ilike, or, and, inArray, count } from "drizzle-orm";
@@ -123,6 +131,21 @@ export interface IStorage {
   createArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
   createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
   updateArtistWallet(artistId: string, updates: Partial<ArtistWallet>): Promise<ArtistWallet | undefined>;
+
+  createConnection(data: InsertArtistConnection): Promise<ArtistConnection>;
+  getConnection(id: string): Promise<ArtistConnection | undefined>;
+  getConnectionBetweenArtists(artistId1: string, artistId2: string): Promise<ArtistConnection | undefined>;
+  updateConnectionStatus(id: string, status: string): Promise<ArtistConnection | undefined>;
+  getPendingConnectionRequests(artistId: string): Promise<ArtistConnectionWithProfiles[]>;
+  getAcceptedConnections(artistId: string): Promise<ArtistConnectionWithProfiles[]>;
+  getSentConnectionRequests(artistId: string): Promise<ArtistConnectionWithProfiles[]>;
+  deleteConnection(id: string): Promise<void>;
+
+  sendMessage(data: InsertArtistMessage): Promise<ArtistMessage>;
+  getMessages(connectionId: string, limit?: number): Promise<ArtistMessage[]>;
+  markMessagesAsRead(connectionId: string, readerId: string): Promise<void>;
+  getUnreadMessageCount(artistId: string): Promise<number>;
+  getConversations(artistId: string): Promise<ConversationPreview[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -814,6 +837,218 @@ export class DatabaseStorage implements IStorage {
       .where(eq(artistWallets.artistId, artistId))
       .returning();
     return wallet || undefined;
+  }
+
+  async createConnection(data: InsertArtistConnection): Promise<ArtistConnection> {
+    const [connection] = await db
+      .insert(artistConnections)
+      .values(data)
+      .returning();
+    return connection;
+  }
+
+  async getConnection(id: string): Promise<ArtistConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(artistConnections)
+      .where(eq(artistConnections.id, id));
+    return connection || undefined;
+  }
+
+  async getConnectionBetweenArtists(artistId1: string, artistId2: string): Promise<ArtistConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(artistConnections)
+      .where(
+        or(
+          and(
+            eq(artistConnections.requesterId, artistId1),
+            eq(artistConnections.receiverId, artistId2)
+          ),
+          and(
+            eq(artistConnections.requesterId, artistId2),
+            eq(artistConnections.receiverId, artistId1)
+          )
+        )
+      );
+    return connection || undefined;
+  }
+
+  async updateConnectionStatus(id: string, status: string): Promise<ArtistConnection | undefined> {
+    const [connection] = await db
+      .update(artistConnections)
+      .set({ status, respondedAt: new Date() })
+      .where(eq(artistConnections.id, id))
+      .returning();
+    return connection || undefined;
+  }
+
+  async getPendingConnectionRequests(artistId: string): Promise<ArtistConnectionWithProfiles[]> {
+    const connections = await db
+      .select()
+      .from(artistConnections)
+      .where(
+        and(
+          eq(artistConnections.receiverId, artistId),
+          eq(artistConnections.status, "pending")
+        )
+      )
+      .orderBy(desc(artistConnections.createdAt));
+
+    const result: ArtistConnectionWithProfiles[] = [];
+    for (const conn of connections) {
+      const requester = await this.getArtistProfileById(conn.requesterId);
+      const receiver = await this.getArtistProfileById(conn.receiverId);
+      if (requester && receiver) {
+        result.push({ ...conn, requester, receiver });
+      }
+    }
+    return result;
+  }
+
+  async getAcceptedConnections(artistId: string): Promise<ArtistConnectionWithProfiles[]> {
+    const connections = await db
+      .select()
+      .from(artistConnections)
+      .where(
+        and(
+          or(
+            eq(artistConnections.requesterId, artistId),
+            eq(artistConnections.receiverId, artistId)
+          ),
+          eq(artistConnections.status, "accepted")
+        )
+      )
+      .orderBy(desc(artistConnections.respondedAt));
+
+    const result: ArtistConnectionWithProfiles[] = [];
+    for (const conn of connections) {
+      const requester = await this.getArtistProfileById(conn.requesterId);
+      const receiver = await this.getArtistProfileById(conn.receiverId);
+      if (requester && receiver) {
+        result.push({ ...conn, requester, receiver });
+      }
+    }
+    return result;
+  }
+
+  async getSentConnectionRequests(artistId: string): Promise<ArtistConnectionWithProfiles[]> {
+    const connections = await db
+      .select()
+      .from(artistConnections)
+      .where(
+        and(
+          eq(artistConnections.requesterId, artistId),
+          eq(artistConnections.status, "pending")
+        )
+      )
+      .orderBy(desc(artistConnections.createdAt));
+
+    const result: ArtistConnectionWithProfiles[] = [];
+    for (const conn of connections) {
+      const requester = await this.getArtistProfileById(conn.requesterId);
+      const receiver = await this.getArtistProfileById(conn.receiverId);
+      if (requester && receiver) {
+        result.push({ ...conn, requester, receiver });
+      }
+    }
+    return result;
+  }
+
+  async deleteConnection(id: string): Promise<void> {
+    await db.delete(artistConnections).where(eq(artistConnections.id, id));
+  }
+
+  async sendMessage(data: InsertArtistMessage): Promise<ArtistMessage> {
+    const [message] = await db
+      .insert(artistMessages)
+      .values(data)
+      .returning();
+    return message;
+  }
+
+  async getMessages(connectionId: string, limit: number = 50): Promise<ArtistMessage[]> {
+    return await db
+      .select()
+      .from(artistMessages)
+      .where(eq(artistMessages.connectionId, connectionId))
+      .orderBy(desc(artistMessages.createdAt))
+      .limit(limit);
+  }
+
+  async markMessagesAsRead(connectionId: string, readerId: string): Promise<void> {
+    await db
+      .update(artistMessages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(artistMessages.connectionId, connectionId),
+          sql`${artistMessages.senderId} != ${readerId}`,
+          eq(artistMessages.isRead, false)
+        )
+      );
+  }
+
+  async getUnreadMessageCount(artistId: string): Promise<number> {
+    const connections = await this.getAcceptedConnections(artistId);
+    let total = 0;
+    
+    for (const conn of connections) {
+      const [result] = await db
+        .select({ count: count() })
+        .from(artistMessages)
+        .where(
+          and(
+            eq(artistMessages.connectionId, conn.id),
+            sql`${artistMessages.senderId} != ${artistId}`,
+            eq(artistMessages.isRead, false)
+          )
+        );
+      total += result?.count || 0;
+    }
+    return total;
+  }
+
+  async getConversations(artistId: string): Promise<ConversationPreview[]> {
+    const connections = await this.getAcceptedConnections(artistId);
+    const conversations: ConversationPreview[] = [];
+
+    for (const conn of connections) {
+      const otherArtist = conn.requesterId === artistId ? conn.receiver : conn.requester;
+      
+      const [lastMessage] = await db
+        .select()
+        .from(artistMessages)
+        .where(eq(artistMessages.connectionId, conn.id))
+        .orderBy(desc(artistMessages.createdAt))
+        .limit(1);
+
+      const [unreadResult] = await db
+        .select({ count: count() })
+        .from(artistMessages)
+        .where(
+          and(
+            eq(artistMessages.connectionId, conn.id),
+            sql`${artistMessages.senderId} != ${artistId}`,
+            eq(artistMessages.isRead, false)
+          )
+        );
+
+      conversations.push({
+        connection: conn,
+        otherArtist,
+        lastMessage: lastMessage || undefined,
+        unreadCount: unreadResult?.count || 0,
+      });
+    }
+
+    conversations.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt?.getTime() || a.connection.createdAt?.getTime() || 0;
+      const bTime = b.lastMessage?.createdAt?.getTime() || b.connection.createdAt?.getTime() || 0;
+      return bTime - aTime;
+    });
+
+    return conversations;
   }
 }
 

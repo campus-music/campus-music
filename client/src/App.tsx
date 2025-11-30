@@ -37,6 +37,8 @@ import AllTrending from "@/pages/all-trending";
 import AllReleases from "@/pages/all-releases";
 import AllArtists from "@/pages/all-artists";
 import BestOfCampus from "@/pages/best-of-campus";
+import ArtistFriends from "@/pages/artist-friends";
+import ArtistMessages from "@/pages/artist-messages";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -332,6 +334,36 @@ function Router() {
           <BestOfCampus />
         </AppLayout>
       )} />
+
+      <Route path="/friends">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <ArtistFriends />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/messages">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <ArtistMessages />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/messages/:connectionId">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <ArtistMessages />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
       
       <Route component={NotFound} />
     </Switch>
