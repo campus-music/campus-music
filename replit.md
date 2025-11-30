@@ -2,7 +2,7 @@
 
 ## Overview
 
-Campus Music is a dark-themed music streaming platform exclusively for university students with .edu email addresses. The application allows students to discover and stream music from student artists worldwide, similar to Apple Music/Spotify but focused on the campus music scene. Users can browse tracks by university, genre, and popularity, create playlists, like songs, and artists can upload their own music.
+Campus Music is a dark-themed music streaming platform for university students with .edu email addresses. It allows students to discover and stream music from student artists globally. Key capabilities include browsing by university, genre, and popularity, creating playlists, liking songs, and enabling artists to upload their music. The platform aims to be a dedicated hub for the campus music scene, similar to mainstream services like Apple Music or Spotify but with a niche focus.
 
 ## User Preferences
 
@@ -11,307 +11,51 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-
-**Framework & Tooling**
-- React with TypeScript for type-safe component development
-- Vite as the build tool and development server with HMR (Hot Module Replacement)
-- React Router via Wouter for lightweight client-side routing
-- TanStack Query (React Query) for server state management and API caching
-
-**UI Component System**
-- Shadcn/ui component library built on Radix UI primitives
-- Tailwind CSS for styling with custom design tokens
-- Dark-first theme inspired by Apple Music and Spotify
-- Component variants managed through class-variance-authority (CVA)
-
-**State Management Strategy**
-- Authentication state managed via React Context (AuthContext)
-- Audio playback state managed via React Context (AudioPlayerContext) with native HTML5 Audio API
-- Server state cached and synchronized through React Query
-- Local UI state handled with React hooks (useState, useEffect)
-
-**Design System**
-- Typography: Inter font family with system font fallbacks
-- Spacing: Tailwind's 4px-based spacing scale
-- Color system: HSL-based with CSS variables for theme customization
-- Component library follows "New York" Shadcn style variant
+- **Frameworks**: React with TypeScript, Vite for build/dev server, Wouter for routing, TanStack Query for server state.
+- **UI/UX**: Shadcn/ui (Radix UI, Tailwind CSS) with a dark-first theme inspired by Apple Music/Spotify. Custom design tokens and Inter font family.
+- **State Management**: React Context for authentication and audio playback, React Query for server state, local UI state with React hooks.
 
 ### Backend Architecture
-
-**Server Framework**
-- Express.js running on Node.js with ESM modules
-- Separate development (index-dev.ts) and production (index-prod.ts) entry points
-- Development mode integrates Vite middleware for HMR and SSR of React app
-- Production mode serves static assets from dist/public
-
-**API Design**
-- RESTful endpoints organized in routes.ts
-- Session-based authentication using express-session
-- MemoryStore for session persistence in development
-- JSON request/response format with consistent error handling
-
-**Authentication & Authorization**
-- Email/password authentication with bcrypt for password hashing
-- University email validation (.edu domain requirement)
-- Session-based authentication with secure cookies
-- User roles: "listener" (default) and "artist"
-
-**Database Layer**
-- Drizzle ORM for type-safe database operations
-- PostgreSQL as the production database (via Neon serverless driver)
-- Schema-first approach with TypeScript type inference
-- Database schema defined in shared/schema.ts for frontend/backend type sharing
+- **Server**: Express.js with Node.js, ESM modules, separate dev/prod entry points. Development integrates Vite middleware for HMR/SSR.
+- **API**: RESTful endpoints, JSON format, session-based authentication using `express-session`.
+- **Authentication**: Email/password authentication (bcrypt), .edu email validation, session-based with secure cookies. User roles: "listener" and "artist".
+- **Database**: Drizzle ORM, PostgreSQL (via Neon serverless driver), schema-first approach with shared TypeScript types (`shared/schema.ts`).
 
 ### Data Architecture
+- **Core Models**: Users (.edu email required), Artist Profiles (linked to users), Tracks (audio content with metadata), Playlists, Likes & Streams, Artist Connections, Artist Messages.
+- **Artist Collaboration**: Features like artist discovery, friend requests, and direct messaging between connected artists.
+- **Type Safety**: Shared TypeScript types, Drizzle Zod integration for runtime validation.
 
-**Core Data Models**
+### File Storage
+- **Abstraction**: S3-compatible storage (AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2) with local filesystem fallback for development.
+- **Uploads**: `ObjectUploader` component handles drag-and-drop, validation (5MB max for images, 20MB for audio), progress tracking, and signed URL generation.
+- **Track Uploads**: Dedicated endpoints for audio files and cover art via signed URLs.
 
-1. **Users**: Authentication and profile information
-   - Email must end in .edu for registration
-   - Stores university affiliation and country
-   - Links to artist profiles for artist role
+## External Dependencies
 
-2. **Artist Profiles**: Extended metadata for student musicians
-   - One-to-one relationship with users (role: "artist")
-   - Includes stage name, bio, genre, social links
-   - Foreign key cascades on user deletion
+### Frontend Libraries
+- `@tanstack/react-query`: Server state management
+- `wouter`: Lightweight routing
+- `@radix-ui/*`: Headless UI primitives
+- `react-hook-form` + `@hookform/resolvers`: Form validation
+- `date-fns`: Date manipulation
+- `cmdk`: Command palette
+- `lucide-react`: Icon system
 
-3. **Tracks**: Audio content with metadata
-   - Belongs to artist profiles
-   - Stores audio URL, cover art, genre, duration
-   - Inherits university and country from artist
+### Backend Libraries
+- `drizzle-orm` + `drizzle-kit`: Type-safe ORM and migrations
+- `@neondatabase/serverless`: PostgreSQL driver
+- `bcryptjs`: Password hashing
+- `express-session`: Session management
+- `zod`: Runtime schema validation
+- `stripe`: Payment processing
 
-4. **Playlists**: User-created collections
-   - Public/private visibility control
-   - Many-to-many relationship with tracks via junction table
+### Development Tools
+- `tsx`: TypeScript execution
+- `esbuild`: Production server bundling
 
-5. **Likes & Streams**: Engagement tracking
-   - Simple foreign key relationships for analytics
-   - Used for trending algorithms and user libraries
+### Audio Playback
+- Native HTML5 `<audio>` element for client-side playback.
 
-**Type Safety Strategy**
-- Shared TypeScript types between client and server via shared/schema.ts
-- Drizzle Zod integration for runtime validation
-- Insert schemas separate from query schemas to handle defaults
-
-### External Dependencies
-
-**Frontend Libraries**
-- @tanstack/react-query: Server state management and caching
-- wouter: Lightweight routing (alternative to react-router)
-- @radix-ui/*: Headless UI primitives for accessibility
-- react-hook-form + @hookform/resolvers: Form validation
-- date-fns: Date formatting and manipulation
-- cmdk: Command palette/search interface
-- lucide-react: Icon system
-
-**Backend Libraries**
-- drizzle-orm + drizzle-kit: Type-safe ORM and migrations
-- @neondatabase/serverless: PostgreSQL serverless driver
-- bcryptjs: Password hashing
-- express-session: Session management
-- zod: Runtime schema validation
-
-**Development Tools**
-- tsx: TypeScript execution for development server
-- esbuild: Production server bundling
-- Replit-specific plugins: runtime error overlay, dev banner, cartographer (development only)
-
-**Build & Deployment**
-- Development: Vite dev server with Express API proxy
-- Production: Static React build served by Express
-- Database migrations: Drizzle Kit push command
-- Environment variables: DATABASE_URL, SESSION_SECRET
-
-**Audio Playback**
-- Native HTML5 `<audio>` element (no external libraries)
-- Client-side audio state management
-- Track queue management in React context
-
-**Styling & Theming**
-- PostCSS with Tailwind CSS and Autoprefixer
-- CSS variables for theme tokens
-- Dark mode as default with light mode support via class-based toggling
-
-**File Storage**
-- S3-compatible storage abstraction supporting AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2
-- Local filesystem fallback for development (when S3 not configured)
-- Custom ObjectUploader component for file uploads with:
-  - Drag-and-drop support
-  - File size validation (5MB max for images, 20MB for audio)
-  - Image preview before upload
-  - Upload progress and cancellation
-  - Memory-safe URL handling (proper cleanup of object URLs)
-  - Automatic handling of both S3 presigned URLs and local upload paths
-- ObjectStorageService for generating signed upload URLs
-- Track upload endpoints for audio files and cover art:
-  - POST /api/tracks/uploads/audio - Get signed URL for audio upload (20MB max, MP3/WAV/FLAC)
-  - POST /api/tracks/uploads/cover - Get signed URL for cover art upload (5MB max, JPG/PNG/WebP)
-  - PUT /api/upload/local/:objectId - Local file upload endpoint (development only)
-  - POST /api/tracks - Create track with uploaded file URLs
-  - DELETE /api/tracks/:trackId - Delete track (artist only)
-
-## Production Upgrade Progress
-
-**Phase 1: PostgreSQL Database (COMPLETE)**
-- Migrated from in-memory storage to PostgreSQL with Drizzle ORM
-- Created DatabaseStorage class implementing IStorage interface
-- Idempotent seed function with 8 demo users, 6 artist profiles, 16 tracks
-- Fixed all routes to use DatabaseStorage methods
-
-**Phase 2: Real File Uploads (COMPLETE)**
-- Extended object storage for audio file uploads
-- TrackUploader component with multi-step upload flow:
-  1. Select audio file + optional cover art
-  2. Upload to cloud storage with progress tracking
-  3. Submit track metadata with normalized URLs
-- Artist dashboard updated to use real file uploads
-
-**Phase 3: Stripe Payment Integration (COMPLETE)**
-- Stripe integration via official Stripe SDK (platform-agnostic)
-- Artist tip checkout sessions with secure Stripe Checkout
-- Payment routes: POST /api/stripe/tip/:artistId creates checkout session
-- Support history and wallet endpoints for artists
-- Real-time webhook processing for payment events
-- Frontend SupportModal with preset amounts and Stripe checkout redirect
-
-**Phase 4: Email Verification (PENDING - Pre-Deployment)**
-- Email sending and verification workflow for .edu artist accounts
-- Recommended service: Resend (modern, developer-friendly)
-- Implementation: Send verification code on artist signup, require verification before artist features
-- Database already has `emailVerified` and `verificationToken` fields ready
-- Consider adding social login (Google, Apple) for listeners in future
-
-**Phase 5: Security & Deployment (PENDING)**
-- Rate limiting, input validation, error handling
-
-## Deployment Preparation
-
-This project is ready to be pushed to GitHub and deployed to a hosting platform.
-
-### Files Created for Deployment
-
-- **`.gitignore`** - Comprehensive exclusions for Node/React/Replit-specific files
-- **`.env.example`** - Template with all required environment variables
-- **`README.md`** - Professional documentation for GitHub
-
-### Next Steps (Manual)
-
-1. **Connect to GitHub**:
-   - In Replit UI, go to Version Control (Git panel)
-   - Connect to your GitHub account
-   - Create a new repository for "campus-music"
-   - Push the current code
-
-2. **Deploy to Render**:
-   - Create a new Web Service on render.com
-   - Connect your GitHub repository
-   - Set build command: `npm install && npm run build`
-   - Set start command: `npm start`
-   - Add all environment variables from `.env.example`
-   - Add a PostgreSQL database
-
-3. **Configure Production Services**:
-   - Stripe: Use production API keys
-   - Storage: Configure GCS or alternative file storage
-   - Database: Render provides managed PostgreSQL
-
-### Important Notes for Deployment
-
-- The app uses `PORT` environment variable (default 5000)
-- Session cookies require `secure: true` in production (auto-detected via `NODE_ENV`)
-- Stripe webhooks need the production URL configured (set APP_URL and configure webhook in Stripe Dashboard)
-- File storage uses S3-compatible APIs - configure S3_BUCKET_NAME, S3_ACCESS_KEY, S3_SECRET_KEY
-
-### GitHub Preparation Summary
-
-Changes made to prepare for GitHub:
-1. Updated `.gitignore` to exclude node_modules, dist, .env, Replit-specific files
-2. Created `.env.example` with placeholders for all required secrets
-3. Created `README.md` with setup instructions, tech stack, and deployment guide
-4. Verified npm scripts work correctly (`dev`, `build`, `start`, `db:push`)
-
-### TODOs Before Production
-
-- [ ] Phase 4: Email verification system
-- [ ] Phase 5: Rate limiting and security hardening
-- [ ] Configure production Stripe webhook URL
-- [ ] Set up S3 bucket and credentials for file uploads
-- [ ] Add production error monitoring (Sentry, etc.)
-
-## Future Roadmap: Mobile App Features
-
-### Campus Creators (TikTok-style UGC Platform)
-
-A social content creation layer where fans interact with artist music through user-generated content.
-
-**Core Features:**
-1. **Vocal Remixes** - Listeners record verses over artist songs, AI synchronizes vocals with original track
-2. **Dance Videos** - Users film dance content to songs and share
-3. **Swipe Feed** - TikTok/Reels-style vertical feed for discovering fan-created content
-4. **Creator Attribution** - Both artists and content creators (dancers, vocalists) get recognition and credit
-
-**Technical Requirements:**
-- Video recording (in-app camera, clip editing)
-- AI audio synchronization (AssemblyAI or ElevenLabs)
-- Video hosting service (Mux or AWS IVS)
-- Processing pipeline (queue system for rendering remixes)
-- Vertical swipe feed UI with engagement features
-- Expanded S3 storage for video content
-
-**MVP Approach:**
-- 60-second video uploads (pre-recorded, not in-app)
-- Basic audio mixing without AI sync
-- Simple swipe feed with likes
-- Artist attribution and lineage tracking
-
-**Full Vision:**
-- In-app recording with filters/effects
-- AI-powered vocal synchronization
-- Duet chains and collaboration features
-- Comments, shares, reaction videos
-- Creator monetization and revenue splits
-- Moderation queue for content review
-
-**Recommended Services:**
-- Video: Mux or AWS IVS
-- AI Audio: AssemblyAI or ElevenLabs
-- Processing: AWS Step Functions/SQS or Temporal
-- CDN: CloudFront for video delivery
-
-**Integration Points:**
-- UGC references original Track IDs for attribution
-- Extends audio-player context for UGC playback
-- Analytics dashboard shows derivative engagement metrics
-- Artist consent workflow for remix permissions
-
-## Recent Updates
-
-- **GitHub Push & Render Deployment Preparation** (November 2025):
-  - Created comprehensive DEPLOY_RENDER.md deployment guide
-  - Added /api/health endpoint for deployment health checks
-  - Updated render.yaml with detailed comments and all environment variables
-  - Enhanced .env.example with complete documentation for all variables
-  - Removed final REPLIT_DOMAINS reference from routes.ts
-  - Repository: https://github.com/campus-music/campus-music
-
-- **Platform-agnostic refactoring for Render deployment** (November 2025):
-  - Replaced Replit Stripe connector with official Stripe SDK
-  - Replaced Replit Object Storage with S3-compatible abstraction (AWS SDK)
-  - Added local filesystem fallback for development uploads
-  - Created render.yaml for one-click Render Blueprint deployment
-  - Updated .env.example with S3 storage variables
-  - All REPLIT_DOMAINS references replaced with APP_URL
-
-- **Earlier Updates**:
-  - Prepared project for GitHub and deployment (updated .gitignore, created .env.example, README.md)
-  - Phase 3 complete: Stripe payment integration for artist tips
-  - Atomic wallet upsert prevents race conditions on concurrent first-time tips
-  - Transaction-based webhook handler with idempotency (unique transactionId constraint)
-  - SupportModal redirects to real Stripe Checkout with preset tip amounts
-  - Artist wallet and support history endpoints for financial tracking
-  - Phase 2 complete: Real audio file upload functionality
-  - TrackUploader component for artists to upload tracks
-  - Profile picture upload functionality for artists
-  - ObjectUploader component with secure file handling
-  - API endpoints for file upload with authentication
+### Styling
+- PostCSS with Tailwind CSS and Autoprefixer.
