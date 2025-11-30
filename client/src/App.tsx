@@ -116,10 +116,12 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
 
   const profileImageUrl = artistProfile?.profileImageUrl;
 
+  const showPublicSidebar = isPublic && !user;
+
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar isPublic={isPublic} />
+        <AppSidebar isPublic={showPublicSidebar} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-40">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
