@@ -69,7 +69,8 @@ export function AuthPromptModal({ open, onOpenChange, action, track }: AuthPromp
       <DialogContent 
         className={cn(
           "sm:max-w-lg p-0 overflow-hidden border-0",
-          hasCoverArt ? "bg-transparent" : "bg-card"
+          hasCoverArt ? "bg-transparent" : "bg-card",
+          "[&>button]:text-white [&>button]:opacity-100 [&>button]:z-50"
         )}
       >
         <VisuallyHidden>
@@ -85,7 +86,7 @@ export function AuthPromptModal({ open, onOpenChange, action, track }: AuthPromp
             />
             <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-[#E84A5F]/30 backdrop-blur-xl" />
             
-            <div className="relative z-10 p-8">
+            <div className="relative z-10 p-8 pt-12">
               <div className="flex gap-6 items-start">
                 <div className="relative group">
                   <div className="absolute -inset-2 bg-[#E84A5F]/30 rounded-xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />

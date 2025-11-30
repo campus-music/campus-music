@@ -63,11 +63,6 @@ export function AudioPlayer() {
                   <Badge variant="secondary" className="text-xs">
                     {currentTrack.universityName}
                   </Badge>
-                  {isPreviewMode && (
-                    <Badge variant="outline" className="text-xs text-[#E84A5F] border-[#E84A5F]">
-                      30s Preview
-                    </Badge>
-                  )}
                 </div>
               </div>
             </div>

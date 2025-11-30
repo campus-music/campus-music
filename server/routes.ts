@@ -53,12 +53,14 @@ async function seedData() {
 
       const trackCount = 3 + Math.floor(Math.random() * 3);
       for (let j = 0; j < trackCount; j++) {
+        // Generate unique cover art for each track using picsum.photos
+        const coverSeed = (i * 10) + j + 100;
         const track = await storage.createTrack({
           artistId: artistProfile.id,
           title: `${genres[i % genres.length]} Track ${j + 1}`,
           description: `An original track created during late-night study sessions at ${uni.name}.`,
           audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-          coverImageUrl: undefined,
+          coverImageUrl: `https://picsum.photos/seed/${coverSeed}/400/400`,
           genre: genres[(i + j) % genres.length],
           universityName: uni.name,
           country: uni.country,
