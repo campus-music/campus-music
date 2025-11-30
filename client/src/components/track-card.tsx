@@ -34,8 +34,8 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
     <>
       <Card
         className={cn(
-          "group overflow-hidden hover-elevate transition-all",
-          isCurrentTrack && "ring-2 ring-primary"
+          "group overflow-hidden hover-elevate transition-all border-2",
+          isCurrentTrack ? "border-primary" : "border-transparent"
         )}
         data-testid={`card-track-${track.id}`}
       >
