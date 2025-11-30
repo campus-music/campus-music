@@ -1,4 +1,4 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Moon, Sun, Monitor } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
@@ -11,9 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { useTheme } from "@/lib/theme-context";
 
 const browseItems = [
   { title: "Home", url: "/", publicUrl: "/browse", icon: Home },
@@ -123,39 +121,6 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
           </>
         )}
       </SidebarContent>
-      <SidebarFooter className="p-4 pt-2">
-        <ThemeSelector />
-      </SidebarFooter>
     </Sidebar>
-  );
-}
-
-function ThemeSelector() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  
-  const themes = [
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "system", label: "System", icon: Monitor },
-  ] as const;
-
-  return (
-    <div className="flex items-center justify-between gap-1 p-1 rounded-lg bg-sidebar-accent/50">
-      {themes.map(({ value, label, icon: Icon }) => (
-        <button
-          key={value}
-          onClick={() => setTheme(value)}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
-            theme === value 
-              ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-          data-testid={`button-theme-${value}`}
-        >
-          <Icon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{label}</span>
-        </button>
-      ))}
-    </div>
   );
 }

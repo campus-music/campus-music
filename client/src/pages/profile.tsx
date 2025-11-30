@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
-import { Camera, Music } from 'lucide-react';
+import { Camera, Music, Sun, Moon, Monitor } from 'lucide-react';
+import { useTheme } from '@/lib/theme-context';
 import type { ArtistProfile } from '@shared/schema';
 
 export default function Profile() {
@@ -104,6 +105,7 @@ export default function Profile() {
           {user.role === 'artist' && (
             <TabsTrigger value="artist" data-testid="tab-artist">Artist Profile</TabsTrigger>
           )}
+          <TabsTrigger value="settings" data-testid="tab-settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
@@ -318,7 +320,68 @@ export default function Profile() {
             </Card>
           </TabsContent>
         )}
+
+        <TabsContent value="settings" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Settings</CardTitle>
+              <CardDescription>Customize your app experience</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <ThemeSettings />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ThemeSettings() {
+  const { theme, setTheme } = useTheme();
+  
+  const themes = [
+    { value: "light", label: "Light", icon: Sun, description: "Classic light appearance" },
+    { value: "dark", label: "Dark", icon: Moon, description: "Easy on the eyes" },
+    { value: "system", label: "System", icon: Monitor, description: "Match your device settings" },
+  ] as const;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label className="text-base font-medium">Theme</Label>
+        <p className="text-sm text-muted-foreground mt-1">
+          Select how you'd like Campus Music to look
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {themes.map(({ value, label, icon: Icon, description }) => (
+          <button
+            key={value}
+            onClick={() => setTheme(value)}
+            className={`flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+              theme === value 
+                ? "border-primary bg-primary/5" 
+                : "border-border hover:border-primary/50 hover:bg-muted/50"
+            }`}
+            data-testid={`button-theme-${value}`}
+          >
+            <div className={`p-3 rounded-full ${
+              theme === value 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-muted text-muted-foreground"
+            }`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-sm">{label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
