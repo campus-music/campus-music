@@ -22,7 +22,7 @@ interface UniversityAutocompleteProps {
   dropdownClassName?: string;
 }
 
-const UNIVERSITIES_API = 'https://universities.hipolabs.com/search';
+const UNIVERSITIES_API = '/api/universities/search';
 
 export function UniversityAutocomplete({
   value,
@@ -69,12 +69,7 @@ export function UniversityAutocomplete({
       const response = await fetch(`${UNIVERSITIES_API}?name=${encodeURIComponent(searchQuery)}`);
       if (response.ok) {
         const data: University[] = await response.json();
-        const usFirst = data.sort((a, b) => {
-          if (a.alpha_two_code === 'US' && b.alpha_two_code !== 'US') return -1;
-          if (a.alpha_two_code !== 'US' && b.alpha_two_code === 'US') return 1;
-          return a.name.localeCompare(b.name);
-        });
-        setSuggestions(usFirst.slice(0, 20));
+        setSuggestions(data);
       }
     } catch (error) {
       console.error('Failed to fetch universities:', error);

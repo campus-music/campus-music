@@ -120,6 +120,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // University search proxy (to avoid CORS issues with external API)
+  app.get("/api/universities/search", async (req, res) => {
+    try {
+      const { name } = req.query;
+      if (!name || typeof name !== 'string' || name.length < 2) {
+        return res.json([]);
+      }
+      
+      const response = await fetch(
+        `https://universities.hipolabs.com/search?name=${encodeURIComponent(name)}`
+      );
+      
+      if (!response.ok) {
+        console.error("Universities API error:", response.status);
+        return res.json([]);
+      }
+      
+      const universities = await response.json();
+      
+      // Sort US universities first, then alphabetically
+      const sorted = universities.sort((a: any, b: any) => {
+        if (a.alpha_two_code === 'US' && b.alpha_two_code !== 'US') return -1;
+        if (a.alpha_two_code !== 'US' && b.alpha_two_code === 'US') return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      res.json(sorted.slice(0, 20));
+    } catch (error) {
+      console.error("Failed to fetch universities:", error);
+      res.json([]);
+    }
+  });
+
   // Auth middleware
   const requireAuth = (req: any, res: any, next: any) => {
     if (!req.session.userId) {
