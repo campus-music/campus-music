@@ -3,6 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import { insertUserSchema, loginSchema, insertArtistProfileSchema, insertTrackSchema, insertPlaylistSchema } from "@shared/schema";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Seed data function - idempotent, will skip users that already exist
 async function seedData() {
@@ -120,35 +126,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // University search proxy (to avoid CORS issues with external API)
-  app.get("/api/universities/search", async (req, res) => {
+  // University search using local data
+  const universitiesPath = join(__dirname, 'data', 'universities.json');
+  const universitiesData = JSON.parse(readFileSync(universitiesPath, 'utf-8')) as Array<{
+    name: string;
+    country: string;
+    state: string;
+    domain: string;
+  }>;
+
+  app.get("/api/universities/search", (req, res) => {
     try {
       const { name } = req.query;
       if (!name || typeof name !== 'string' || name.length < 2) {
         return res.json([]);
       }
       
-      const response = await fetch(
-        `https://universities.hipolabs.com/search?name=${encodeURIComponent(name)}`
+      const searchTerm = name.toLowerCase();
+      
+      // Search universities by name
+      const matches = universitiesData.filter(uni => 
+        uni.name.toLowerCase().includes(searchTerm)
       );
       
-      if (!response.ok) {
-        console.error("Universities API error:", response.status);
-        return res.json([]);
-      }
-      
-      const universities = await response.json();
-      
-      // Sort US universities first, then alphabetically
-      const sorted = universities.sort((a: any, b: any) => {
-        if (a.alpha_two_code === 'US' && b.alpha_two_code !== 'US') return -1;
-        if (a.alpha_two_code !== 'US' && b.alpha_two_code === 'US') return 1;
+      // Sort: exact matches first, then US universities, then alphabetically
+      const sorted = matches.sort((a, b) => {
+        const aExact = a.name.toLowerCase().startsWith(searchTerm);
+        const bExact = b.name.toLowerCase().startsWith(searchTerm);
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        
+        if (a.country === 'United States' && b.country !== 'United States') return -1;
+        if (a.country !== 'United States' && b.country === 'United States') return 1;
         return a.name.localeCompare(b.name);
       });
       
-      res.json(sorted.slice(0, 20));
+      // Format response to match expected structure
+      const results = sorted.slice(0, 15).map(uni => ({
+        name: uni.name,
+        country: uni.country,
+        "state-province": uni.state,
+        domains: [uni.domain],
+        alpha_two_code: uni.country === 'United States' ? 'US' : uni.country.slice(0, 2).toUpperCase()
+      }));
+      
+      res.json(results);
     } catch (error) {
-      console.error("Failed to fetch universities:", error);
+      console.error("Failed to search universities:", error);
       res.json([]);
     }
   });
