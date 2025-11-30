@@ -40,15 +40,20 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-6">
+      <SidebarHeader className="p-4 pb-2">
         <Link href={isPublic ? "/browse" : "/"} data-testid="link-home-logo">
-          <div className="flex items-center gap-2 cursor-pointer hover-elevate">
-            <img 
-              src={logoUrl}
-              alt="Campus Music"
-              className="h-8 w-8 object-contain"
-            />
-            <span className="text-xl font-bold">Campus Music</span>
+          <div className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/30 blur-lg rounded-full group-hover:bg-primary/40 transition-all" />
+              <img 
+                src={logoUrl}
+                alt="Campus Music"
+                className="h-9 w-9 object-contain relative z-10"
+              />
+            </div>
+            <span className="text-lg font-semibold tracking-tight text-foreground">
+              Campus Music
+            </span>
           </div>
         </Link>
       </SidebarHeader>
