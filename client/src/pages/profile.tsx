@@ -347,12 +347,6 @@ function SettingsPage() {
 
 function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
-  
-  const themes = [
-    { value: "light", label: "Light", icon: Sun, description: "Classic light appearance" },
-    { value: "dark", label: "Dark", icon: Moon, description: "Easy on the eyes" },
-    { value: "system", label: "System", icon: Monitor, description: "Match your device settings" },
-  ] as const;
 
   return (
     <Card>
@@ -363,37 +357,22 @@ function AppearanceSettings() {
         </CardTitle>
         <CardDescription>Customize how Campus Music looks</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <Label className="text-sm font-medium">Theme</Label>
-          <p className="text-xs text-muted-foreground mt-0.5 mb-3">
-            Select your preferred color scheme
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {themes.map(({ value, label, icon: Icon, description }) => (
-              <button
-                key={value}
-                onClick={() => setTheme(value)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                  theme === value 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border hover:border-primary/50 hover:bg-muted/50"
-                }`}
-                data-testid={`button-theme-${value}`}
-              >
-                <div className={`p-2 rounded-full ${
-                  theme === value 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted text-muted-foreground"
-                }`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="text-center">
-                  <p className="font-medium text-xs">{label}</p>
-                </div>
-              </button>
-            ))}
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm font-medium">Theme</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">Choose your color scheme</p>
           </div>
+          <Select value={theme} onValueChange={(value: "light" | "dark" | "system") => setTheme(value)}>
+            <SelectTrigger className="w-32" data-testid="select-theme">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="system">System</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
     </Card>
