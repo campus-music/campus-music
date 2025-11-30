@@ -136,6 +136,26 @@ export const userListeningHistory = pgTable("user_listening_history", {
   lastPlayedAt: timestamp("last_played_at").notNull().defaultNow(),
 });
 
+// Artist connections for collaboration - friend system between artists
+export const artistConnections = pgTable("artist_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  receiverId: varchar("receiver_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // "pending", "accepted", "rejected"
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  respondedAt: timestamp("responded_at"),
+});
+
+// Messages between connected artists
+export const artistMessages = pgTable("artist_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => artistConnections.id, { onDelete: "cascade" }),
+  senderId: varchar("sender_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email('Please enter a valid email address'),
@@ -212,6 +232,21 @@ export const insertArtistWalletSchema = createInsertSchema(artistWallets).omit({
   balance: true 
 });
 
+export const insertArtistConnectionSchema = createInsertSchema(artistConnections).omit({ 
+  id: true, 
+  createdAt: true,
+  respondedAt: true,
+  status: true 
+});
+
+export const insertArtistMessageSchema = createInsertSchema(artistMessages, {
+  content: z.string().min(1, 'Message cannot be empty'),
+}).omit({ 
+  id: true, 
+  createdAt: true,
+  isRead: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -258,6 +293,12 @@ export type Support = typeof supports.$inferSelect;
 export type InsertArtistWallet = z.infer<typeof insertArtistWalletSchema>;
 export type ArtistWallet = typeof artistWallets.$inferSelect;
 
+export type InsertArtistConnection = z.infer<typeof insertArtistConnectionSchema>;
+export type ArtistConnection = typeof artistConnections.$inferSelect;
+
+export type InsertArtistMessage = z.infer<typeof insertArtistMessageSchema>;
+export type ArtistMessage = typeof artistMessages.$inferSelect;
+
 export type Login = z.infer<typeof loginSchema>;
 
 // Extended types for joined data
@@ -267,4 +308,20 @@ export type TrackWithArtist = Track & {
 
 export type PlaylistWithTracks = Playlist & {
   tracks: TrackWithArtist[];
+};
+
+export type ArtistConnectionWithProfiles = ArtistConnection & {
+  requester: ArtistProfile;
+  receiver: ArtistProfile;
+};
+
+export type ArtistMessageWithSender = ArtistMessage & {
+  sender: ArtistProfile;
+};
+
+export type ConversationPreview = {
+  connection: ArtistConnection;
+  otherArtist: ArtistProfile;
+  lastMessage?: ArtistMessage;
+  unreadCount: number;
 };
