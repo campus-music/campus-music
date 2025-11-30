@@ -60,7 +60,7 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
               <Play className="h-6 w-6 ml-0.5" />
             </Button>
           </div>
-          {onLike && (
+          {(onLike || !user) && (
             <Button
               size="icon"
               variant="secondary"
@@ -94,6 +94,11 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
         open={authPromptOpen}
         onOpenChange={setAuthPromptOpen}
         action="like"
+        track={{
+          coverImageUrl: track.coverImageUrl,
+          title: track.title,
+          artistName: track.artist.stageName,
+        }}
       />
     </>
   );

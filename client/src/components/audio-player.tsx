@@ -139,6 +139,11 @@ export function AudioPlayer() {
         open={authPromptOpen}
         onOpenChange={setAuthPromptOpen}
         action="play"
+        track={{
+          coverImageUrl: currentTrack.coverImageUrl,
+          title: currentTrack.title,
+          artistName: currentTrack.artist.stageName,
+        }}
       />
     </>
   );

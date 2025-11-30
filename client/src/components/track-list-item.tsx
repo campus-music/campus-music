@@ -89,7 +89,7 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
         <span className="text-sm text-muted-foreground w-16 text-right">
           {formatDuration(track.durationSeconds)}
         </span>
-        {onLike && (
+        {(onLike || !user) && (
           <Button
             size="icon"
             variant="ghost"
@@ -123,6 +123,11 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
         open={authPromptOpen}
         onOpenChange={setAuthPromptOpen}
         action={authAction}
+        track={{
+          coverImageUrl: track.coverImageUrl,
+          title: track.title,
+          artistName: track.artist.stageName,
+        }}
       />
     </>
   );
