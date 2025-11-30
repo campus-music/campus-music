@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Headphones, Mic2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { UniversityAutocomplete } from '@/components/university-autocomplete';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 interface AuthModalProps {
@@ -290,14 +291,20 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-university" className="text-white/80">University</Label>
-                        <Input
+                        <UniversityAutocomplete
                           id="signup-university"
-                          type="text"
-                          placeholder="Stanford University"
                           value={signupData.universityName}
-                          onChange={(e) => setSignupData({ ...signupData, universityName: e.target.value })}
+                          onChange={(value, university) => {
+                            setSignupData({ 
+                              ...signupData, 
+                              universityName: value,
+                              country: university?.country || signupData.country 
+                            });
+                          }}
+                          placeholder="Start typing your university..."
                           required
                           className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
+                          dropdownClassName="bg-zinc-900 border border-white/20"
                           data-testid="input-modal-signup-university"
                         />
                       </div>
@@ -313,6 +320,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
                           className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#E84A5F] focus:ring-[#E84A5F]/20"
                           data-testid="input-modal-signup-country"
                         />
+                        <p className="text-xs text-white/40">Auto-filled when you select a university</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-password" className="text-white/80">Password</Label>

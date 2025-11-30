@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Headphones, Mic2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { UniversityAutocomplete } from '@/components/university-autocomplete';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 
 export default function Signup() {
@@ -188,15 +189,23 @@ export default function Signup() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="universityName">University Name</Label>
-                <Input
+                <UniversityAutocomplete
                   id="universityName"
-                  type="text"
-                  placeholder="Stanford University"
                   value={formData.universityName}
-                  onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
+                  onChange={(value, university) => {
+                    setFormData({ 
+                      ...formData, 
+                      universityName: value,
+                      country: university?.country || formData.country 
+                    });
+                  }}
+                  placeholder="Start typing your university..."
                   required
                   data-testid="input-university"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Search from thousands of universities worldwide
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
@@ -209,6 +218,9 @@ export default function Signup() {
                   required
                   data-testid="input-country"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Auto-filled when you select a university
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
