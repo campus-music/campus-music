@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { ThemeToggle } from "@/components/theme-toggle";
 import type { ArtistProfile } from "@shared/schema";
 import { AudioPlayerProvider } from "@/lib/audio-player-context";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -124,8 +123,7 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-40">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2 ml-auto">
-              <ThemeToggle />
+            <div className="flex items-center gap-3 ml-auto">
               {user ? (
                 <button
                   type="button"
