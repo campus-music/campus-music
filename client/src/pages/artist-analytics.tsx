@@ -107,7 +107,7 @@ export default function ArtistAnalytics() {
                   <XAxis dataKey="trackId" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="plays" fill="#a78bfa" />
+                  <Bar dataKey="plays" fill="#E84A5F" />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
@@ -128,11 +128,11 @@ export default function ArtistAnalytics() {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={100}
-                    fill="#a78bfa"
+                    fill="#E84A5F"
                     dataKey="value"
                   >
                     {Object.entries(analytics.listenerCountries).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={['#a78bfa', '#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6'][index % 5]} />
+                      <Cell key={`cell-${index}`} fill={['#E84A5F', '#D43D50', '#F06575', '#C73045', '#FF7A8A'][index % 5]} />
                     ))}
                   </Pie>
                   <Tooltip />
