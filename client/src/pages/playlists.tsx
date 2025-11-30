@@ -7,12 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrackListItem } from '@/components/track-list-item';
-import { Plus, Music, Trash2, ChevronLeft } from 'lucide-react';
+import { Plus, Music, Trash2, ChevronLeft, ListMusic } from 'lucide-react';
 import type { PlaylistWithTracks } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import playlistPlaceholder from '@assets/generated_images/coral_music_note_playlist_placeholder.png';
 
 export default function Playlists() {
   const { toast } = useToast();
@@ -196,12 +195,13 @@ export default function Playlists() {
                   onClick={() => setSelectedPlaylistId(playlist.id)}
                   data-testid={`card-playlist-${playlist.id}`}
                 >
-                  <div className="aspect-square flex-shrink-0 relative">
-                    <img 
-                      src={playlistPlaceholder} 
-                      alt="Playlist cover" 
-                      className="w-full h-full object-cover"
-                    />
+                  <div 
+                    className="aspect-square flex-shrink-0 relative flex items-center justify-center"
+                    style={{
+                      background: 'radial-gradient(circle at 30% 30%, hsl(351 76% 60% / 0.15), hsl(var(--card)) 70%)'
+                    }}
+                  >
+                    <ListMusic className="h-12 w-12 text-primary/50" />
                     <Button
                       size="sm"
                       variant="destructive"
