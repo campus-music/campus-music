@@ -68,7 +68,7 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
           </div>
         </Link>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="pb-24">
         {/* Browse Section - Available to everyone */}
         <SidebarGroup>
           <SidebarGroupLabel>Browse</SidebarGroupLabel>
