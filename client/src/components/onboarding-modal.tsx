@@ -46,13 +46,8 @@ export function OnboardingModal({ isOpen, onComplete, universityName }: Onboardi
   });
 
   const { data: searchResults, isLoading: isSearching } = useQuery<SuggestedArtist[]>({
-    queryKey: ['/api/onboarding/search', debouncedQuery],
-    queryFn: async () => {
-      const response = await fetch(`/api/onboarding/search?q=${encodeURIComponent(debouncedQuery)}`);
-      if (!response.ok) throw new Error('Search failed');
-      return response.json();
-    },
-    enabled: isOpen && debouncedQuery.length >= 2,
+    queryKey: [`/api/onboarding/search?q=${encodeURIComponent(debouncedQuery)}`],
+    enabled: isOpen && debouncedQuery.length >= 2 && debouncedQuery.length <= 100,
   });
 
   const followMutation = useMutation({

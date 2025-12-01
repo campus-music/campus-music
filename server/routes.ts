@@ -970,13 +970,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/onboarding/search", requireAuth, async (req, res) => {
     try {
-      const query = req.query.q as string;
+      const query = (req.query.q as string || '').trim();
       
+      // Validate query length (min 2, max 100 chars for security)
       if (!query || query.length < 2) {
         return res.json([]);
       }
+      if (query.length > 100) {
+        return res.status(400).json({ error: "Search query too long" });
+      }
       
-      const artists = await storage.searchArtistsForOnboarding(query, 20);
+      const artists = await storage.searchArtistsForOnboarding(query.slice(0, 100), 20);
       
       // Enrich with metadata
       const enrichedArtists = await Promise.all(artists.map(async (artist) => {
