@@ -151,7 +151,7 @@ export default function Feed() {
                     <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#E84A5F] via-[#ff6b7a] to-[#E84A5F] animate-pulse" />
                     <Avatar className="h-14 w-14 relative border-2 border-background group-hover:scale-105 transition-transform">
                       <AvatarImage src={stream.artist?.profileImageUrl || undefined} />
-                      <AvatarFallback className="bg-[#E84A5F]/20 text-[#E84A5F] font-semibold">
+                      <AvatarFallback className="bg-white text-[#E84A5F] font-semibold">
                         {stream.artist?.stageName?.charAt(0) || 'L'}
                       </AvatarFallback>
                     </Avatar>
@@ -541,7 +541,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                 {mediaType === 'video' ? (
                   <video
                     src={mediaPreview}
-                    className="max-h-48 rounded-lg aspect-video"
+                    className="max-h-48 rounded-lg aspect-square object-cover"
                     controls
                     muted
                   />
@@ -869,7 +869,7 @@ function PostCard({ post, currentUserId, showHotBadge }: { post: ArtistPostWithD
         {post.mediaUrl && !imageError && (
           <div className="relative rounded-xl overflow-hidden max-w-md mx-auto">
             {(post as any).mediaType === 'video' ? (
-              <div className="aspect-video">
+              <div className="aspect-square">
                 <video
                   src={post.mediaUrl}
                   className="w-full h-full object-cover rounded-xl"
