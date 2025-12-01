@@ -449,6 +449,9 @@ function FriendCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
+            {user.profileImageUrl && (
+              <AvatarImage src={user.profileImageUrl} alt={user.fullName} />
+            )}
             <AvatarFallback className="bg-primary/10 text-primary">
               {initials}
             </AvatarFallback>
@@ -576,6 +579,9 @@ function RequestCard({
     >
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
+          {user.profileImageUrl && (
+            <AvatarImage src={user.profileImageUrl} alt={user.fullName} />
+          )}
           <AvatarFallback className="bg-primary/10 text-primary">
             {initials}
           </AvatarFallback>
@@ -638,6 +644,9 @@ function SentRequestCard({
     >
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
+          {user.profileImageUrl && (
+            <AvatarImage src={user.profileImageUrl} alt={user.fullName} />
+          )}
           <AvatarFallback className="bg-primary/10 text-primary">
             {initials}
           </AvatarFallback>
@@ -828,6 +837,9 @@ function SuggestionCard({
         {/* Avatar */}
         <div className="mb-3">
           <Avatar className="h-16 w-16 ring-2 ring-offset-2 ring-offset-background ring-primary/30">
+            {user.profileImageUrl && (
+              <AvatarImage src={user.profileImageUrl} alt={user.fullName} />
+            )}
             <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-lg">
               {initials}
             </AvatarFallback>
