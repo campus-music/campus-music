@@ -33,6 +33,7 @@ import Landing from "@/pages/landing";
 import ArtistBrowse from "@/pages/artist-browse";
 import ArtistDetail from "@/pages/artist-detail";
 import Playlists from "@/pages/playlists";
+import PlaylistDetail from "@/pages/playlist-detail";
 import AllTrending from "@/pages/all-trending";
 import AllReleases from "@/pages/all-releases";
 import AllArtists from "@/pages/all-artists";
@@ -253,6 +254,16 @@ function Router() {
           <ProtectedRoute component={() => (
             <AppLayout>
               <Playlists />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/playlist/:id">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <PlaylistDetail />
             </AppLayout>
           )} />
         )}

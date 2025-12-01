@@ -439,6 +439,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(playlistsWithTracks);
   });
 
+  app.get("/api/playlists/:id", requireAuth, async (req, res) => {
+    try {
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist) {
+        return res.status(404).json({ error: "Playlist not found" });
+      }
+      if (playlist.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const tracks = await storage.getPlaylistTracks(playlist.id);
+      res.json({ ...playlist, tracks });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   app.post("/api/playlists", requireAuth, async (req, res) => {
     try {
       const data = insertPlaylistSchema.parse({
