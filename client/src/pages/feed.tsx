@@ -61,7 +61,7 @@ const POST_TYPES = [
   { value: 'update', label: 'Update', icon: Sparkles, color: 'bg-blue-500/10 text-blue-500' },
   { value: 'new_release', label: 'New Release', icon: Music, color: 'bg-primary/10 text-primary' },
   { value: 'behind_scenes', label: 'Behind the Scenes', icon: Camera, color: 'bg-purple-500/10 text-purple-500' },
-  { value: 'live_show', label: 'Live Show', icon: Mic, color: 'bg-green-500/10 text-green-500' },
+  { value: 'live_show', label: 'Go Live', icon: Mic, color: 'bg-green-500/10 text-green-500' },
   { value: 'milestone', label: 'Milestone', icon: Star, color: 'bg-yellow-500/10 text-yellow-500' },
 ];
 
@@ -514,7 +514,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                   </Button>
                 );
               })}
-              {/* Live Show button opens Go Live modal */}
+              {/* Go Live button opens Go Live modal */}
               <Button
                 variant="outline"
                 size="sm"
@@ -523,7 +523,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                 data-testid="button-go-live"
               >
                 <Radio className="h-3.5 w-3.5" />
-                Live Show
+                Go Live
               </Button>
             </div>
             
