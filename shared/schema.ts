@@ -46,6 +46,7 @@ export const playlists = pgTable("playlists", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
+  coverImageUrl: text("cover_image_url"),
   isPublic: boolean("is_public").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
