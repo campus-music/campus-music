@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Heart } from 'lucide-react';
+import { Play, Pause, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -17,10 +17,19 @@ interface TrackCardProps {
 }
 
 export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
-  const { playTrack, currentTrack } = useAudioPlayer();
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = useAudioPlayer();
   const { user } = useAuth();
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const isCurrentTrack = currentTrack?.id === track.id;
+  const isCurrentlyPlaying = isCurrentTrack && isPlaying;
+
+  const handlePlayClick = () => {
+    if (isCurrentTrack) {
+      togglePlayPause();
+    } else {
+      playTrack(track);
+    }
+  };
 
   const handleLike = () => {
     if (!user) {
@@ -50,14 +59,21 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
               {track.title[0]}
             </AvatarFallback>
           </Avatar>
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity flex items-center justify-center",
+            isCurrentlyPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
             <Button
               size="icon"
               className="h-12 w-12 rounded-full"
-              onClick={() => playTrack(track)}
+              onClick={handlePlayClick}
               data-testid={`button-play-${track.id}`}
             >
-              <Play className="h-6 w-6 ml-0.5" />
+              {isCurrentlyPlaying ? (
+                <Pause className="h-6 w-6" />
+              ) : (
+                <Play className="h-6 w-6 ml-0.5" />
+              )}
             </Button>
           </div>
         </div>
