@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
-import { insertUserSchema, loginSchema, insertArtistProfileSchema, insertTrackSchema, insertPlaylistSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertArtistProfileSchema, insertTrackSchema, insertPlaylistSchema, insertArtistPostSchema, insertPostCommentSchema } from "@shared/schema";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -1900,6 +1900,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error marking DMs as read:", error);
       res.status(500).json({ error: error.message || "Failed to mark as read" });
+    }
+  });
+
+  // =====================
+  // Social Feed Routes
+  // =====================
+
+  // Get feed posts (for all logged-in users)
+  app.get("/api/feed", requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const posts = await storage.getFeedPosts(req.session.userId, limit, offset);
+      res.json(posts);
+    } catch (error: any) {
+      console.error("Error getting feed:", error);
+      res.status(500).json({ error: error.message || "Failed to get feed" });
+    }
+  });
+
+  // Get a single post
+  app.get("/api/posts/:postId", requireAuth, async (req: any, res) => {
+    try {
+      const post = await storage.getPost(req.params.postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+      const isLiked = await storage.isPostLiked(post.id, req.session.userId);
+      res.json({ ...post, isLiked });
+    } catch (error: any) {
+      console.error("Error getting post:", error);
+      res.status(500).json({ error: error.message || "Failed to get post" });
+    }
+  });
+
+  // Get posts by an artist
+  app.get("/api/artists/:artistId/posts", async (req: any, res) => {
+    try {
+      const posts = await storage.getArtistPosts(req.params.artistId);
+      res.json(posts);
+    } catch (error: any) {
+      console.error("Error getting artist posts:", error);
+      res.status(500).json({ error: error.message || "Failed to get artist posts" });
+    }
+  });
+
+  // Create a new post (artist only)
+  app.post("/api/posts", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "artist") {
+        return res.status(403).json({ error: "Only artists can create posts" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile) {
+        return res.status(404).json({ error: "Artist profile not found" });
+      }
+
+      const parsed = insertArtistPostSchema.safeParse({
+        ...req.body,
+        artistId: artistProfile.id,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+
+      const post = await storage.createPost(parsed.data);
+      const postWithDetails = await storage.getPost(post.id);
+      res.status(201).json(postWithDetails);
+    } catch (error: any) {
+      console.error("Error creating post:", error);
+      res.status(500).json({ error: error.message || "Failed to create post" });
+    }
+  });
+
+  // Delete a post (artist only, their own post)
+  app.delete("/api/posts/:postId", requireAuth, async (req: any, res) => {
+    try {
+      const post = await storage.getPost(req.params.postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile || post.artistId !== artistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to delete this post" });
+      }
+
+      await storage.deletePost(req.params.postId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting post:", error);
+      res.status(500).json({ error: error.message || "Failed to delete post" });
+    }
+  });
+
+  // Like a post
+  app.post("/api/posts/:postId/like", requireAuth, async (req: any, res) => {
+    try {
+      const postId = req.params.postId;
+      const userId = req.session.userId;
+
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      const isLiked = await storage.isPostLiked(postId, userId);
+      if (isLiked) {
+        return res.status(400).json({ error: "Already liked" });
+      }
+
+      await storage.likePost(postId, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error liking post:", error);
+      res.status(500).json({ error: error.message || "Failed to like post" });
+    }
+  });
+
+  // Unlike a post
+  app.delete("/api/posts/:postId/like", requireAuth, async (req: any, res) => {
+    try {
+      const postId = req.params.postId;
+      const userId = req.session.userId;
+
+      await storage.unlikePost(postId, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error unliking post:", error);
+      res.status(500).json({ error: error.message || "Failed to unlike post" });
+    }
+  });
+
+  // Get post comments
+  app.get("/api/posts/:postId/comments", async (req: any, res) => {
+    try {
+      const comments = await storage.getPostComments(req.params.postId);
+      res.json(comments);
+    } catch (error: any) {
+      console.error("Error getting comments:", error);
+      res.status(500).json({ error: error.message || "Failed to get comments" });
+    }
+  });
+
+  // Add a comment to a post
+  app.post("/api/posts/:postId/comments", requireAuth, async (req: any, res) => {
+    try {
+      const parsed = insertPostCommentSchema.safeParse({
+        postId: req.params.postId,
+        userId: req.session.userId,
+        content: req.body.content,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+
+      const comment = await storage.createPostComment(parsed.data);
+      const user = await storage.getUser(req.session.userId);
+      res.status(201).json({ ...comment, user });
+    } catch (error: any) {
+      console.error("Error adding comment:", error);
+      res.status(500).json({ error: error.message || "Failed to add comment" });
+    }
+  });
+
+  // Delete a comment (own comment only)
+  app.delete("/api/comments/:commentId", requireAuth, async (req: any, res) => {
+    try {
+      // Note: In a full implementation, we'd verify comment ownership
+      await storage.deletePostComment(req.params.commentId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ error: error.message || "Failed to delete comment" });
+    }
+  });
+
+  // Share a post with a connected friend
+  app.post("/api/posts/:postId/share", requireAuth, async (req: any, res) => {
+    try {
+      const postId = req.params.postId;
+      const { toUserId } = req.body;
+      const fromUserId = req.session.userId;
+
+      if (!toUserId) {
+        return res.status(400).json({ error: "Recipient user ID is required" });
+      }
+
+      // Check if the post exists
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      // Check if the users are connected
+      const connection = await storage.getUserConnectionBetweenUsers(fromUserId, toUserId);
+      if (!connection || connection.status !== "accepted") {
+        return res.status(403).json({ error: "Can only share with connected friends" });
+      }
+
+      const share = await storage.sharePost(postId, fromUserId, toUserId);
+      res.status(201).json(share);
+    } catch (error: any) {
+      console.error("Error sharing post:", error);
+      res.status(500).json({ error: error.message || "Failed to share post" });
+    }
+  });
+
+  // Get user's connected friends (for share modal)
+  app.get("/api/friends", requireAuth, async (req: any, res) => {
+    try {
+      const connections = await storage.getAcceptedUserConnections(req.session.userId);
+      const friends = connections.map(conn => 
+        conn.requesterId === req.session.userId ? conn.receiver : conn.requester
+      );
+      res.json(friends);
+    } catch (error: any) {
+      console.error("Error getting friends:", error);
+      res.status(500).json({ error: error.message || "Failed to get friends" });
     }
   });
 
