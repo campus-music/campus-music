@@ -184,6 +184,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [usingTrackCover, setUsingTrackCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: myTracks } = useQuery<TrackWithArtist[]>({
@@ -194,6 +195,25 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
       return response.json();
     },
   });
+
+  // Auto-fill track cover art when a track is selected
+  const handleTrackSelect = useCallback((newTrackId: string | undefined) => {
+    setTrackId(newTrackId);
+    
+    if (newTrackId && myTracks) {
+      const selectedTrack = myTracks.find(t => t.id === newTrackId);
+      if (selectedTrack?.coverArtUrl && !selectedImage) {
+        setImagePreview(selectedTrack.coverArtUrl);
+        setMediaUrl(selectedTrack.coverArtUrl);
+        setUsingTrackCover(true);
+      }
+    } else if (usingTrackCover) {
+      // Clear the auto-filled cover when track is deselected
+      setImagePreview(null);
+      setMediaUrl('');
+      setUsingTrackCover(false);
+    }
+  }, [myTracks, selectedImage, usingTrackCover]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -215,16 +235,17 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
   }, []);
 
   const removeImage = useCallback(() => {
-    if (imagePreview) {
+    if (imagePreview && !usingTrackCover) {
       URL.revokeObjectURL(imagePreview);
     }
     setSelectedImage(null);
     setImagePreview(null);
     setMediaUrl('');
+    setUsingTrackCover(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [imagePreview]);
+  }, [imagePreview, usingTrackCover]);
 
   const uploadImage = async (file: File): Promise<string> => {
     setIsUploading(true);
@@ -301,6 +322,12 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
   const handleSubmit = async () => {
     if (!caption.trim()) return;
     
+    // Validate: New Release posts require either an image or a linked track
+    if (postType === 'new_release' && !selectedImage && !mediaUrl && !trackId) {
+      alert('New Release posts require album art or a linked track');
+      return;
+    }
+    
     let finalMediaUrl = mediaUrl;
     
     if (selectedImage) {
@@ -372,8 +399,14 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                 <img
                   src={imagePreview}
                   alt="Upload preview"
-                  className="max-h-48 rounded-lg object-cover"
+                  className="max-h-48 rounded-lg object-cover aspect-square"
                 />
+                {usingTrackCover && (
+                  <Badge variant="secondary" className="absolute bottom-2 left-2 text-xs">
+                    <Music className="h-3 w-3 mr-1" />
+                    From linked track
+                  </Badge>
+                )}
                 <Button
                   variant="destructive"
                   size="icon"
@@ -384,6 +417,13 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
+            )}
+            
+            {postType === 'new_release' && !imagePreview && !trackId && (
+              <p className="text-sm text-amber-500 flex items-center gap-1">
+                <Music className="h-4 w-4" />
+                New Release posts require album art or a linked track
+              </p>
             )}
             
             {isUploading && (
@@ -415,7 +455,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
               
               {myTracks && myTracks.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Select value={trackId || ''} onValueChange={(value) => setTrackId(value || undefined)}>
+                  <Select value={trackId || ''} onValueChange={(value) => handleTrackSelect(value || undefined)}>
                     <SelectTrigger className="w-[220px]" data-testid="select-track-for-post">
                       <Music className="h-4 w-4 mr-2 text-muted-foreground" />
                       <SelectValue placeholder="Link a track" />
@@ -429,7 +469,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                     </SelectContent>
                   </Select>
                   {trackId && (
-                    <Button variant="ghost" size="icon" onClick={() => setTrackId(undefined)} data-testid="button-clear-track">
+                    <Button variant="ghost" size="icon" onClick={() => handleTrackSelect(undefined)} data-testid="button-clear-track">
                       <X className="h-4 w-4" />
                     </Button>
                   )}
