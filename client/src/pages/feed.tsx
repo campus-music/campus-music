@@ -805,9 +805,9 @@ function CommentWithStickers({
 
   // Handle sticker placement with random position near corners
   const handleAddSticker = (stickerId: string) => {
-    // Random position in the top-right area of the comment
-    const positionX = 70 + Math.random() * 25; // 70-95%
-    const positionY = Math.random() * 60; // 0-60%
+    // Random position in the top-right area of the comment (rounded to integers)
+    const positionX = Math.round(70 + Math.random() * 25); // 70-95%
+    const positionY = Math.round(Math.random() * 60); // 0-60%
     addStickerMutation.mutate({ stickerId, positionX, positionY });
   };
 
