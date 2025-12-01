@@ -13,9 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Heart, MessageCircle, Share2, Music, Trash2, Send, X, Image as ImageIcon, 
-  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker, GraduationCap
+  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker, GraduationCap, HelpCircle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { ArtistPostWithDetails, TrackWithArtist, User, PostCommentWithUser, ArtistProfile, CommentSticker } from '@shared/schema';
@@ -420,10 +421,29 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
             )}
             
             {postType === 'new_release' && !imagePreview && !trackId && (
-              <p className="text-sm text-amber-500 flex items-center gap-1">
-                <Music className="h-4 w-4" />
-                New Release posts require album art or a linked track
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-amber-500 flex items-center gap-1">
+                  <Music className="h-4 w-4" />
+                  New Release posts require album art or a linked track
+                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0">
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-medium mb-1">What's a linked track?</p>
+                    <p className="text-sm text-muted-foreground">
+                      When you upload music to your artist profile, you can link those tracks to your posts. 
+                      The track's cover art will automatically be used, and fans can play it directly from the feed.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Go to <span className="text-primary">Profile</span> to upload your first track!
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             )}
             
             {isUploading && (
