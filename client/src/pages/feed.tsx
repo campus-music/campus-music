@@ -583,12 +583,14 @@ function PostCard({ post, currentUserId, showHotBadge }: { post: ArtistPostWithD
         <p className="text-base whitespace-pre-wrap leading-relaxed" data-testid="text-post-caption">{post.caption}</p>
         
         {post.mediaUrl && (
-          <div className="relative rounded-xl overflow-hidden">
-            <img
-              src={post.mediaUrl}
-              alt="Post media"
-              className="w-full object-cover max-h-[400px]"
-            />
+          <div className="relative rounded-xl overflow-hidden max-w-md mx-auto">
+            <div className="aspect-square">
+              <img
+                src={post.mediaUrl}
+                alt="Album art"
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
           </div>
         )}
