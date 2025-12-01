@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
-import { insertUserSchema, loginSchema, insertArtistProfileSchema, insertTrackSchema, insertPlaylistSchema, insertArtistPostSchema, insertPostCommentSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertArtistProfileSchema, insertTrackSchema, insertPlaylistSchema, insertArtistPostSchema, insertPostCommentSchema, insertLiveStreamSchema } from "@shared/schema";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -2459,9 +2460,347 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============= LIVE STREAMING API =============
+
+  // Get all active live streams
+  app.get("/api/live-streams", async (req: any, res) => {
+    try {
+      const streams = await storage.getActiveLiveStreams();
+      res.json(streams);
+    } catch (error: any) {
+      console.error("Error getting live streams:", error);
+      res.status(500).json({ error: error.message || "Failed to get live streams" });
+    }
+  });
+
+  // Get a specific live stream
+  app.get("/api/live-streams/:streamId", async (req: any, res) => {
+    try {
+      const stream = await storage.getLiveStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      res.json(stream);
+    } catch (error: any) {
+      console.error("Error getting stream:", error);
+      res.status(500).json({ error: error.message || "Failed to get stream" });
+    }
+  });
+
+  // Start a live stream (artist only)
+  app.post("/api/live-streams", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "artist") {
+        return res.status(403).json({ error: "Only artists can start live streams" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile) {
+        return res.status(404).json({ error: "Artist profile not found" });
+      }
+
+      // Check if artist already has an active stream
+      const activeStream = await storage.getArtistActiveLiveStream(artistProfile.id);
+      if (activeStream) {
+        return res.status(400).json({ error: "You already have an active live stream" });
+      }
+
+      const parsed = insertLiveStreamSchema.safeParse({
+        ...req.body,
+        artistId: artistProfile.id,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+
+      const stream = await storage.createLiveStream(parsed.data);
+      const streamWithDetails = await storage.getLiveStream(stream.id);
+      res.status(201).json(streamWithDetails);
+    } catch (error: any) {
+      console.error("Error creating live stream:", error);
+      res.status(500).json({ error: error.message || "Failed to create live stream" });
+    }
+  });
+
+  // End a live stream (artist only)
+  app.post("/api/live-streams/:streamId/end", requireAuth, async (req: any, res) => {
+    try {
+      const stream = await storage.getLiveStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile || stream.artistId !== artistProfile.id) {
+        return res.status(403).json({ error: "Not authorized to end this stream" });
+      }
+
+      const updatedStream = await storage.endLiveStream(req.params.streamId);
+      res.json(updatedStream);
+    } catch (error: any) {
+      console.error("Error ending live stream:", error);
+      res.status(500).json({ error: error.message || "Failed to end live stream" });
+    }
+  });
+
+  // Join a live stream as a viewer
+  app.post("/api/live-streams/:streamId/join", requireAuth, async (req: any, res) => {
+    try {
+      const stream = await storage.getLiveStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+
+      if (stream.status !== 'live') {
+        return res.status(400).json({ error: "Stream is not live" });
+      }
+
+      const viewer = await storage.addStreamViewer({
+        streamId: req.params.streamId,
+        userId: req.session.userId,
+        joinedAt: new Date(),
+      });
+
+      res.json({ viewer, viewerCount: await storage.getStreamViewerCount(req.params.streamId) });
+    } catch (error: any) {
+      console.error("Error joining stream:", error);
+      res.status(500).json({ error: error.message || "Failed to join stream" });
+    }
+  });
+
+  // Leave a live stream
+  app.post("/api/live-streams/:streamId/leave", requireAuth, async (req: any, res) => {
+    try {
+      await storage.removeStreamViewer(req.params.streamId, req.session.userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error leaving stream:", error);
+      res.status(500).json({ error: error.message || "Failed to leave stream" });
+    }
+  });
+
+  // Get stream messages
+  app.get("/api/live-streams/:streamId/messages", async (req: any, res) => {
+    try {
+      const messages = await storage.getStreamMessages(req.params.streamId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error getting stream messages:", error);
+      res.status(500).json({ error: error.message || "Failed to get messages" });
+    }
+  });
+
+  // Send a stream message
+  app.post("/api/live-streams/:streamId/messages", requireAuth, async (req: any, res) => {
+    try {
+      const { message } = req.body;
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const stream = await storage.getLiveStream(req.params.streamId);
+      if (!stream || stream.status !== 'live') {
+        return res.status(400).json({ error: "Stream is not live" });
+      }
+
+      const chatMessage = await storage.sendStreamMessage({
+        streamId: req.params.streamId,
+        userId: req.session.userId,
+        message: message.trim(),
+        sentAt: new Date(),
+      });
+
+      const user = await storage.getUser(req.session.userId);
+      res.status(201).json({ ...chatMessage, user });
+    } catch (error: any) {
+      console.error("Error sending stream message:", error);
+      res.status(500).json({ error: error.message || "Failed to send message" });
+    }
+  });
+
+  // Get artist's live stream history
+  app.get("/api/artists/:artistId/live-streams", async (req: any, res) => {
+    try {
+      const streams = await storage.getLiveStreamsByArtist(req.params.artistId);
+      res.json(streams);
+    } catch (error: any) {
+      console.error("Error getting artist streams:", error);
+      res.status(500).json({ error: error.message || "Failed to get artist streams" });
+    }
+  });
+
+  // Check if an artist is currently live
+  app.get("/api/artists/:artistId/live", async (req: any, res) => {
+    try {
+      const stream = await storage.getArtistActiveLiveStream(req.params.artistId);
+      res.json({ isLive: !!stream, stream: stream || null });
+    } catch (error: any) {
+      console.error("Error checking artist live status:", error);
+      res.status(500).json({ error: error.message || "Failed to check live status" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 
   const httpServer = createServer(app);
+
+  // ============= WEBSOCKET SIGNALING FOR LIVE STREAMING =============
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws/live' });
+  
+  // Track active streams and their connected peers
+  const streamRooms = new Map<string, Map<string, WebSocket>>();
+  const peerStreams = new Map<WebSocket, string>(); // Maps WebSocket to streamId
+
+  wss.on('connection', (ws: WebSocket) => {
+    let currentStreamId: string | null = null;
+    let currentUserId: string | null = null;
+    let isHost = false;
+
+    ws.on('message', async (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        switch (message.type) {
+          case 'join': {
+            // Join a stream room
+            const { streamId, userId, role } = message;
+            currentStreamId = streamId;
+            currentUserId = userId;
+            isHost = role === 'host';
+
+            if (!streamRooms.has(streamId)) {
+              streamRooms.set(streamId, new Map());
+            }
+            
+            const room = streamRooms.get(streamId)!;
+            room.set(userId, ws);
+            peerStreams.set(ws, streamId);
+
+            // Notify all peers in the room about the new participant
+            const joinMessage = JSON.stringify({
+              type: 'peer-joined',
+              userId,
+              isHost,
+              peerCount: room.size,
+            });
+
+            room.forEach((client, peerId) => {
+              if (peerId !== userId && client.readyState === WebSocket.OPEN) {
+                client.send(joinMessage);
+              }
+            });
+
+            // Send existing peers to the new participant
+            const existingPeers: string[] = [];
+            room.forEach((_, peerId) => {
+              if (peerId !== userId) {
+                existingPeers.push(peerId);
+              }
+            });
+
+            ws.send(JSON.stringify({
+              type: 'joined',
+              streamId,
+              existingPeers,
+              peerCount: room.size,
+            }));
+            break;
+          }
+
+          case 'offer':
+          case 'answer':
+          case 'ice-candidate': {
+            // Forward WebRTC signaling messages to the target peer
+            const { targetUserId, ...payload } = message;
+            const room = streamRooms.get(currentStreamId || '');
+            
+            if (room && room.has(targetUserId)) {
+              const targetWs = room.get(targetUserId)!;
+              if (targetWs.readyState === WebSocket.OPEN) {
+                targetWs.send(JSON.stringify({
+                  ...payload,
+                  fromUserId: currentUserId,
+                }));
+              }
+            }
+            break;
+          }
+
+          case 'chat': {
+            // Broadcast chat message to all participants
+            const { streamId, userId, message: chatMessage, userName } = message;
+            const room = streamRooms.get(streamId);
+            
+            if (room) {
+              const broadcastMessage = JSON.stringify({
+                type: 'chat',
+                userId,
+                userName,
+                message: chatMessage,
+                timestamp: new Date().toISOString(),
+              });
+
+              room.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(broadcastMessage);
+                }
+              });
+            }
+            break;
+          }
+
+          case 'stream-ended': {
+            // Notify all viewers that the stream has ended
+            const room = streamRooms.get(currentStreamId || '');
+            if (room && isHost) {
+              const endMessage = JSON.stringify({ type: 'stream-ended' });
+              room.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(endMessage);
+                }
+              });
+              streamRooms.delete(currentStreamId || '');
+            }
+            break;
+          }
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      if (currentStreamId && currentUserId) {
+        const room = streamRooms.get(currentStreamId);
+        if (room) {
+          room.delete(currentUserId);
+          peerStreams.delete(ws);
+
+          // Notify remaining peers
+          const leaveMessage = JSON.stringify({
+            type: 'peer-left',
+            userId: currentUserId,
+            isHost,
+            peerCount: room.size,
+          });
+
+          room.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(leaveMessage);
+            }
+          });
+
+          // Clean up empty rooms
+          if (room.size === 0) {
+            streamRooms.delete(currentStreamId);
+          }
+        }
+      }
+    });
+  });
+
   return httpServer;
 }
