@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrackListItem } from '@/components/track-list-item';
-import { Plus, Music, Trash2, ChevronLeft, ListMusic } from 'lucide-react';
+import { Plus, Music, Trash2, ChevronLeft, ListMusic, ImagePlus, Loader2 } from 'lucide-react';
 import type { PlaylistWithTracks } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -182,49 +181,60 @@ export default function Playlists() {
             </Dialog>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="space-y-2">
             {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-lg" />
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-2">
+                  <Skeleton className="h-14 w-14 rounded-md" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
               ))
             ) : playlists && playlists.length > 0 ? (
               playlists.map((playlist) => (
-                <Card
+                <div
                   key={playlist.id}
-                  className="overflow-hidden hover-elevate transition-all cursor-pointer flex flex-col group"
+                  className="flex items-center gap-4 p-2 rounded-md hover-elevate cursor-pointer group"
                   onClick={() => setSelectedPlaylistId(playlist.id)}
                   data-testid={`card-playlist-${playlist.id}`}
                 >
-                  <div 
-                    className="h-24 relative flex items-center justify-center"
-                    style={{
-                      background: 'radial-gradient(circle at 30% 30%, hsl(351 76% 60% / 0.15), hsl(var(--card)) 70%)'
-                    }}
-                  >
-                    <ListMusic className="h-6 w-6 text-primary/50" />
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeletePlaylist(playlist.id);
-                      }}
-                      data-testid={`button-delete-${playlist.id}`}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                  <div className="h-14 w-14 rounded-md overflow-hidden flex-shrink-0 bg-muted relative">
+                    {playlist.coverImageUrl ? (
+                      <img
+                        src={playlist.coverImageUrl}
+                        alt={playlist.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                        <ListMusic className="h-6 w-6 text-primary/50" />
+                      </div>
+                    )}
                   </div>
-                  <div className="p-3 flex flex-col">
-                    <h3 className="font-semibold truncate text-sm">{playlist.name}</h3>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{playlist.name}</h3>
+                    <p className="text-sm text-muted-foreground">
                       {playlist.tracks?.length || 0} {playlist.tracks?.length === 1 ? 'track' : 'tracks'}
                     </p>
                   </div>
-                </Card>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePlaylist(playlist.id);
+                    }}
+                    data-testid={`button-delete-${playlist.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               ))
             ) : (
-              <div className="col-span-full text-center py-20 text-muted-foreground">
+              <div className="text-center py-20 text-muted-foreground">
                 <Music className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p>No playlists yet. Create your first one!</p>
               </div>
