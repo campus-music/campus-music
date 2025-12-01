@@ -340,7 +340,7 @@ export default function ArtistAnalytics() {
                 </h2>
                 <ScrollArea className="h-[280px]">
                   {analytics.recentActivity.length > 0 ? (
-                    <div className="divide-y">
+                    <div className="divide-y pr-4">
                       {analytics.recentActivity.slice(0, 10).map((activity, idx) => (
                         <ActivityItem key={idx} activity={activity} />
                       ))}
