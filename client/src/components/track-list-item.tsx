@@ -92,11 +92,11 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
         {(onLike || !user) && (
           <Button
             size="icon"
-            variant="ghost"
+            variant={isLiked ? "default" : "ghost"}
             onClick={handleLike}
             data-testid={`button-like-${track.id}`}
           >
-            <Heart className={cn("h-4 w-4", isLiked && "fill-current text-primary")} />
+            <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
           </Button>
         )}
         <DropdownMenu>

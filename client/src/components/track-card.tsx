@@ -63,12 +63,15 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
           {(onLike || !user) && (
             <Button
               size="icon"
-              variant="secondary"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              variant={isLiked ? "default" : "secondary"}
+              className={cn(
+                "absolute top-2 right-2 transition-opacity",
+                isLiked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              )}
               onClick={handleLike}
               data-testid={`button-like-${track.id}`}
             >
-              <Heart className={cn("h-4 w-4", isLiked && "fill-current text-primary")} />
+              <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
             </Button>
           )}
         </div>

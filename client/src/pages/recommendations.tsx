@@ -13,14 +13,24 @@ export default function Recommendations() {
     queryKey: ['/api/user/recommendations'],
   });
 
+  const { data: likedTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/user/liked-tracks'],
+  });
+
+  const likedTrackIds = new Set(likedTracks?.map(t => t.id) || []);
+
   const likeMutation = useMutation({
-    mutationFn: async (trackId: string) => {
-      const res = await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
-      return res.json();
+    mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
+      if (isLiked) {
+        await apiRequest('DELETE', `/api/tracks/${trackId}/like`, {});
+      } else {
+        await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, { isLiked }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
-      toast({ title: 'Track liked!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/recommendations'] });
+      toast({ title: isLiked ? 'Removed from liked tracks' : 'Added to liked tracks' });
     },
   });
 
@@ -44,14 +54,18 @@ export default function Recommendations() {
             <Skeleton key={i} className="h-72 rounded-lg" />
           ))
         ) : recommendations && recommendations.length > 0 ? (
-          recommendations.map((track) => (
-            <TrackCard
-              key={track.id}
-              track={track}
-              onLike={() => likeMutation.mutate(track.id)}
-              data-testid={`card-recommendation-${track.id}`}
-            />
-          ))
+          recommendations.map((track) => {
+            const isLiked = likedTrackIds.has(track.id);
+            return (
+              <TrackCard
+                key={track.id}
+                track={track}
+                isLiked={isLiked}
+                onLike={() => likeMutation.mutate({ trackId: track.id, isLiked })}
+                data-testid={`card-recommendation-${track.id}`}
+              />
+            );
+          })
         ) : (
           <div className="col-span-full text-center py-20 text-muted-foreground">
             Like more tracks to get better recommendations
