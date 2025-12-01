@@ -373,6 +373,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(tracks);
   });
 
+  // Social home page endpoints
+  app.get("/api/tracks/from-following", requireAuth, async (req, res) => {
+    try {
+      const tracks = await storage.getTracksFromFollowedArtists(req.session.userId!, 20);
+      res.json(tracks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks/my-university", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || !user.universityName) {
+        return res.json([]);
+      }
+      const tracks = await storage.getTracksByUniversity(user.universityName);
+      res.json(tracks.slice(0, 20)); // Limit to 20
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tracks/friends-listening", requireAuth, async (req, res) => {
+    try {
+      const activity = await storage.getFriendsRecentListens(req.session.userId!, 20);
+      // Return in a format the frontend can use
+      res.json(activity.map(item => ({
+        ...item.track,
+        listenedBy: {
+          id: item.user.id,
+          fullName: item.user.fullName,
+          profileImageUrl: item.user.profileImageUrl,
+        },
+        playedAt: item.playedAt,
+      })));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/tracks/liked", requireAuth, async (req, res) => {
     const tracks = await storage.getLikedTracks(req.session.userId!);
     res.json(tracks);

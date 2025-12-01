@@ -140,6 +140,10 @@ export interface IStorage {
   getFollowers(userId: string): Promise<User[]>;
   getFollowing(userId: string): Promise<User[]>;
   isFollowing(userId: string, followerId: string): Promise<boolean>;
+  
+  // Social home page methods
+  getTracksFromFollowedArtists(userId: string, limit?: number): Promise<TrackWithArtist[]>;
+  getFriendsRecentListens(userId: string, limit?: number): Promise<{ track: TrackWithArtist; user: User; playedAt: Date }[]>;
 
   addComment(data: InsertTrackComment): Promise<TrackComment>;
   getTrackComments(trackId: string): Promise<TrackComment[]>;
@@ -744,6 +748,92 @@ export class DatabaseStorage implements IStorage {
       .from(followers)
       .where(and(eq(followers.userId, userId), eq(followers.followerId, followerId)));
     return !!record;
+  }
+
+  async getTracksFromFollowedArtists(userId: string, limit: number = 20): Promise<TrackWithArtist[]> {
+    // Get artists the user follows (followers table stores artistId as userId)
+    const followingRecords = await db
+      .select()
+      .from(followers)
+      .where(eq(followers.followerId, userId));
+    
+    if (followingRecords.length === 0) {
+      return [];
+    }
+
+    // Get artist profiles for followed users
+    const followedArtistIds: string[] = [];
+    for (const f of followingRecords) {
+      const artistProfile = await this.getArtistProfile(f.userId);
+      if (artistProfile) {
+        followedArtistIds.push(artistProfile.id);
+      }
+    }
+
+    if (followedArtistIds.length === 0) {
+      return [];
+    }
+
+    // Get recent tracks from followed artists
+    const recentTracks = await db
+      .select()
+      .from(tracks)
+      .where(inArray(tracks.artistId, followedArtistIds))
+      .orderBy(desc(tracks.createdAt))
+      .limit(limit);
+
+    // Enrich with artist info
+    const result: TrackWithArtist[] = [];
+    for (const track of recentTracks) {
+      const trackWithArtist = await this.getTrackWithArtist(track.id);
+      if (trackWithArtist) {
+        result.push(trackWithArtist);
+      }
+    }
+    return result;
+  }
+
+  async getFriendsRecentListens(userId: string, limit: number = 20): Promise<{ track: TrackWithArtist; user: User; playedAt: Date }[]> {
+    // Get the user's friends (accepted connections)
+    const friendConnections = await this.getAcceptedUserConnections(userId);
+    
+    if (friendConnections.length === 0) {
+      return [];
+    }
+
+    // Get friend user IDs
+    const friendIds = friendConnections.map(conn => 
+      conn.requesterId === userId ? conn.receiverId : conn.requesterId
+    );
+
+    // Get recent streams from friends
+    const recentStreams = await db
+      .select()
+      .from(streams)
+      .where(inArray(streams.userId, friendIds))
+      .orderBy(desc(streams.playedAt))
+      .limit(limit);
+
+    // Enrich with track and user info
+    const result: { track: TrackWithArtist; user: User; playedAt: Date }[] = [];
+    const seenTracks = new Set<string>(); // Avoid duplicate tracks
+    
+    for (const stream of recentStreams) {
+      if (seenTracks.has(stream.trackId)) continue;
+      seenTracks.add(stream.trackId);
+      
+      const track = await this.getTrackWithArtist(stream.trackId);
+      const user = await this.getUser(stream.userId);
+      
+      if (track && user) {
+        result.push({
+          track,
+          user,
+          playedAt: stream.playedAt,
+        });
+      }
+    }
+    return result;
   }
 
   async addComment(data: InsertTrackComment): Promise<TrackComment> {
