@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Card } from '@/components/ui/card';
 import { Plus, Music } from 'lucide-react';
+import { Link } from 'wouter';
 import type { TrackWithArtist, PlaylistWithTracks } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -131,32 +131,33 @@ export default function Library() {
               ))
             ) : playlists && playlists.length > 0 ? (
               playlists.map((playlist, index) => (
-                <div 
-                  key={playlist.id} 
-                  className="flex items-center gap-4 p-2 rounded-md hover-elevate transition-all cursor-pointer group"
-                  data-testid={`card-playlist-${playlist.id}`}
-                >
-                  <div className="text-sm text-muted-foreground w-6 text-right">
-                    {index + 1}
+                <Link key={playlist.id} href={`/playlist/${playlist.id}`}>
+                  <div 
+                    className="flex items-center gap-4 p-2 rounded-md hover-elevate transition-all cursor-pointer group"
+                    data-testid={`card-playlist-${playlist.id}`}
+                  >
+                    <div className="text-sm text-muted-foreground w-6 text-right">
+                      {index + 1}
+                    </div>
+                    <div className="h-12 w-12 rounded-md overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+                      {playlist.coverImageUrl ? (
+                        <img 
+                          src={playlist.coverImageUrl} 
+                          alt={playlist.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Music className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{playlist.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {playlist.tracks?.length || 0} tracks
+                      </p>
+                    </div>
                   </div>
-                  <div className="h-12 w-12 rounded-md overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
-                    {playlist.coverImageUrl ? (
-                      <img 
-                        src={playlist.coverImageUrl} 
-                        alt={playlist.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Music className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{playlist.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {playlist.tracks?.length || 0} tracks
-                    </p>
-                  </div>
-                </div>
+                </Link>
               ))
             ) : (
               <div className="text-center py-20 text-muted-foreground">
