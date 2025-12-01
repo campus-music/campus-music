@@ -21,7 +21,11 @@ import {
   Check,
   X,
   Music,
-  GraduationCap
+  GraduationCap,
+  Heart,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import type { UserConnectionWithUsers, User } from '@shared/schema';
 
@@ -32,6 +36,13 @@ type SafeUser = {
   universityName: string;
   profileImageUrl: string | null;
   role: string;
+};
+
+type FriendSuggestion = {
+  user: User;
+  similarityScore: number;
+  commonArtists: string[];
+  commonGenres: string[];
 };
 
 export default function Social() {
@@ -57,6 +68,11 @@ export default function Social() {
 
   const { data: allUsers = [], isLoading: usersLoading } = useQuery<SafeUser[]>({
     queryKey: ['/api/users/all'],
+    enabled: !!user,
+  });
+
+  const { data: suggestions = [], isLoading: suggestionsLoading } = useQuery<FriendSuggestion[]>({
+    queryKey: ['/api/social/suggestions'],
     enabled: !!user,
   });
 
@@ -163,6 +179,15 @@ export default function Social() {
           Connect and chat with fellow students
         </p>
       </div>
+
+      {/* Suggested Friends based on Music Taste */}
+      {suggestions.length > 0 && (
+        <SuggestedFriendsCarousel 
+          suggestions={suggestions}
+          onConnect={(userId) => sendRequestMutation.mutate(userId)}
+          isConnecting={sendRequestMutation.isPending}
+        />
+      )}
 
       <Tabs defaultValue="friends" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
@@ -617,6 +642,182 @@ function DiscoverCard({
         data-testid={`button-connect-${user.id}`}
       >
         <UserPlus className="h-4 w-4 mr-1" />
+        Connect
+      </Button>
+    </div>
+  );
+}
+
+function SuggestedFriendsCarousel({
+  suggestions,
+  onConnect,
+  isConnecting,
+}: {
+  suggestions: FriendSuggestion[];
+  onConnect: (userId: string) => void;
+  isConnecting: boolean;
+}) {
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const containerRef = useState<HTMLDivElement | null>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    const container = document.getElementById('suggestions-carousel');
+    if (container) {
+      const scrollAmount = 320;
+      const newPosition = direction === 'left' 
+        ? container.scrollLeft - scrollAmount 
+        : container.scrollLeft + scrollAmount;
+      container.scrollTo({ left: newPosition, behavior: 'smooth' });
+      setScrollPosition(newPosition);
+    }
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Suggested Friends</CardTitle>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => scroll('left')}
+              className="h-8 w-8"
+              data-testid="button-scroll-left"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => scroll('right')}
+              className="h-8 w-8"
+              data-testid="button-scroll-right"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <CardDescription>
+          People who share your music taste
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div 
+          id="suggestions-carousel"
+          className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+          {suggestions.map((suggestion) => (
+            <SuggestionCard
+              key={suggestion.user.id}
+              suggestion={suggestion}
+              onConnect={() => onConnect(suggestion.user.id)}
+              isConnecting={isConnecting}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SuggestionCard({
+  suggestion,
+  onConnect,
+  isConnecting,
+}: {
+  suggestion: FriendSuggestion;
+  onConnect: () => void;
+  isConnecting: boolean;
+}) {
+  const { user, similarityScore, commonArtists, commonGenres } = suggestion;
+  const initials = user.fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+  
+  return (
+    <div 
+      className="flex-shrink-0 w-72 p-4 rounded-lg border bg-card"
+      style={{ scrollSnapAlign: 'start' }}
+      data-testid={`card-suggestion-${user.id}`}
+    >
+      <div className="flex items-start gap-3 mb-3">
+        <Avatar className="h-12 w-12">
+          <AvatarFallback className="bg-primary/10 text-primary">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold truncate">{user.fullName}</h3>
+          </div>
+          {user.universityName && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <GraduationCap className="h-3 w-3" />
+              <span className="truncate">{user.universityName}</span>
+            </div>
+          )}
+        </div>
+        <Badge variant="secondary" className="shrink-0">
+          <Heart className="h-3 w-3 mr-1 text-primary" />
+          {similarityScore}%
+        </Badge>
+      </div>
+
+      <div className="space-y-2 mb-4">
+        {commonArtists.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">
+              <Music className="h-3 w-3 inline mr-1" />
+              Common artists
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {commonArtists.slice(0, 2).map((artist) => (
+                <Badge key={artist} variant="outline" className="text-xs">
+                  {artist}
+                </Badge>
+              ))}
+              {commonArtists.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{commonArtists.length - 2}
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+
+        {commonGenres.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">
+              <Sparkles className="h-3 w-3 inline mr-1" />
+              Common genres
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {commonGenres.slice(0, 2).map((genre) => (
+                <Badge key={genre} variant="outline" className="text-xs">
+                  {genre}
+                </Badge>
+              ))}
+              {commonGenres.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{commonGenres.length - 2}
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Button 
+        size="sm"
+        className="w-full"
+        onClick={onConnect}
+        disabled={isConnecting}
+        data-testid={`button-connect-suggestion-${user.id}`}
+      >
+        <UserPlus className="h-4 w-4 mr-2" />
         Connect
       </Button>
     </div>
