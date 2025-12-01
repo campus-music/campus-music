@@ -6,9 +6,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Music } from 'lucide-react';
 import type { TrackWithArtist } from '@shared/schema';
 
-const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Indie', 'Jazz', 'Classical'];
-const UNIVERSITIES = ['MIT', 'Stanford', 'Harvard', 'UC Berkeley', 'Oxford', 'Yale', 'Princeton'];
-
 export default function AllReleases() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
@@ -16,6 +13,11 @@ export default function AllReleases() {
   const { data: tracks, isLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/latest'],
   });
+
+  // Extract unique genres and universities from top 20 tracks
+  const top20Tracks = tracks?.slice(0, 20) || [];
+  const availableGenres = Array.from(new Set(top20Tracks.map(t => t.genre))).sort();
+  const availableUniversities = Array.from(new Set(top20Tracks.map(t => t.universityName))).sort();
 
   const filteredTracks = tracks?.filter(track => {
     if (selectedGenre && track.genre !== selectedGenre) return false;
@@ -38,7 +40,7 @@ export default function AllReleases() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
         <SearchableFilter
           label="Filter by Genre"
-          options={GENRES}
+          options={availableGenres}
           selected={selectedGenre}
           onSelect={setSelectedGenre}
           placeholder="Search or select genre..."
@@ -46,7 +48,7 @@ export default function AllReleases() {
         />
         <SearchableFilter
           label="Filter by University"
-          options={UNIVERSITIES}
+          options={availableUniversities}
           selected={selectedUniversity}
           onSelect={setSelectedUniversity}
           placeholder="Search or select university..."

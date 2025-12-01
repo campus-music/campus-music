@@ -17,9 +17,6 @@ interface Artist extends ArtistProfile {
   streams: number;
 }
 
-const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Indie', 'Jazz', 'Classical'];
-const UNIVERSITIES = ['MIT', 'Stanford', 'Harvard', 'UC Berkeley', 'Oxford', 'Yale', 'Princeton'];
-
 export default function Home() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
@@ -30,6 +27,11 @@ export default function Home() {
   const { data: trendingTracks, isLoading: trendingLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/trending'],
   });
+
+  // Extract unique genres and universities from top 20 trending tracks
+  const top20Tracks = trendingTracks?.slice(0, 20) || [];
+  const availableGenres = Array.from(new Set(top20Tracks.map(t => t.genre))).sort();
+  const availableUniversities = Array.from(new Set(top20Tracks.map(t => t.universityName))).sort();
 
   const { data: allArtists, isLoading: artistsLoading } = useQuery<Artist[]>({
     queryKey: ['/api/artists'],
@@ -115,7 +117,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
           <SearchableFilter
             label="Filter by Genre"
-            options={GENRES}
+            options={availableGenres}
             selected={selectedGenre}
             onSelect={setSelectedGenre}
             placeholder="Search or select genre..."
@@ -123,7 +125,7 @@ export default function Home() {
           />
           <SearchableFilter
             label="Filter by University"
-            options={UNIVERSITIES}
+            options={availableUniversities}
             selected={selectedUniversity}
             onSelect={setSelectedUniversity}
             placeholder="Search or select university..."
