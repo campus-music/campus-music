@@ -49,6 +49,20 @@ Preferred communication style: Simple, everyday language.
   - Tables: listenerFavoriteArtists, listenerFavoriteGenres
 - **Routes**: /social (discovery and friend management), /chat (direct messaging), /feed (artist social feed)
 
+### Live Streaming
+- **Technology**: Browser-based WebRTC with mesh topology (supports up to 50 concurrent viewers)
+- **Signaling**: WebSocket server at `/ws/live` handles offer/answer/ICE candidate exchange and real-time chat
+- **Access Control**: Only verified artists can start streams; viewers can watch any live stream
+- **Features**:
+  - Real-time video/audio broadcasting using browser camera/microphone
+  - Live chat with message persistence and history
+  - LIVE badges on artist profiles when streaming
+  - Stream viewer count tracking
+  - Chat emoji reactions
+- **Tables**: live_streams (stream metadata, status), live_stream_viewers (viewer tracking), live_stream_messages (chat history)
+- **Routes**: /live (browse active streams), /live/:streamId (watch/broadcast)
+- **Future Improvements**: Add TURN servers for NAT-restricted viewers; expand automated test coverage
+
 ### File Storage
 - **Abstraction**: S3-compatible storage (AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2) with local filesystem fallback for development.
 - **Uploads**: `ObjectUploader` component handles drag-and-drop, validation (5MB max for images, 20MB for audio), progress tracking, and signed URL generation.
