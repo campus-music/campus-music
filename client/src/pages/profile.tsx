@@ -12,12 +12,12 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
-import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Bell, Shield, HardDrive } from 'lucide-react';
+import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Bell, Shield, HardDrive, Heart, Users, X, Plus, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { ArtistProfile } from '@shared/schema';
+import type { ArtistProfile, ListenerFavoriteArtist, ListenerFavoriteGenre } from '@shared/schema';
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -108,6 +108,7 @@ export default function Profile() {
           {user.role === 'artist' && (
             <TabsTrigger value="artist" data-testid="tab-artist">Artist Profile</TabsTrigger>
           )}
+          <TabsTrigger value="music-taste" data-testid="tab-music-taste">Music Taste</TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -324,10 +325,312 @@ export default function Profile() {
           </TabsContent>
         )}
 
+        <TabsContent value="music-taste" className="mt-6">
+          <MusicTasteSettings />
+        </TabsContent>
+
         <TabsContent value="settings" className="mt-6">
           <SettingsPage />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+interface FavoriteArtistWithProfile extends ListenerFavoriteArtist {
+  artist: ArtistProfile;
+}
+
+const GENRE_OPTIONS = [
+  'Pop', 'Rock', 'Hip Hop', 'R&B', 'Jazz', 'Classical', 'Electronic', 
+  'Country', 'Folk', 'Indie', 'Alternative', 'Metal', 'Punk', 
+  'Soul', 'Funk', 'Reggae', 'Latin', 'Blues', 'Gospel', 'World'
+];
+
+function MusicTasteSettings() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [newGenre, setNewGenre] = useState('');
+  const [showArtistSearch, setShowArtistSearch] = useState(false);
+  const [artistSearchQuery, setArtistSearchQuery] = useState('');
+
+  const { data: favoriteArtists = [], isLoading: loadingArtists } = useQuery<FavoriteArtistWithProfile[]>({
+    queryKey: ['/api/preferences/artists'],
+  });
+
+  const { data: favoriteGenres = [], isLoading: loadingGenres } = useQuery<ListenerFavoriteGenre[]>({
+    queryKey: ['/api/preferences/genres'],
+  });
+
+  const { data: allArtists = [] } = useQuery<ArtistProfile[]>({
+    queryKey: ['/api/artists'],
+    enabled: showArtistSearch,
+  });
+
+  const addArtistMutation = useMutation({
+    mutationFn: async (artistId: string) => {
+      const res = await apiRequest('POST', `/api/preferences/artists/${artistId}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/preferences/artists'] });
+      toast({ title: 'Artist added to favorites' });
+      setShowArtistSearch(false);
+      setArtistSearchQuery('');
+    },
+    onError: () => {
+      toast({ title: 'Failed to add artist', variant: 'destructive' });
+    },
+  });
+
+  const removeArtistMutation = useMutation({
+    mutationFn: async (artistId: string) => {
+      const res = await apiRequest('DELETE', `/api/preferences/artists/${artistId}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/preferences/artists'] });
+      toast({ title: 'Artist removed from favorites' });
+    },
+  });
+
+  const addGenreMutation = useMutation({
+    mutationFn: async (genre: string) => {
+      const res = await apiRequest('POST', '/api/preferences/genres', { genre });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/preferences/genres'] });
+      toast({ title: 'Genre added to favorites' });
+      setNewGenre('');
+    },
+    onError: () => {
+      toast({ title: 'Failed to add genre', variant: 'destructive' });
+    },
+  });
+
+  const removeGenreMutation = useMutation({
+    mutationFn: async (genre: string) => {
+      const res = await apiRequest('DELETE', `/api/preferences/genres/${encodeURIComponent(genre)}`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/preferences/genres'] });
+      toast({ title: 'Genre removed from favorites' });
+    },
+  });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async (showMusicPreferences: boolean) => {
+      const res = await apiRequest('PATCH', '/api/preferences/visibility', { showMusicPreferences });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      toast({ title: 'Visibility updated' });
+    },
+  });
+
+  const filteredArtists = allArtists.filter(artist => 
+    artist.stageName.toLowerCase().includes(artistSearchQuery.toLowerCase()) &&
+    !favoriteArtists.some(fav => fav.artistId === artist.id)
+  );
+
+  const availableGenres = GENRE_OPTIONS.filter(
+    genre => !favoriteGenres.some(fg => fg.genre === genre)
+  );
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Heart className="h-5 w-5 text-primary" />
+            Favorite Artists
+          </CardTitle>
+          <CardDescription>
+            Select artists you love - this helps us suggest friends with similar taste
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingArtists ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : favoriteArtists.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {favoriteArtists.map((fav) => (
+                <Badge 
+                  key={fav.artistId} 
+                  variant="secondary" 
+                  className="flex items-center gap-2 py-1.5 px-3"
+                  data-testid={`badge-favorite-artist-${fav.artistId}`}
+                >
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={fav.artist.profileImageUrl || undefined} />
+                    <AvatarFallback className="text-xs">{fav.artist.stageName[0]}</AvatarFallback>
+                  </Avatar>
+                  <span>{fav.artist.stageName}</span>
+                  <button
+                    onClick={() => removeArtistMutation.mutate(fav.artistId)}
+                    className="ml-1 hover:text-destructive transition-colors"
+                    disabled={removeArtistMutation.isPending}
+                    data-testid={`button-remove-artist-${fav.artistId}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No favorite artists yet</p>
+          )}
+
+          {showArtistSearch ? (
+            <div className="space-y-3 pt-2 border-t">
+              <Input
+                placeholder="Search for artists..."
+                value={artistSearchQuery}
+                onChange={(e) => setArtistSearchQuery(e.target.value)}
+                data-testid="input-search-artists"
+              />
+              {artistSearchQuery && filteredArtists.length > 0 && (
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {filteredArtists.slice(0, 10).map((artist) => (
+                    <button
+                      key={artist.id}
+                      onClick={() => addArtistMutation.mutate(artist.id)}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover-elevate transition-colors text-left"
+                      disabled={addArtistMutation.isPending}
+                      data-testid={`button-add-artist-${artist.id}`}
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={artist.profileImageUrl || undefined} />
+                        <AvatarFallback>{artist.stageName[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{artist.stageName}</p>
+                        <p className="text-xs text-muted-foreground">{artist.mainGenre}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowArtistSearch(false);
+                  setArtistSearchQuery('');
+                }}
+                data-testid="button-cancel-artist-search"
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArtistSearch(true)}
+              className="mt-2"
+              data-testid="button-add-favorite-artist"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Artist
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Music className="h-5 w-5 text-primary" />
+            Favorite Genres
+          </CardTitle>
+          <CardDescription>
+            What genres do you enjoy the most?
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingGenres ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : favoriteGenres.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {favoriteGenres.map((fg) => (
+                <Badge 
+                  key={fg.genre} 
+                  variant="secondary"
+                  className="flex items-center gap-2 py-1.5 px-3"
+                  data-testid={`badge-favorite-genre-${fg.genre}`}
+                >
+                  <span>{fg.genre}</span>
+                  <button
+                    onClick={() => removeGenreMutation.mutate(fg.genre)}
+                    className="ml-1 hover:text-destructive transition-colors"
+                    disabled={removeGenreMutation.isPending}
+                    data-testid={`button-remove-genre-${fg.genre}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No favorite genres yet</p>
+          )}
+
+          <div className="flex gap-2 pt-2 border-t">
+            <Select 
+              value={newGenre} 
+              onValueChange={(value) => {
+                setNewGenre(value);
+                if (value) {
+                  addGenreMutation.mutate(value);
+                }
+              }}
+            >
+              <SelectTrigger className="w-48" data-testid="select-genre">
+                <SelectValue placeholder="Add a genre" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableGenres.map((genre) => (
+                  <SelectItem key={genre} value={genre}>
+                    {genre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Privacy
+          </CardTitle>
+          <CardDescription>
+            Control who can see your music preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 pr-4">
+              <Label className="text-sm font-medium cursor-pointer">Show Music Preferences</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Allow others to see your favorite artists and genres on your profile
+              </p>
+            </div>
+            <Switch 
+              checked={user?.showMusicPreferences !== false}
+              onCheckedChange={(checked) => toggleVisibilityMutation.mutate(checked)}
+              disabled={toggleVisibilityMutation.isPending}
+              data-testid="switch-show-music-preferences"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
