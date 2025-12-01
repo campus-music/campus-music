@@ -49,6 +49,8 @@ import {
   type CommentSticker,
   type InsertCommentSticker,
   type University,
+  type ListenerFavoriteArtist,
+  type ListenerFavoriteGenre,
   commentStickers,
   universities,
   users,
@@ -72,7 +74,9 @@ import {
   artistPosts,
   postLikes,
   postComments,
-  postShares
+  postShares,
+  listenerFavoriteArtists,
+  listenerFavoriteGenres
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, ilike, or, and, inArray, count } from "drizzle-orm";
@@ -216,6 +220,18 @@ export interface IStorage {
   addCommentSticker(data: InsertCommentSticker): Promise<CommentSticker>;
   getCommentStickers(commentId: string): Promise<CommentSticker[]>;
   deleteCommentSticker(stickerId: string): Promise<void>;
+
+  // Listener music preferences
+  addFavoriteArtist(userId: string, artistId: string): Promise<ListenerFavoriteArtist>;
+  removeFavoriteArtist(userId: string, artistId: string): Promise<void>;
+  getFavoriteArtists(userId: string): Promise<(ListenerFavoriteArtist & { artist: ArtistProfile })[]>;
+  
+  addFavoriteGenre(userId: string, genre: string): Promise<ListenerFavoriteGenre>;
+  removeFavoriteGenre(userId: string, genre: string): Promise<void>;
+  getFavoriteGenres(userId: string): Promise<ListenerFavoriteGenre[]>;
+  
+  // Friend suggestions based on music taste
+  getSuggestedFriends(userId: string, limit?: number): Promise<{ user: User; similarityScore: number; commonArtists: string[]; commonGenres: string[] }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1614,6 +1630,210 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCommentSticker(stickerId: string): Promise<void> {
     await db.delete(commentStickers).where(eq(commentStickers.id, stickerId));
+  }
+
+  // Listener music preferences
+  async addFavoriteArtist(userId: string, artistId: string): Promise<ListenerFavoriteArtist> {
+    // Check if already exists
+    const [existing] = await db
+      .select()
+      .from(listenerFavoriteArtists)
+      .where(and(
+        eq(listenerFavoriteArtists.userId, userId),
+        eq(listenerFavoriteArtists.artistId, artistId)
+      ));
+    
+    if (existing) {
+      return existing;
+    }
+
+    const [favorite] = await db
+      .insert(listenerFavoriteArtists)
+      .values({ userId, artistId })
+      .returning();
+    return favorite;
+  }
+
+  async removeFavoriteArtist(userId: string, artistId: string): Promise<void> {
+    await db
+      .delete(listenerFavoriteArtists)
+      .where(and(
+        eq(listenerFavoriteArtists.userId, userId),
+        eq(listenerFavoriteArtists.artistId, artistId)
+      ));
+  }
+
+  async getFavoriteArtists(userId: string): Promise<(ListenerFavoriteArtist & { artist: ArtistProfile })[]> {
+    const favorites = await db
+      .select()
+      .from(listenerFavoriteArtists)
+      .where(eq(listenerFavoriteArtists.userId, userId))
+      .orderBy(desc(listenerFavoriteArtists.addedAt));
+    
+    const result: (ListenerFavoriteArtist & { artist: ArtistProfile })[] = [];
+    
+    for (const favorite of favorites) {
+      const [artist] = await db
+        .select()
+        .from(artistProfiles)
+        .where(eq(artistProfiles.id, favorite.artistId));
+      
+      if (artist) {
+        result.push({ ...favorite, artist });
+      }
+    }
+    
+    return result;
+  }
+
+  async addFavoriteGenre(userId: string, genre: string): Promise<ListenerFavoriteGenre> {
+    // Check if already exists
+    const [existing] = await db
+      .select()
+      .from(listenerFavoriteGenres)
+      .where(and(
+        eq(listenerFavoriteGenres.userId, userId),
+        eq(listenerFavoriteGenres.genre, genre)
+      ));
+    
+    if (existing) {
+      return existing;
+    }
+
+    const [favorite] = await db
+      .insert(listenerFavoriteGenres)
+      .values({ userId, genre })
+      .returning();
+    return favorite;
+  }
+
+  async removeFavoriteGenre(userId: string, genre: string): Promise<void> {
+    await db
+      .delete(listenerFavoriteGenres)
+      .where(and(
+        eq(listenerFavoriteGenres.userId, userId),
+        eq(listenerFavoriteGenres.genre, genre)
+      ));
+  }
+
+  async getFavoriteGenres(userId: string): Promise<ListenerFavoriteGenre[]> {
+    return await db
+      .select()
+      .from(listenerFavoriteGenres)
+      .where(eq(listenerFavoriteGenres.userId, userId))
+      .orderBy(desc(listenerFavoriteGenres.addedAt));
+  }
+
+  async getSuggestedFriends(userId: string, limit: number = 10): Promise<{ user: User; similarityScore: number; commonArtists: string[]; commonGenres: string[] }[]> {
+    // Get current user's favorite artists and genres
+    const userArtists = await db
+      .select()
+      .from(listenerFavoriteArtists)
+      .where(eq(listenerFavoriteArtists.userId, userId));
+    
+    const userGenres = await db
+      .select()
+      .from(listenerFavoriteGenres)
+      .where(eq(listenerFavoriteGenres.userId, userId));
+    
+    const userArtistIds = new Set(userArtists.map(a => a.artistId));
+    const userGenreNames = new Set(userGenres.map(g => g.genre));
+
+    // Get existing connections to exclude
+    const existingConnections = await db
+      .select()
+      .from(userConnections)
+      .where(or(
+        eq(userConnections.requesterId, userId),
+        eq(userConnections.receiverId, userId)
+      ));
+    
+    const connectedUserIds = new Set<string>();
+    connectedUserIds.add(userId);
+    for (const conn of existingConnections) {
+      connectedUserIds.add(conn.requesterId);
+      connectedUserIds.add(conn.receiverId);
+    }
+
+    // Get all other users who have music preferences set
+    const allUsers = await db.select().from(users);
+    const eligibleUsers = allUsers.filter(u => 
+      !connectedUserIds.has(u.id) && 
+      u.showMusicPreferences !== false
+    );
+
+    const suggestions: { user: User; similarityScore: number; commonArtists: string[]; commonGenres: string[] }[] = [];
+
+    for (const otherUser of eligibleUsers) {
+      // Get other user's preferences
+      const otherArtists = await db
+        .select()
+        .from(listenerFavoriteArtists)
+        .where(eq(listenerFavoriteArtists.userId, otherUser.id));
+      
+      const otherGenres = await db
+        .select()
+        .from(listenerFavoriteGenres)
+        .where(eq(listenerFavoriteGenres.userId, otherUser.id));
+      
+      // Skip users with no preferences
+      if (otherArtists.length === 0 && otherGenres.length === 0) continue;
+
+      // Calculate common artists
+      const commonArtistIds = otherArtists
+        .filter(a => userArtistIds.has(a.artistId))
+        .map(a => a.artistId);
+      
+      // Get artist names for common artists
+      const commonArtistNames: string[] = [];
+      for (const artistId of commonArtistIds) {
+        const [artist] = await db
+          .select()
+          .from(artistProfiles)
+          .where(eq(artistProfiles.id, artistId));
+        if (artist) {
+          commonArtistNames.push(artist.stageName);
+        }
+      }
+
+      // Calculate common genres
+      const commonGenres = otherGenres
+        .filter(g => userGenreNames.has(g.genre))
+        .map(g => g.genre);
+
+      // Calculate similarity score (Jaccard-like with weights)
+      const artistWeight = 0.6;
+      const genreWeight = 0.4;
+      
+      const otherArtistIds = new Set(otherArtists.map(a => a.artistId));
+      const otherGenreNames = new Set(otherGenres.map(g => g.genre));
+      
+      const artistUnion = new Set([...userArtistIds, ...otherArtistIds]);
+      const genreUnion = new Set([...userGenreNames, ...otherGenreNames]);
+      
+      const artistSimilarity = artistUnion.size > 0 
+        ? commonArtistIds.length / artistUnion.size 
+        : 0;
+      const genreSimilarity = genreUnion.size > 0 
+        ? commonGenres.length / genreUnion.size 
+        : 0;
+      
+      const similarityScore = Math.round((artistWeight * artistSimilarity + genreWeight * genreSimilarity) * 100);
+
+      if (similarityScore > 0) {
+        suggestions.push({
+          user: otherUser,
+          similarityScore,
+          commonArtists: commonArtistNames,
+          commonGenres,
+        });
+      }
+    }
+
+    // Sort by similarity score and return top results
+    return suggestions
+      .sort((a, b) => b.similarityScore - a.similarityScore)
+      .slice(0, limit);
   }
 }
 
