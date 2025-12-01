@@ -82,7 +82,7 @@ export function SearchableFilter({
         </div>
 
         {open && (
-          <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg">
+          <div className="absolute z-50 w-full mt-1 bg-popover/80 backdrop-blur-md border border-border/50 rounded-md shadow-lg">
             <ScrollArea className="max-h-48">
               <div className="p-1">
                 {filteredOptions.length > 0 ? (
