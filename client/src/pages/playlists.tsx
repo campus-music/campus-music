@@ -201,7 +201,7 @@ export default function Playlists() {
                       background: 'radial-gradient(circle at 30% 30%, hsl(351 76% 60% / 0.15), hsl(var(--card)) 70%)'
                     }}
                   >
-                    <ListMusic className="h-12 w-12 text-primary/50" />
+                    <ListMusic className="h-5 w-5 text-primary/50" />
                     <Button
                       size="sm"
                       variant="destructive"
