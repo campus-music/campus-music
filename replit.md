@@ -48,6 +48,12 @@ Preferred communication style: Simple, everyday language.
   - Expandable shared music taste display on friend cards (requires friendship and visibility)
   - Tables: listenerFavoriteArtists, listenerFavoriteGenres
 - **Routes**: /social (discovery and friend management), /chat (direct messaging), /feed (artist social feed)
+- **Social Home Page**:
+  - "New From Artists You Follow" - Recent tracks from followed artists
+  - "Hot at Your University" - Trending tracks from user's university
+  - "Friends Are Listening To" - Real-time friend listening activity
+  - Empty states with CTAs to drive discovery and social connections
+  - API endpoints: /api/tracks/from-following, /api/tracks/my-university, /api/tracks/friends-listening
 
 ### Live Streaming
 - **Technology**: Browser-based WebRTC with mesh topology (supports up to 50 concurrent viewers)
