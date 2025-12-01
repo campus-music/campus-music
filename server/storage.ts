@@ -38,6 +38,14 @@ import {
   type InsertDirectMessage,
   type UserConnectionWithUsers,
   type UserConversationPreview,
+  type ArtistPost,
+  type InsertArtistPost,
+  type PostLike,
+  type InsertPostComment,
+  type PostComment,
+  type PostShare,
+  type ArtistPostWithDetails,
+  type PostCommentWithUser,
   users,
   artistProfiles,
   tracks,
@@ -55,7 +63,11 @@ import {
   artistConnections,
   artistMessages,
   userConnections,
-  directMessages
+  directMessages,
+  artistPosts,
+  postLikes,
+  postComments,
+  postShares
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, ilike, or, and, inArray, count } from "drizzle-orm";
@@ -174,6 +186,24 @@ export interface IStorage {
   markDirectMessagesAsRead(connectionId: string, readerId: string): Promise<void>;
   getUnreadDirectMessageCount(userId: string): Promise<number>;
   getUserConversations(userId: string): Promise<UserConversationPreview[]>;
+
+  // Social feed
+  createPost(data: InsertArtistPost): Promise<ArtistPost>;
+  getPost(id: string): Promise<ArtistPostWithDetails | undefined>;
+  getFeedPosts(userId: string, limit?: number, offset?: number): Promise<ArtistPostWithDetails[]>;
+  getArtistPosts(artistId: string): Promise<ArtistPostWithDetails[]>;
+  deletePost(postId: string): Promise<void>;
+  
+  likePost(postId: string, userId: string): Promise<PostLike>;
+  unlikePost(postId: string, userId: string): Promise<void>;
+  isPostLiked(postId: string, userId: string): Promise<boolean>;
+  
+  createPostComment(data: InsertPostComment): Promise<PostComment>;
+  getPostComments(postId: string): Promise<PostCommentWithUser[]>;
+  deletePostComment(commentId: string): Promise<void>;
+  
+  sharePost(postId: string, sharedByUserId: string, sharedToUserId: string): Promise<PostShare>;
+  getPostShares(postId: string): Promise<PostShare[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1305,6 +1335,241 @@ export class DatabaseStorage implements IStorage {
     });
 
     return conversations;
+  }
+
+  // Social Feed
+  async createPost(data: InsertArtistPost): Promise<ArtistPost> {
+    const [post] = await db
+      .insert(artistPosts)
+      .values(data)
+      .returning();
+    return post;
+  }
+
+  async getPost(id: string): Promise<ArtistPostWithDetails | undefined> {
+    const [post] = await db
+      .select()
+      .from(artistPosts)
+      .where(eq(artistPosts.id, id));
+    
+    if (!post) return undefined;
+    
+    const [artist] = await db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.id, post.artistId));
+    
+    let trackWithArtist = null;
+    if (post.trackId) {
+      trackWithArtist = await this.getTrackWithArtist(post.trackId);
+    }
+    
+    const [likeCountResult] = await db
+      .select({ count: count() })
+      .from(postLikes)
+      .where(eq(postLikes.postId, id));
+    
+    const [commentCountResult] = await db
+      .select({ count: count() })
+      .from(postComments)
+      .where(eq(postComments.postId, id));
+    
+    const [shareCountResult] = await db
+      .select({ count: count() })
+      .from(postShares)
+      .where(eq(postShares.postId, id));
+    
+    return {
+      ...post,
+      artist,
+      track: trackWithArtist,
+      likeCount: likeCountResult?.count || 0,
+      commentCount: commentCountResult?.count || 0,
+      shareCount: shareCountResult?.count || 0,
+      isLiked: false,
+    };
+  }
+
+  async getFeedPosts(userId: string, limit: number = 20, offset: number = 0): Promise<ArtistPostWithDetails[]> {
+    const allPosts = await db
+      .select()
+      .from(artistPosts)
+      .orderBy(desc(artistPosts.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const postsWithDetails: ArtistPostWithDetails[] = [];
+    
+    for (const post of allPosts) {
+      const [artist] = await db
+        .select()
+        .from(artistProfiles)
+        .where(eq(artistProfiles.id, post.artistId));
+      
+      let trackWithArtist = null;
+      if (post.trackId) {
+        trackWithArtist = await this.getTrackWithArtist(post.trackId);
+      }
+      
+      const [likeCountResult] = await db
+        .select({ count: count() })
+        .from(postLikes)
+        .where(eq(postLikes.postId, post.id));
+      
+      const [commentCountResult] = await db
+        .select({ count: count() })
+        .from(postComments)
+        .where(eq(postComments.postId, post.id));
+      
+      const [shareCountResult] = await db
+        .select({ count: count() })
+        .from(postShares)
+        .where(eq(postShares.postId, post.id));
+      
+      const isLiked = await this.isPostLiked(post.id, userId);
+      
+      postsWithDetails.push({
+        ...post,
+        artist,
+        track: trackWithArtist,
+        likeCount: likeCountResult?.count || 0,
+        commentCount: commentCountResult?.count || 0,
+        shareCount: shareCountResult?.count || 0,
+        isLiked,
+      });
+    }
+    
+    return postsWithDetails;
+  }
+
+  async getArtistPosts(artistId: string): Promise<ArtistPostWithDetails[]> {
+    const [artist] = await db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.id, artistId));
+    
+    if (!artist) return [];
+    
+    const posts = await db
+      .select()
+      .from(artistPosts)
+      .where(eq(artistPosts.artistId, artistId))
+      .orderBy(desc(artistPosts.createdAt));
+    
+    const postsWithDetails: ArtistPostWithDetails[] = [];
+    
+    for (const post of posts) {
+      let trackWithArtist = null;
+      if (post.trackId) {
+        trackWithArtist = await this.getTrackWithArtist(post.trackId);
+      }
+      
+      const [likeCountResult] = await db
+        .select({ count: count() })
+        .from(postLikes)
+        .where(eq(postLikes.postId, post.id));
+      
+      const [commentCountResult] = await db
+        .select({ count: count() })
+        .from(postComments)
+        .where(eq(postComments.postId, post.id));
+      
+      const [shareCountResult] = await db
+        .select({ count: count() })
+        .from(postShares)
+        .where(eq(postShares.postId, post.id));
+      
+      postsWithDetails.push({
+        ...post,
+        artist,
+        track: trackWithArtist,
+        likeCount: likeCountResult?.count || 0,
+        commentCount: commentCountResult?.count || 0,
+        shareCount: shareCountResult?.count || 0,
+        isLiked: false,
+      });
+    }
+    
+    return postsWithDetails;
+  }
+
+  async deletePost(postId: string): Promise<void> {
+    await db.delete(artistPosts).where(eq(artistPosts.id, postId));
+  }
+
+  async likePost(postId: string, userId: string): Promise<PostLike> {
+    const [like] = await db
+      .insert(postLikes)
+      .values({ postId, userId })
+      .returning();
+    return like;
+  }
+
+  async unlikePost(postId: string, userId: string): Promise<void> {
+    await db
+      .delete(postLikes)
+      .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+  }
+
+  async isPostLiked(postId: string, userId: string): Promise<boolean> {
+    const [like] = await db
+      .select()
+      .from(postLikes)
+      .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+    return !!like;
+  }
+
+  async createPostComment(data: InsertPostComment): Promise<PostComment> {
+    const [comment] = await db
+      .insert(postComments)
+      .values(data)
+      .returning();
+    return comment;
+  }
+
+  async getPostComments(postId: string): Promise<PostCommentWithUser[]> {
+    const comments = await db
+      .select()
+      .from(postComments)
+      .where(eq(postComments.postId, postId))
+      .orderBy(desc(postComments.createdAt));
+    
+    const commentsWithUser: PostCommentWithUser[] = [];
+    
+    for (const comment of comments) {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, comment.userId));
+      
+      if (user) {
+        commentsWithUser.push({
+          ...comment,
+          user,
+        });
+      }
+    }
+    
+    return commentsWithUser;
+  }
+
+  async deletePostComment(commentId: string): Promise<void> {
+    await db.delete(postComments).where(eq(postComments.id, commentId));
+  }
+
+  async sharePost(postId: string, sharedByUserId: string, sharedToUserId: string): Promise<PostShare> {
+    const [share] = await db
+      .insert(postShares)
+      .values({ postId, sharedByUserId, sharedToUserId })
+      .returning();
+    return share;
+  }
+
+  async getPostShares(postId: string): Promise<PostShare[]> {
+    return await db
+      .select()
+      .from(postShares)
+      .where(eq(postShares.postId, postId));
   }
 }
 
