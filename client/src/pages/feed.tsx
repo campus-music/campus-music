@@ -531,6 +531,7 @@ function PostCard({ post, currentUserId, showHotBadge }: { post: ArtistPostWithD
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [showComments, setShowComments] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const { currentlyPlaying, setCurrentlyPlaying, audioRef } = useFeedAudio();
   const isPlaying = currentlyPlaying === post.id;
@@ -642,13 +643,14 @@ function PostCard({ post, currentUserId, showHotBadge }: { post: ArtistPostWithD
       <CardContent className="space-y-4">
         <p className="text-base whitespace-pre-wrap leading-relaxed" data-testid="text-post-caption">{post.caption}</p>
         
-        {post.mediaUrl && (
+        {post.mediaUrl && !imageError && (
           <div className="relative rounded-xl overflow-hidden max-w-md mx-auto">
             <div className="aspect-square">
               <img
                 src={post.mediaUrl}
                 alt="Album art"
                 className="w-full h-full object-cover"
+                onError={() => setImageError(true)}
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
