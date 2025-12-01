@@ -2231,6 +2231,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ MUSIC PREFERENCES ============
+
+  // Get user's favorite artists
+  app.get("/api/preferences/artists", requireAuth, async (req: any, res) => {
+    try {
+      const favorites = await storage.getFavoriteArtists(req.session.userId);
+      res.json(favorites);
+    } catch (error: any) {
+      console.error("Error getting favorite artists:", error);
+      res.status(500).json({ error: error.message || "Failed to get favorite artists" });
+    }
+  });
+
+  // Add a favorite artist
+  app.post("/api/preferences/artists/:artistId", requireAuth, async (req: any, res) => {
+    try {
+      const { artistId } = req.params;
+      
+      // Verify artist exists
+      const artist = await storage.getArtistProfileById(artistId);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+
+      const favorite = await storage.addFavoriteArtist(req.session.userId, artistId);
+      res.status(201).json(favorite);
+    } catch (error: any) {
+      console.error("Error adding favorite artist:", error);
+      res.status(500).json({ error: error.message || "Failed to add favorite artist" });
+    }
+  });
+
+  // Remove a favorite artist
+  app.delete("/api/preferences/artists/:artistId", requireAuth, async (req: any, res) => {
+    try {
+      const { artistId } = req.params;
+      await storage.removeFavoriteArtist(req.session.userId, artistId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing favorite artist:", error);
+      res.status(500).json({ error: error.message || "Failed to remove favorite artist" });
+    }
+  });
+
+  // Get user's favorite genres
+  app.get("/api/preferences/genres", requireAuth, async (req: any, res) => {
+    try {
+      const favorites = await storage.getFavoriteGenres(req.session.userId);
+      res.json(favorites);
+    } catch (error: any) {
+      console.error("Error getting favorite genres:", error);
+      res.status(500).json({ error: error.message || "Failed to get favorite genres" });
+    }
+  });
+
+  // Add a favorite genre
+  app.post("/api/preferences/genres", requireAuth, async (req: any, res) => {
+    try {
+      const { genre } = req.body;
+      
+      if (!genre || typeof genre !== 'string') {
+        return res.status(400).json({ error: "Genre is required" });
+      }
+
+      const favorite = await storage.addFavoriteGenre(req.session.userId, genre.trim());
+      res.status(201).json(favorite);
+    } catch (error: any) {
+      console.error("Error adding favorite genre:", error);
+      res.status(500).json({ error: error.message || "Failed to add favorite genre" });
+    }
+  });
+
+  // Remove a favorite genre
+  app.delete("/api/preferences/genres/:genre", requireAuth, async (req: any, res) => {
+    try {
+      const genre = decodeURIComponent(req.params.genre);
+      await storage.removeFavoriteGenre(req.session.userId, genre);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing favorite genre:", error);
+      res.status(500).json({ error: error.message || "Failed to remove favorite genre" });
+    }
+  });
+
+  // Toggle music preferences visibility
+  app.patch("/api/preferences/visibility", requireAuth, async (req: any, res) => {
+    try {
+      const { showMusicPreferences } = req.body;
+      
+      if (typeof showMusicPreferences !== 'boolean') {
+        return res.status(400).json({ error: "showMusicPreferences must be a boolean" });
+      }
+
+      const user = await storage.updateUser(req.session.userId, { showMusicPreferences });
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error updating preference visibility:", error);
+      res.status(500).json({ error: error.message || "Failed to update visibility" });
+    }
+  });
+
+  // Get friend suggestions based on music taste
+  app.get("/api/social/suggestions", requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const suggestions = await storage.getSuggestedFriends(req.session.userId, limit);
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("Error getting friend suggestions:", error);
+      res.status(500).json({ error: error.message || "Failed to get suggestions" });
+    }
+  });
+
+  // Get another user's music preferences (for their profile)
+  app.get("/api/users/:userId/preferences", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if user allows showing preferences
+      if (!user.showMusicPreferences && userId !== req.session.userId) {
+        return res.json({ artists: [], genres: [], visible: false });
+      }
+
+      const artists = await storage.getFavoriteArtists(userId);
+      const genres = await storage.getFavoriteGenres(userId);
+
+      res.json({
+        artists,
+        genres,
+        visible: true
+      });
+    } catch (error: any) {
+      console.error("Error getting user preferences:", error);
+      res.status(500).json({ error: error.message || "Failed to get preferences" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 
