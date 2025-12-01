@@ -13,8 +13,23 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("listener"),
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
+  showUniversity: boolean("show_university").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// Universities table for dropdown selection and .edu domain auto-detection
+export const universities = pgTable("universities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  shortName: text("short_name"),
+  domain: text("domain"), // e.g., "ucla.edu" for auto-detection
+  country: text("country").notNull(),
+  logoUrl: text("logo_url"),
+});
+
+export const insertUniversitySchema = createInsertSchema(universities).omit({ id: true });
+export type InsertUniversity = z.infer<typeof insertUniversitySchema>;
+export type University = typeof universities.$inferSelect;
 
 export const artistProfiles = pgTable("artist_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
