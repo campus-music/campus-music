@@ -43,6 +43,8 @@ import ArtistMessages from "@/pages/artist-messages";
 import Social from "@/pages/social";
 import Chat from "@/pages/chat";
 import Feed from "@/pages/feed";
+import Live from "@/pages/live";
+import LiveStream from "@/pages/live-stream";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -416,6 +418,22 @@ function Router() {
               <Feed />
             </AppLayout>
           )} />
+        )}
+      </Route>
+
+      <Route path="/live">
+        {() => (
+          <AppLayout>
+            <Live />
+          </AppLayout>
+        )}
+      </Route>
+
+      <Route path="/live/:streamId">
+        {() => (
+          <AppLayout>
+            <LiveStream />
+          </AppLayout>
         )}
       </Route>
       
