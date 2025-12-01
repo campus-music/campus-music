@@ -2,12 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useRoute, useLocation } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Music, MapPin, Users } from 'lucide-react';
+import { Music, MapPin, Users, Radio } from 'lucide-react';
 import { SupportModal } from '@/components/support-modal';
 import { SupportHistory } from '@/components/support-history';
 import { TrackCard } from '@/components/track-card';
-import type { ArtistProfile, Track } from '@shared/schema';
+import type { ArtistProfile, Track, LiveStream } from '@shared/schema';
 
 interface ArtistWithTracks extends ArtistProfile {
   tracks: Track[];
@@ -26,6 +27,13 @@ export default function ArtistDetail() {
   const { data: supporterData } = useQuery<{ count: number }>({
     queryKey: ['/api/artist', artistId, 'supporter-count'],
     enabled: !!artistId,
+  });
+
+  // Check if artist is currently live
+  const { data: liveStatus } = useQuery<{ isLive: boolean; stream: LiveStream | null }>({
+    queryKey: ['/api/artists', artistId, 'live'],
+    enabled: !!artistId,
+    refetchInterval: 30000, // Check every 30 seconds
   });
 
   if (!artistId) {
@@ -69,7 +77,20 @@ export default function ArtistDetail() {
 
           <div className="flex-1 space-y-4">
             <div>
-              <h1 className="text-4xl font-bold mb-2">{artist.stageName}</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-4xl font-bold">{artist.stageName}</h1>
+                {liveStatus?.isLive && (
+                  <Badge 
+                    variant="destructive" 
+                    className="animate-pulse gap-1 cursor-pointer"
+                    onClick={() => navigate(`/live/${liveStatus.stream?.id}`)}
+                    data-testid="badge-artist-live"
+                  >
+                    <Radio className="w-3 h-3" />
+                    LIVE
+                  </Badge>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2 items-center">
                 <Badge>{artist.mainGenre}</Badge>
                 <div className="flex items-center gap-1 text-muted-foreground">
@@ -84,6 +105,16 @@ export default function ArtistDetail() {
             )}
 
             <div className="flex gap-3 flex-wrap">
+              {liveStatus?.isLive && liveStatus.stream && (
+                <Button 
+                  className="bg-[#E84A5F] hover:bg-[#E84A5F]/90 gap-2"
+                  onClick={() => navigate(`/live/${liveStatus.stream?.id}`)}
+                  data-testid="button-watch-live"
+                >
+                  <Radio className="w-4 h-4" />
+                  Watch Live
+                </Button>
+              )}
               <SupportModal artistId={artist.id} artistName={artist.stageName} artistImageUrl={artist.profileImageUrl} />
             </div>
 
