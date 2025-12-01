@@ -51,7 +51,7 @@ export default function LiveStreamPage() {
 
   // Fetch artist profile for current user
   const { data: artistProfile } = useQuery<ArtistProfile | null>({
-    queryKey: ["/api/artists/profile"],
+    queryKey: ["/api/artist/profile"],
     enabled: !!user && user.role === "artist",
   });
 
