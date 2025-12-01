@@ -1005,6 +1005,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update artist profile details (stage name, genre, bio)
+  app.put("/api/artist/profile", requireAuth, async (req, res) => {
+    try {
+      const { stageName, mainGenre, bio } = req.body;
+      
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile) {
+        return res.status(404).json({ error: "Artist profile not found" });
+      }
+
+      const updates: { stageName?: string; mainGenre?: string; bio?: string } = {};
+      if (stageName !== undefined) updates.stageName = stageName;
+      if (mainGenre !== undefined) updates.mainGenre = mainGenre;
+      if (bio !== undefined) updates.bio = bio;
+
+      const updatedProfile = await storage.updateArtistProfile(artistProfile.id, updates);
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error("Error updating artist profile:", error);
+      res.status(500).json({ error: error.message || "Failed to update profile" });
+    }
+  });
+
   // Profile picture upload endpoints
   app.post("/api/objects/upload", requireAuth, async (req, res) => {
     try {

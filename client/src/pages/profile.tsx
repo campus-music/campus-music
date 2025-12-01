@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { ObjectUploader } from '@/components/ObjectUploader';
-import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Bell, Shield, HardDrive, Heart, Users, X, Plus, Eye, EyeOff } from 'lucide-react';
+import { Camera, Music, Sun, Moon, Monitor, Palette, Play, Bell, Shield, HardDrive, Heart, Users, X, Plus, Eye, EyeOff, Pencil } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { useTheme } from '@/lib/theme-context';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -24,15 +25,38 @@ export default function Profile() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingArtist, setIsEditingArtist] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     universityName: user?.universityName || '',
     country: user?.country || '',
   });
+  const [artistFormData, setArtistFormData] = useState({
+    stageName: '',
+    mainGenre: '',
+    bio: '',
+  });
 
   const { data: artistProfile, refetch: refetchArtistProfile } = useQuery<ArtistProfile>({
     queryKey: ['/api/artist/profile'],
     enabled: user?.role === 'artist',
+  });
+
+  const updateArtistProfileMutation = useMutation({
+    mutationFn: async (data: { stageName?: string; mainGenre?: string; bio?: string }) => {
+      const res = await apiRequest('PUT', '/api/artist/profile', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/artist/profile'] });
+      refetchArtistProfile();
+      setIsEditingArtist(false);
+      toast({ title: 'Artist profile updated successfully!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to update artist profile', variant: 'destructive' });
+      console.error('Artist profile update error:', error);
+    },
   });
 
   const updateProfileMutation = useMutation({
@@ -249,9 +273,29 @@ export default function Profile() {
         {user.role === 'artist' && artistProfile && (
           <TabsContent value="artist" className="mt-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Artist Profile</CardTitle>
-                <CardDescription>Your artist information and branding</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Artist Profile</CardTitle>
+                  <CardDescription>Your artist information and branding</CardDescription>
+                </div>
+                {!isEditingArtist && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setArtistFormData({
+                        stageName: artistProfile.stageName,
+                        mainGenre: artistProfile.mainGenre,
+                        bio: artistProfile.bio || '',
+                      });
+                      setIsEditingArtist(true);
+                    }}
+                    data-testid="button-edit-artist-profile"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -282,16 +326,78 @@ export default function Profile() {
                         </ObjectUploader>
                       </div>
                     </div>
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <Label>Stage Name</Label>
-                        <p className="text-lg font-semibold mt-1">{artistProfile.stageName}</p>
+                    
+                    {isEditingArtist ? (
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <Label htmlFor="stageName">Stage Name</Label>
+                          <Input
+                            id="stageName"
+                            value={artistFormData.stageName}
+                            onChange={(e) => setArtistFormData(prev => ({ ...prev, stageName: e.target.value }))}
+                            className="mt-1"
+                            data-testid="input-stage-name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="mainGenre">Main Genre</Label>
+                          <Select 
+                            value={artistFormData.mainGenre} 
+                            onValueChange={(value) => setArtistFormData(prev => ({ ...prev, mainGenre: value }))}
+                          >
+                            <SelectTrigger className="mt-1" data-testid="select-main-genre">
+                              <SelectValue placeholder="Select genre" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Jazz', 'Classical', 'Electronic', 
+                                'Country', 'Folk', 'Indie', 'Alternative', 'Metal', 'Punk', 
+                                'Soul', 'Funk', 'Reggae', 'Latin', 'Blues', 'Gospel', 'World', 'Afrobeats'].map((genre) => (
+                                <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="bio">Bio</Label>
+                          <Textarea
+                            id="bio"
+                            value={artistFormData.bio}
+                            onChange={(e) => setArtistFormData(prev => ({ ...prev, bio: e.target.value }))}
+                            className="mt-1"
+                            rows={3}
+                            placeholder="Tell your fans about yourself..."
+                            data-testid="textarea-bio"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button 
+                            onClick={() => updateArtistProfileMutation.mutate(artistFormData)}
+                            disabled={updateArtistProfileMutation.isPending}
+                            data-testid="button-save-artist-profile"
+                          >
+                            {updateArtistProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setIsEditingArtist(false)}
+                            data-testid="button-cancel-edit"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <Label>Main Genre</Label>
-                        <p className="mt-1">{artistProfile.mainGenre}</p>
+                    ) : (
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <Label>Stage Name</Label>
+                          <p className="text-lg font-semibold mt-1">{artistProfile.stageName}</p>
+                        </div>
+                        <div>
+                          <Label>Main Genre</Label>
+                          <p className="mt-1">{artistProfile.mainGenre}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                   
                   <div className="pt-4 border-t">
@@ -313,7 +419,7 @@ export default function Profile() {
                     </ObjectUploader>
                   </div>
 
-                  {artistProfile.bio && (
+                  {!isEditingArtist && artistProfile.bio && (
                     <div className="pt-4 border-t">
                       <Label>Bio</Label>
                       <p className="text-sm text-muted-foreground mt-1">{artistProfile.bio}</p>
