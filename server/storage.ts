@@ -87,6 +87,8 @@ export interface IStorage {
   getPlaylist(id: string): Promise<Playlist | undefined>;
   getPlaylistsByUser(userId: string): Promise<Playlist[]>;
   createPlaylist(playlist: InsertPlaylist): Promise<Playlist>;
+  updatePlaylist(id: string, updates: Partial<Playlist>): Promise<Playlist | undefined>;
+  deletePlaylist(id: string): Promise<void>;
   addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack>;
   removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
   getPlaylistTracks(playlistId: string): Promise<TrackWithArtist[]>;
@@ -386,6 +388,19 @@ export class DatabaseStorage implements IStorage {
       .values(insertPlaylist)
       .returning();
     return playlist;
+  }
+
+  async updatePlaylist(id: string, updates: Partial<Playlist>): Promise<Playlist | undefined> {
+    const [playlist] = await db
+      .update(playlists)
+      .set(updates)
+      .where(eq(playlists.id, id))
+      .returning();
+    return playlist || undefined;
+  }
+
+  async deletePlaylist(id: string): Promise<void> {
+    await db.delete(playlists).where(eq(playlists.id, id));
   }
 
   async addTrackToPlaylist(data: InsertPlaylistTrack): Promise<PlaylistTrack> {

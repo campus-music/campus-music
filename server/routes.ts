@@ -452,6 +452,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/playlists/:id", requireAuth, async (req, res) => {
+    try {
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist || playlist.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const updates: Partial<typeof playlist> = {};
+      if (req.body.name !== undefined) updates.name = req.body.name;
+      if (req.body.description !== undefined) updates.description = req.body.description;
+      if (req.body.coverImageUrl !== undefined) updates.coverImageUrl = req.body.coverImageUrl;
+      if (req.body.isPublic !== undefined) updates.isPublic = req.body.isPublic;
+
+      const updated = await storage.updatePlaylist(req.params.id, updates);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/playlists/:id", requireAuth, async (req, res) => {
+    try {
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist || playlist.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.deletePlaylist(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   app.post("/api/playlists/:id/tracks", requireAuth, async (req, res) => {
     try {
       const playlist = await storage.getPlaylist(req.params.id);
