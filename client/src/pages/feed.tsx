@@ -113,8 +113,8 @@ export default function Feed() {
     <div className="max-w-3xl mx-auto pb-32 space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-            <Music className="h-6 w-6 text-primary" />
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#E84A5F]/20 to-[#E84A5F]/5">
+            <Radio className="h-6 w-6 text-[#E84A5F]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Artist Feed</h1>
@@ -126,51 +126,34 @@ export default function Feed() {
       {user?.role === 'artist' && isLoadingProfile && <ComposerSkeleton />}
       {isArtist && artistProfile && <PostComposer artistProfile={artistProfile} />}
 
-      {/* Active Live Streams Section */}
+      {/* Active Live Streams Section - Twitter Spaces Style */}
       {liveStreams && liveStreams.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#E84A5F]/10">
-              <Radio className="h-3.5 w-3.5 text-[#E84A5F] animate-pulse" />
-              <span className="text-sm font-medium text-[#E84A5F]">Live Now</span>
-            </div>
-            <span className="text-sm text-muted-foreground">
-              {liveStreams.length} {liveStreams.length === 1 ? 'artist is' : 'artists are'} streaming
-            </span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2">
+        <div className="py-3 border-b border-border/50">
+          <div className="flex items-center gap-4 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-hide">
             {liveStreams.map((stream) => (
               <Link 
                 key={stream.id} 
                 href={`/live/${stream.id}`}
-                className="flex-shrink-0"
+                className="flex flex-col items-center gap-1.5 flex-shrink-0 group"
                 data-testid={`link-live-stream-${stream.id}`}
               >
-                <Card className="w-64 hover-elevate cursor-pointer border-[#E84A5F]/30 bg-gradient-to-br from-[#E84A5F]/5 to-transparent">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <Avatar className="h-12 w-12 ring-2 ring-[#E84A5F]">
-                          <AvatarImage src={stream.artist?.profileImageUrl || undefined} />
-                          <AvatarFallback className="bg-[#E84A5F]/10">
-                            {stream.artist?.stageName?.charAt(0) || 'L'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-[#E84A5F] text-[10px] font-bold text-white">
-                          LIVE
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{stream.artist?.stageName || 'Artist'}</p>
-                        <p className="text-sm text-muted-foreground truncate">{stream.title}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                          <Users className="h-3 w-3" />
-                          <span>{stream.peakViewerCount || 0} watching</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#E84A5F] via-[#ff6b7a] to-[#E84A5F] p-[2px] animate-pulse">
+                    <div className="w-full h-full rounded-full bg-background" />
+                  </div>
+                  <Avatar className="h-14 w-14 relative ring-2 ring-[#E84A5F] ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform">
+                    <AvatarImage src={stream.artist?.profileImageUrl || undefined} />
+                    <AvatarFallback className="bg-[#E84A5F]/20 text-[#E84A5F] font-semibold">
+                      {stream.artist?.stageName?.charAt(0) || 'L'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-[#E84A5F] text-[9px] font-bold text-white uppercase tracking-wide">
+                    Live
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground max-w-[72px] truncate text-center group-hover:text-foreground transition-colors">
+                  {stream.artist?.stageName || 'Artist'}
+                </span>
               </Link>
             ))}
           </div>
@@ -273,9 +256,9 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
     
     if (newTrackId && myTracks) {
       const selectedTrack = myTracks.find(t => t.id === newTrackId);
-      if (selectedTrack?.coverArtUrl && !selectedMedia) {
-        setMediaPreview(selectedTrack.coverArtUrl);
-        setMediaUrl(selectedTrack.coverArtUrl);
+      if (selectedTrack?.coverImageUrl && !selectedMedia) {
+        setMediaPreview(selectedTrack.coverImageUrl);
+        setMediaUrl(selectedTrack.coverImageUrl);
         setMediaType('image');
         setUsingTrackCover(true);
       }
@@ -490,7 +473,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
               {POST_TYPES.filter(t => t.value !== 'live_show').map((type) => {
                 const Icon = type.icon;
                 const handlePostTypeChange = () => {
@@ -506,7 +489,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                     variant={postType === type.value ? 'default' : 'outline'}
                     size="sm"
                     onClick={handlePostTypeChange}
-                    className={`gap-1.5 ${postType === type.value ? '' : 'hover:bg-muted'}`}
+                    className={`gap-1.5 flex-shrink-0 ${postType === type.value ? '' : 'hover:bg-muted'}`}
                     data-testid={`button-post-type-${type.value}`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -519,7 +502,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowGoLiveModal(true)}
-                className="gap-1.5 bg-[#E84A5F]/10 text-[#E84A5F] border-[#E84A5F]/30 hover:bg-[#E84A5F]/20"
+                className="gap-1.5 flex-shrink-0 bg-[#E84A5F]/10 text-[#E84A5F] border-[#E84A5F]/30 hover:bg-[#E84A5F]/20"
                 data-testid="button-go-live"
               >
                 <Radio className="h-3.5 w-3.5" />
