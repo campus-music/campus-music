@@ -11,7 +11,6 @@ import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Link } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
 
 interface Artist extends ArtistProfile {
   trackCount: number;
@@ -22,7 +21,6 @@ const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Indie', 'Jazz', 
 const UNIVERSITIES = ['MIT', 'Stanford', 'Harvard', 'UC Berkeley', 'Oxford', 'Yale', 'Princeton'];
 
 export default function Home() {
-  const { toast } = useToast();
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
   const { data: latestTracks, isLoading: latestLoading } = useQuery<TrackWithArtist[]>({
@@ -41,7 +39,12 @@ export default function Home() {
     queryKey: ['/api/user/liked-tracks'],
   });
 
-  const likedTrackIds = new Set(likedTracks?.map(t => t.id) || []);
+  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
+  
+  const likedTrackIds = new Set([
+    ...(likedTracks?.map(t => t.id) || []),
+    ...Array.from(localLikedIds)
+  ]);
 
   const likeMutation = useMutation({
     mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
@@ -51,14 +54,25 @@ export default function Home() {
         await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
       }
     },
-    onSuccess: (_, { isLiked }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
-      toast({ title: isLiked ? 'Removed from liked tracks' : 'Added to liked tracks' });
     },
   });
 
   const handleLike = (trackId: string) => {
     const isLiked = likedTrackIds.has(trackId);
+    
+    // Optimistically update the UI immediately
+    setLocalLikedIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+    
     likeMutation.mutate({ trackId, isLiked });
   };
 

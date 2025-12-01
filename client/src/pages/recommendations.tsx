@@ -1,14 +1,12 @@
+import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackCard } from '@/components/track-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
 import type { TrackWithArtist } from '@shared/schema';
 
 export default function Recommendations() {
-  const { toast } = useToast();
-
   const { data: recommendations, isLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/user/recommendations'],
   });
@@ -17,7 +15,12 @@ export default function Recommendations() {
     queryKey: ['/api/user/liked-tracks'],
   });
 
-  const likedTrackIds = new Set(likedTracks?.map(t => t.id) || []);
+  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
+  
+  const likedTrackIds = new Set([
+    ...(likedTracks?.map(t => t.id) || []),
+    ...Array.from(localLikedIds)
+  ]);
 
   const likeMutation = useMutation({
     mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
@@ -27,12 +30,27 @@ export default function Recommendations() {
         await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
       }
     },
-    onSuccess: (_, { isLiked }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/recommendations'] });
-      toast({ title: isLiked ? 'Removed from liked tracks' : 'Added to liked tracks' });
     },
   });
+
+  const handleLike = (trackId: string) => {
+    const isLiked = likedTrackIds.has(trackId);
+    
+    setLocalLikedIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+    
+    likeMutation.mutate({ trackId, isLiked });
+  };
 
   return (
     <div className="space-y-6 pb-32">
@@ -61,7 +79,7 @@ export default function Recommendations() {
                 key={track.id}
                 track={track}
                 isLiked={isLiked}
-                onLike={() => likeMutation.mutate({ trackId: track.id, isLiked })}
+                onLike={() => handleLike(track.id)}
                 data-testid={`card-recommendation-${track.id}`}
               />
             );

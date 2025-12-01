@@ -1,14 +1,12 @@
+import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackListItem } from '@/components/track-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
 import type { TrackWithArtist } from '@shared/schema';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
 
 export default function Trending() {
-  const { toast } = useToast();
-  
   const { data: tracks, isLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/trending'],
   });
@@ -17,7 +15,12 @@ export default function Trending() {
     queryKey: ['/api/user/liked-tracks'],
   });
 
-  const likedTrackIds = new Set(likedTracks?.map(t => t.id) || []);
+  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
+  
+  const likedTrackIds = new Set([
+    ...(likedTracks?.map(t => t.id) || []),
+    ...Array.from(localLikedIds)
+  ]);
 
   const likeMutation = useMutation({
     mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
@@ -27,14 +30,24 @@ export default function Trending() {
         await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
       }
     },
-    onSuccess: (_, { isLiked }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
-      toast({ title: isLiked ? 'Removed from liked tracks' : 'Added to liked tracks' });
     },
   });
 
   const handleLike = (trackId: string) => {
     const isLiked = likedTrackIds.has(trackId);
+    
+    setLocalLikedIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+    
     likeMutation.mutate({ trackId, isLiked });
   };
 
