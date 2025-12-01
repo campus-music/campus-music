@@ -15,13 +15,14 @@ const __dirname = dirname(__filename);
 async function seedData() {
   console.log("Checking database seed status...");
 
+  // Universities with their actual email domains for consistency
   const universities = [
-    { name: "Stanford University", country: "United States" },
-    { name: "MIT", country: "United States" },
-    { name: "Harvard University", country: "United States" },
-    { name: "UC Berkeley", country: "United States" },
-    { name: "Oxford University", country: "United Kingdom" },
-    { name: "DePaul University", country: "United States" },
+    { name: "Stanford University", country: "United States", domain: "stanford.edu" },
+    { name: "Massachusetts Institute of Technology", country: "United States", domain: "mit.edu" },
+    { name: "Harvard University", country: "United States", domain: "harvard.edu" },
+    { name: "University of California, Berkeley", country: "United States", domain: "berkeley.edu" },
+    { name: "University of Oxford", country: "United Kingdom", domain: "ox.ac.uk" },
+    { name: "DePaul University", country: "United States", domain: "depaul.edu" },
   ];
 
   const genres = ["Pop", "Hip-Hop", "Electronic", "Rock", "R&B", "Indie", "Jazz"];
@@ -32,7 +33,8 @@ async function seedData() {
 
   for (let i = 0; i < 6; i++) {
     const uni = universities[i];
-    const email = `demo${i + 1}@${uni.name.toLowerCase().replace(/\s+/g, '')}.edu`;
+    // Use actual university email domain for consistency
+    const email = `demo${i + 1}@${uni.domain}`;
     
     try {
       const existingUser = await storage.getUserByEmail(email);
@@ -194,6 +196,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await storage.getUserByEmail(data.email);
       if (existing) {
         return res.status(400).json({ error: "Email already registered" });
+      }
+
+      // Auto-detect university from .edu email domain
+      const emailDomain = data.email.split('@')[1]?.toLowerCase();
+      if (emailDomain && emailDomain.endsWith('.edu')) {
+        const university = await storage.getUniversityByDomain(emailDomain);
+        if (university) {
+          // Override university name with the one matching email domain
+          data.universityName = university.name;
+        }
       }
 
       const user = await storage.createUser(data);
