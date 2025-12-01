@@ -112,9 +112,11 @@ export default function LivePage() {
 
         {/* Active Streams */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Badge variant="destructive" className="animate-pulse">LIVE NOW</Badge>
-            <span className="text-muted-foreground">{activeStreams.length} streams</span>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="font-medium text-foreground">{activeStreams.length} Live Now</span>
+            </div>
           </div>
 
           {isLoading ? (
