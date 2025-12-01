@@ -697,6 +697,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all universities with full details for dropdown selector
+  app.get("/api/universities/list", async (req, res) => {
+    try {
+      const universities = await storage.getAllUniversitiesWithDetails();
+      res.json(universities);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Auto-detect university from email domain
+  app.get("/api/universities/detect", async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email) {
+        return res.json({ university: null });
+      }
+      
+      const domain = email.split('@')[1];
+      if (!domain) {
+        return res.json({ university: null });
+      }
+
+      const university = await storage.getUniversityByDomain(domain);
+      res.json({ university: university || null });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Genre discovery routes
   app.get("/api/genres", async (req, res) => {
     try {

@@ -48,7 +48,9 @@ import {
   type PostCommentWithUser,
   type CommentSticker,
   type InsertCommentSticker,
+  type University,
   commentStickers,
+  universities,
   users,
   artistProfiles,
   tracks,
@@ -139,6 +141,8 @@ export interface IStorage {
   getTopArtistsByGenre(genre: string, limit?: number): Promise<ArtistProfile[]>;
   getGenres(): Promise<string[]>;
   getUniversities(): Promise<string[]>;
+  getAllUniversitiesWithDetails(): Promise<University[]>;
+  getUniversityByDomain(domain: string): Promise<University | undefined>;
   getPersonalizedRecommendations(userId: string, limit?: number): Promise<TrackWithArtist[]>;
 
   getArtistAnalytics(artistId: string): Promise<{
@@ -747,6 +751,18 @@ export class DatabaseStorage implements IStorage {
       .selectDistinct({ universityName: tracks.universityName })
       .from(tracks);
     return result.map(r => r.universityName).filter(u => u && u !== 'Unknown').sort();
+  }
+
+  async getAllUniversitiesWithDetails(): Promise<University[]> {
+    return await db.select().from(universities).orderBy(universities.name);
+  }
+
+  async getUniversityByDomain(domain: string): Promise<University | undefined> {
+    const [university] = await db
+      .select()
+      .from(universities)
+      .where(eq(universities.domain, domain));
+    return university || undefined;
   }
 
   async getPersonalizedRecommendations(userId: string, limit: number = 20): Promise<TrackWithArtist[]> {

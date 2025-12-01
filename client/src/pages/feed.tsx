@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Heart, MessageCircle, Share2, Music, Trash2, Send, X, Image as ImageIcon, 
-  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker
+  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker, GraduationCap
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { ArtistPostWithDetails, TrackWithArtist, User, PostCommentWithUser, ArtistProfile, CommentSticker } from '@shared/schema';
@@ -839,8 +839,16 @@ function CommentWithStickers({
         <AvatarFallback className="text-xs">{comment.user?.fullName?.charAt(0)}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-sm">{comment.user?.fullName}</p>
+          {comment.user?.universityName && comment.user?.showUniversity !== false && (
+            <Badge variant="secondary" className="text-xs py-0 px-1.5 h-5" data-testid={`badge-university-${comment.id}`}>
+              <GraduationCap className="h-3 w-3 mr-1" />
+              {comment.user.universityName.length > 25 
+                ? comment.user.universityName.substring(0, 22) + '...' 
+                : comment.user.universityName}
+            </Badge>
+          )}
           <p className="text-xs text-muted-foreground">
             {comment.createdAt && formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
           </p>
