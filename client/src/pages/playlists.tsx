@@ -191,21 +191,21 @@ export default function Playlists() {
               playlists.map((playlist) => (
                 <Card
                   key={playlist.id}
-                  className="overflow-hidden hover-elevate transition-all cursor-pointer h-64 flex flex-col group"
+                  className="overflow-hidden hover-elevate transition-all cursor-pointer flex flex-col group"
                   onClick={() => setSelectedPlaylistId(playlist.id)}
                   data-testid={`card-playlist-${playlist.id}`}
                 >
                   <div 
-                    className="aspect-square flex-shrink-0 relative flex items-center justify-center"
+                    className="h-24 relative flex items-center justify-center"
                     style={{
                       background: 'radial-gradient(circle at 30% 30%, hsl(351 76% 60% / 0.15), hsl(var(--card)) 70%)'
                     }}
                   >
-                    <ListMusic className="h-5 w-5 text-primary/50" />
+                    <ListMusic className="h-6 w-6 text-primary/50" />
                     <Button
                       size="sm"
                       variant="destructive"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeletePlaylist(playlist.id);
@@ -215,9 +215,9 @@ export default function Playlists() {
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold truncate">{playlist.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="p-3 flex flex-col">
+                    <h3 className="font-semibold truncate text-sm">{playlist.name}</h3>
+                    <p className="text-xs text-muted-foreground">
                       {playlist.tracks?.length || 0} {playlist.tracks?.length === 1 ? 'track' : 'tracks'}
                     </p>
                   </div>
