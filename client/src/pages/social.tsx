@@ -815,22 +815,23 @@ function SuggestionCard({
   
   return (
     <Card 
-      className="flex-shrink-0 w-44 hover-elevate transition-all group"
+      className="flex-shrink-0 w-44 hover-elevate transition-all group relative"
       style={{ scrollSnapAlign: 'start' }}
       data-testid={`card-suggestion-${user.id}`}
     >
-      <CardContent className="p-4 flex flex-col items-center text-center">
-        {/* Avatar with match indicator ring */}
-        <div className="relative mb-3">
+      {/* Match percentage badge - top right corner */}
+      <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-muted/80 text-[10px] font-semibold ${matchColor}`}>
+        {similarityScore}%
+      </div>
+      
+      <CardContent className="p-4 pt-3 flex flex-col items-center text-center">
+        {/* Avatar */}
+        <div className="mb-3">
           <Avatar className="h-16 w-16 ring-2 ring-offset-2 ring-offset-background ring-primary/30">
             <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-lg">
               {initials}
             </AvatarFallback>
           </Avatar>
-          {/* Match percentage badge */}
-          <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-background border text-[10px] font-bold ${matchColor}`}>
-            {similarityScore}% match
-          </div>
         </div>
         
         {/* Name */}
