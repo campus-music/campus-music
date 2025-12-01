@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
   showUniversity: boolean("show_university").notNull().default(true),
+  showMusicPreferences: boolean("show_music_preferences").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -240,6 +241,22 @@ export const commentStickers = pgTable("comment_stickers", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Listener favorite artists - for music taste matching
+export const listenerFavoriteArtists = pgTable("listener_favorite_artists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  artistId: varchar("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+// Listener favorite genres - for music taste matching
+export const listenerFavoriteGenres = pgTable("listener_favorite_genres", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  genre: text("genre").notNull(),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email('Please enter a valid email address'),
@@ -378,6 +395,16 @@ export const insertCommentStickerSchema = createInsertSchema(commentStickers, {
   createdAt: true 
 });
 
+export const insertListenerFavoriteArtistSchema = createInsertSchema(listenerFavoriteArtists).omit({ 
+  id: true, 
+  addedAt: true 
+});
+
+export const insertListenerFavoriteGenreSchema = createInsertSchema(listenerFavoriteGenres).omit({ 
+  id: true, 
+  addedAt: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -450,6 +477,12 @@ export type PostShare = typeof postShares.$inferSelect;
 
 export type InsertCommentSticker = z.infer<typeof insertCommentStickerSchema>;
 export type CommentSticker = typeof commentStickers.$inferSelect;
+
+export type InsertListenerFavoriteArtist = z.infer<typeof insertListenerFavoriteArtistSchema>;
+export type ListenerFavoriteArtist = typeof listenerFavoriteArtists.$inferSelect;
+
+export type InsertListenerFavoriteGenre = z.infer<typeof insertListenerFavoriteGenreSchema>;
+export type ListenerFavoriteGenre = typeof listenerFavoriteGenres.$inferSelect;
 
 export type Login = z.infer<typeof loginSchema>;
 
