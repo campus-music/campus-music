@@ -214,6 +214,17 @@ export const postShares = pgTable("post_shares", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Stickers on comments (iMessage-style)
+export const commentStickers = pgTable("comment_stickers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  commentId: varchar("comment_id").notNull().references(() => postComments.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stickerId: varchar("sticker_id").notNull(), // ID of the predefined sticker
+  positionX: integer("position_x").notNull().default(50), // Percentage position 0-100
+  positionY: integer("position_y").notNull().default(50), // Percentage position 0-100
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email('Please enter a valid email address'),
@@ -344,6 +355,14 @@ export const insertPostShareSchema = createInsertSchema(postShares).omit({
   createdAt: true 
 });
 
+export const insertCommentStickerSchema = createInsertSchema(commentStickers, {
+  positionX: z.number().min(0).max(100),
+  positionY: z.number().min(0).max(100),
+}).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -413,6 +432,9 @@ export type PostComment = typeof postComments.$inferSelect;
 
 export type InsertPostShare = z.infer<typeof insertPostShareSchema>;
 export type PostShare = typeof postShares.$inferSelect;
+
+export type InsertCommentSticker = z.infer<typeof insertCommentStickerSchema>;
+export type CommentSticker = typeof commentStickers.$inferSelect;
 
 export type Login = z.infer<typeof loginSchema>;
 
