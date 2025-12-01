@@ -543,3 +543,56 @@ export type ArtistPostWithDetails = ArtistPost & {
   isLiked: boolean;
   comments?: PostCommentWithUser[];
 };
+
+// Live Streaming - Artists can broadcast live to fans
+export const liveStreams = pgTable("live_streams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("live"), // 'scheduled', 'live', 'ended'
+  thumbnailUrl: text("thumbnail_url"),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  scheduledFor: timestamp("scheduled_for"),
+  peakViewerCount: integer("peak_viewer_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const liveStreamViewers = pgTable("live_stream_viewers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streamId: varchar("stream_id").notNull().references(() => liveStreams.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  leftAt: timestamp("left_at"),
+});
+
+export const liveStreamMessages = pgTable("live_stream_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  streamId: varchar("stream_id").notNull().references(() => liveStreams.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+});
+
+export const insertLiveStreamSchema = createInsertSchema(liveStreams).omit({ id: true, createdAt: true });
+export const insertLiveStreamViewerSchema = createInsertSchema(liveStreamViewers).omit({ id: true });
+export const insertLiveStreamMessageSchema = createInsertSchema(liveStreamMessages).omit({ id: true });
+
+export type InsertLiveStream = z.infer<typeof insertLiveStreamSchema>;
+export type LiveStream = typeof liveStreams.$inferSelect;
+
+export type InsertLiveStreamViewer = z.infer<typeof insertLiveStreamViewerSchema>;
+export type LiveStreamViewer = typeof liveStreamViewers.$inferSelect;
+
+export type InsertLiveStreamMessage = z.infer<typeof insertLiveStreamMessageSchema>;
+export type LiveStreamMessage = typeof liveStreamMessages.$inferSelect;
+
+export type LiveStreamWithArtist = LiveStream & {
+  artist: ArtistProfile;
+  viewerCount: number;
+};
+
+export type LiveStreamMessageWithUser = LiveStreamMessage & {
+  user: User;
+};
