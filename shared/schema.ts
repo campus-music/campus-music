@@ -177,6 +177,42 @@ export const directMessages = pgTable("direct_messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Social Feed: Artist posts to promote tracks
+export const artistPosts = pgTable("artist_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id").references(() => tracks.id, { onDelete: "set null" }),
+  caption: text("caption").notNull(),
+  mediaUrl: text("media_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Likes on artist posts
+export const postLikes = pgTable("post_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => artistPosts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Comments on artist posts
+export const postComments = pgTable("post_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => artistPosts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Shares of artist posts to friends
+export const postShares = pgTable("post_shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  postId: varchar("post_id").notNull().references(() => artistPosts.id, { onDelete: "cascade" }),
+  sharedByUserId: varchar("shared_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sharedToUserId: varchar("shared_to_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email('Please enter a valid email address'),
@@ -283,6 +319,30 @@ export const insertDirectMessageSchema = createInsertSchema(directMessages, {
   isRead: true 
 });
 
+export const insertArtistPostSchema = createInsertSchema(artistPosts, {
+  caption: z.string().min(1, 'Caption is required').max(500, 'Caption too long'),
+}).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertPostLikeSchema = createInsertSchema(postLikes).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertPostCommentSchema = createInsertSchema(postComments, {
+  content: z.string().min(1, 'Comment cannot be empty').max(500, 'Comment too long'),
+}).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertPostShareSchema = createInsertSchema(postShares).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 // Login Schema
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -341,6 +401,18 @@ export type UserConnection = typeof userConnections.$inferSelect;
 export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
 export type DirectMessage = typeof directMessages.$inferSelect;
 
+export type InsertArtistPost = z.infer<typeof insertArtistPostSchema>;
+export type ArtistPost = typeof artistPosts.$inferSelect;
+
+export type InsertPostLike = z.infer<typeof insertPostLikeSchema>;
+export type PostLike = typeof postLikes.$inferSelect;
+
+export type InsertPostComment = z.infer<typeof insertPostCommentSchema>;
+export type PostComment = typeof postComments.$inferSelect;
+
+export type InsertPostShare = z.infer<typeof insertPostShareSchema>;
+export type PostShare = typeof postShares.$inferSelect;
+
 export type Login = z.infer<typeof loginSchema>;
 
 // Extended types for joined data
@@ -383,4 +455,19 @@ export type UserConversationPreview = {
   otherUser: User;
   lastMessage?: DirectMessage;
   unreadCount: number;
+};
+
+// Social feed types
+export type PostCommentWithUser = PostComment & {
+  user: User;
+};
+
+export type ArtistPostWithDetails = ArtistPost & {
+  artist: ArtistProfile;
+  track?: TrackWithArtist | null;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  isLiked: boolean;
+  comments?: PostCommentWithUser[];
 };
