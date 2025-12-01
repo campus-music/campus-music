@@ -46,6 +46,9 @@ import {
   type PostShare,
   type ArtistPostWithDetails,
   type PostCommentWithUser,
+  type CommentSticker,
+  type InsertCommentSticker,
+  commentStickers,
   users,
   artistProfiles,
   tracks,
@@ -204,6 +207,11 @@ export interface IStorage {
   
   sharePost(postId: string, sharedByUserId: string, sharedToUserId: string): Promise<PostShare>;
   getPostShares(postId: string): Promise<PostShare[]>;
+
+  // Comment stickers
+  addCommentSticker(data: InsertCommentSticker): Promise<CommentSticker>;
+  getCommentStickers(commentId: string): Promise<CommentSticker[]>;
+  deleteCommentSticker(stickerId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1570,6 +1578,26 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(postShares)
       .where(eq(postShares.postId, postId));
+  }
+
+  async addCommentSticker(data: InsertCommentSticker): Promise<CommentSticker> {
+    const [sticker] = await db
+      .insert(commentStickers)
+      .values(data)
+      .returning();
+    return sticker;
+  }
+
+  async getCommentStickers(commentId: string): Promise<CommentSticker[]> {
+    return await db
+      .select()
+      .from(commentStickers)
+      .where(eq(commentStickers.commentId, commentId))
+      .orderBy(desc(commentStickers.createdAt));
+  }
+
+  async deleteCommentSticker(stickerId: string): Promise<void> {
+    await db.delete(commentStickers).where(eq(commentStickers.id, stickerId));
   }
 }
 

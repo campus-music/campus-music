@@ -2111,6 +2111,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get stickers for a comment
+  app.get("/api/comments/:commentId/stickers", async (req: any, res) => {
+    try {
+      const stickers = await storage.getCommentStickers(req.params.commentId);
+      res.json(stickers);
+    } catch (error: any) {
+      console.error("Error getting stickers:", error);
+      res.status(500).json({ error: error.message || "Failed to get stickers" });
+    }
+  });
+
+  // Add a sticker to a comment
+  app.post("/api/comments/:commentId/stickers", requireAuth, async (req: any, res) => {
+    try {
+      const { stickerId, positionX, positionY } = req.body;
+      
+      if (!stickerId) {
+        return res.status(400).json({ error: "Sticker ID is required" });
+      }
+
+      const sticker = await storage.addCommentSticker({
+        commentId: req.params.commentId,
+        userId: req.session.userId,
+        stickerId,
+        positionX: positionX ?? 50,
+        positionY: positionY ?? 50,
+      });
+      res.status(201).json(sticker);
+    } catch (error: any) {
+      console.error("Error adding sticker:", error);
+      res.status(500).json({ error: error.message || "Failed to add sticker" });
+    }
+  });
+
+  // Delete a sticker (own sticker only)
+  app.delete("/api/stickers/:stickerId", requireAuth, async (req: any, res) => {
+    try {
+      await storage.deleteCommentSticker(req.params.stickerId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting sticker:", error);
+      res.status(500).json({ error: error.message || "Failed to delete sticker" });
+    }
+  });
+
   // Share a post with a connected friend
   app.post("/api/posts/:postId/share", requireAuth, async (req: any, res) => {
     try {
