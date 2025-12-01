@@ -350,17 +350,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/tracks/latest", async (req, res) => {
-    const tracks = await storage.getLatestTracks(20);
+    const tracks = await storage.getLatestTracks(100);
     res.json(tracks);
   });
 
   app.get("/api/tracks/trending", async (req, res) => {
-    const tracks = await storage.getTrendingTracks(20);
+    const tracks = await storage.getTrendingTracks(100);
     res.json(tracks);
   });
 
   app.get("/api/tracks/best-of-campus", async (req, res) => {
-    const tracks = await storage.getTrendingTracks(10);
+    const tracks = await storage.getTrendingTracks(100);
     res.json(tracks);
   });
 
