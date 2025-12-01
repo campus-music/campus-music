@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("listener"),
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
+  profileImageUrl: text("profile_image_url"),
   showUniversity: boolean("show_university").notNull().default(true),
   showMusicPreferences: boolean("show_music_preferences").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
