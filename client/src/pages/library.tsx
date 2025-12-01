@@ -124,28 +124,44 @@ export default function Library() {
             </Dialog>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="space-y-2">
             {playlistsLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-lg" />
+                <Skeleton key={i} className="h-16 rounded-md" />
               ))
             ) : playlists && playlists.length > 0 ? (
-              playlists.map((playlist) => (
-                <Card key={playlist.id} className="overflow-hidden hover-elevate transition-all" data-testid={`card-playlist-${playlist.id}`}>
-                  <div className="aspect-square bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                    <Music className="h-16 w-16 text-muted-foreground" />
+              playlists.map((playlist, index) => (
+                <div 
+                  key={playlist.id} 
+                  className="flex items-center gap-4 p-2 rounded-md hover-elevate transition-all cursor-pointer group"
+                  data-testid={`card-playlist-${playlist.id}`}
+                >
+                  <div className="text-sm text-muted-foreground w-6 text-right">
+                    {index + 1}
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold truncate">{playlist.name}</h3>
+                  <div className="h-12 w-12 rounded-md overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+                    {playlist.coverImageUrl ? (
+                      <img 
+                        src={playlist.coverImageUrl} 
+                        alt={playlist.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Music className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium truncate">{playlist.name}</h3>
                     <p className="text-sm text-muted-foreground">
                       {playlist.tracks?.length || 0} tracks
                     </p>
                   </div>
-                </Card>
+                </div>
               ))
             ) : (
-              <div className="col-span-full text-center py-20 text-muted-foreground">
-                No playlists yet. Create your first playlist!
+              <div className="text-center py-20 text-muted-foreground">
+                <Music className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No playlists yet. Create your first playlist!</p>
               </div>
             )}
           </div>
