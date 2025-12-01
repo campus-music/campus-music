@@ -159,7 +159,7 @@ export default function ArtistFriends() {
     : discoverableArtists;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-32">
+    <div className="space-y-6 pb-32">
       <div>
         <h1 className="text-4xl font-bold mb-2">Artist Connections</h1>
         <p className="text-muted-foreground text-lg">
