@@ -1,13 +1,42 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackListItem } from '@/components/track-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
 import type { TrackWithArtist } from '@shared/schema';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Trending() {
+  const { toast } = useToast();
+  
   const { data: tracks, isLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/trending'],
   });
+
+  const { data: likedTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/user/liked-tracks'],
+  });
+
+  const likedTrackIds = new Set(likedTracks?.map(t => t.id) || []);
+
+  const likeMutation = useMutation({
+    mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
+      if (isLiked) {
+        await apiRequest('DELETE', `/api/tracks/${trackId}/like`, {});
+      } else {
+        await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      }
+    },
+    onSuccess: (_, { isLiked }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
+      toast({ title: isLiked ? 'Removed from liked tracks' : 'Added to liked tracks' });
+    },
+  });
+
+  const handleLike = (trackId: string) => {
+    const isLiked = likedTrackIds.has(trackId);
+    likeMutation.mutate({ trackId, isLiked });
+  };
 
   return (
     <div className="space-y-6 pb-32">
@@ -30,7 +59,13 @@ export default function Trending() {
           ))
         ) : tracks && tracks.length > 0 ? (
           tracks.map((track, index) => (
-            <TrackListItem key={track.id} track={track} index={index} />
+            <TrackListItem 
+              key={track.id} 
+              track={track} 
+              index={index}
+              isLiked={likedTrackIds.has(track.id)}
+              onLike={() => handleLike(track.id)}
+            />
           ))
         ) : (
           <div className="text-center py-20 text-muted-foreground">

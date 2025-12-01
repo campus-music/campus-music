@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackCard } from '@/components/track-card';
 import { TrackListItem } from '@/components/track-list-item';
 import { SearchableFilter } from '@/components/searchable-filter';
@@ -10,6 +10,8 @@ import { Music, Flame, Star } from 'lucide-react';
 import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Link } from 'wouter';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface Artist extends ArtistProfile {
   trackCount: number;
@@ -20,6 +22,7 @@ const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Indie', 'Jazz', 
 const UNIVERSITIES = ['MIT', 'Stanford', 'Harvard', 'UC Berkeley', 'Oxford', 'Yale', 'Princeton'];
 
 export default function Home() {
+  const { toast } = useToast();
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
   const { data: latestTracks, isLoading: latestLoading } = useQuery<TrackWithArtist[]>({
@@ -33,6 +36,31 @@ export default function Home() {
   const { data: allArtists, isLoading: artistsLoading } = useQuery<Artist[]>({
     queryKey: ['/api/artists'],
   });
+
+  const { data: likedTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/user/liked-tracks'],
+  });
+
+  const likedTrackIds = new Set(likedTracks?.map(t => t.id) || []);
+
+  const likeMutation = useMutation({
+    mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
+      if (isLiked) {
+        await apiRequest('DELETE', `/api/tracks/${trackId}/like`, {});
+      } else {
+        await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      }
+    },
+    onSuccess: (_, { isLiked }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
+      toast({ title: isLiked ? 'Removed from liked tracks' : 'Added to liked tracks' });
+    },
+  });
+
+  const handleLike = (trackId: string) => {
+    const isLiked = likedTrackIds.has(trackId);
+    likeMutation.mutate({ trackId, isLiked });
+  };
 
   const topArtists = allArtists
     ? [...allArtists].sort((a, b) => b.streams - a.streams).slice(0, 6)
@@ -100,7 +128,13 @@ export default function Home() {
             ))
           ) : filteredTrendingTracks.length > 0 ? (
             filteredTrendingTracks.slice(0, 10).map((track, index) => (
-              <TrackListItem key={track.id} track={track} index={index} />
+              <TrackListItem 
+                key={track.id} 
+                track={track} 
+                index={index}
+                isLiked={likedTrackIds.has(track.id)}
+                onLike={() => handleLike(track.id)}
+              />
             ))
           ) : (
             <div className="text-center py-12 text-muted-foreground">
@@ -156,7 +190,11 @@ export default function Home() {
             ) : latestTracks && latestTracks.length > 0 ? (
               latestTracks.slice(0, 8).map((track) => (
                 <div key={track.id} className="w-48 flex-shrink-0">
-                  <TrackCard track={track} data-testid={`card-track-fresh-${track.id}`} />
+                  <TrackCard 
+                    track={track} 
+                    isLiked={likedTrackIds.has(track.id)}
+                    onLike={() => handleLike(track.id)}
+                  />
                 </div>
               ))
             ) : (
@@ -181,7 +219,11 @@ export default function Home() {
             ) : trendingTracks && trendingTracks.length > 0 ? (
               trendingTracks.slice(0, 6).map((track) => (
                 <div key={track.id} className="w-48 flex-shrink-0">
-                  <TrackCard track={track} data-testid={`card-track-best-${track.id}`} />
+                  <TrackCard 
+                    track={track}
+                    isLiked={likedTrackIds.has(track.id)}
+                    onLike={() => handleLike(track.id)}
+                  />
                 </div>
               ))
             ) : (
