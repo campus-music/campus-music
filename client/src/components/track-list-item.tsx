@@ -107,9 +107,7 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {user ? (
-              <DropdownMenuItem asChild>
-                <AddToPlaylist trackId={track.id} trackTitle={track.title} />
-              </DropdownMenuItem>
+              <AddToPlaylist trackId={track.id} trackTitle={track.title} />
             ) : (
               <DropdownMenuItem onClick={() => { setAuthAction('playlist'); setAuthPromptOpen(true); }}>
                 Add to Playlist

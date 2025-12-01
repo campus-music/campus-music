@@ -429,7 +429,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Playlist routes
   app.get("/api/playlists", requireAuth, async (req, res) => {
     const playlists = await storage.getPlaylistsByUser(req.session.userId!);
-    res.json(playlists);
+    // Include tracks for each playlist
+    const playlistsWithTracks = await Promise.all(
+      playlists.map(async (playlist) => {
+        const tracks = await storage.getPlaylistTracks(playlist.id);
+        return { ...playlist, tracks };
+      })
+    );
+    res.json(playlistsWithTracks);
   });
 
   app.post("/api/playlists", requireAuth, async (req, res) => {
