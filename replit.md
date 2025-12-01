@@ -40,6 +40,13 @@ Preferred communication style: Simple, everyday language.
   2. Universal Social Chat - For all logged-in users (listeners and artists), uses user IDs
 - **User Connections**: Friend requests, accept/reject, unfriend functionality
 - **Direct Messages**: Real-time chat between connected friends with read receipts
+- **Music Taste Matching**: 
+  - Users can set favorite artists and genres in their profile (Music Taste tab)
+  - Privacy control: `showMusicPreferences` toggle to show/hide preferences from friends
+  - Friend suggestions based on weighted Jaccard similarity (60% artist overlap + 40% genre overlap)
+  - Suggested Friends carousel on Social page showing similarity scores and common interests
+  - Expandable shared music taste display on friend cards (requires friendship and visibility)
+  - Tables: listenerFavoriteArtists, listenerFavoriteGenres
 - **Routes**: /social (discovery and friend management), /chat (direct messaging), /feed (artist social feed)
 
 ### File Storage
