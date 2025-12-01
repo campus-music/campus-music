@@ -11,6 +11,45 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Helper to normalize email domain for university lookup
+// Handles subdomains and various international academic suffixes
+function normalizeEmailDomain(email: string): string | null {
+  const emailDomain = email.split('@')[1]?.toLowerCase();
+  if (!emailDomain) return null;
+  
+  const domainParts = emailDomain.split('.');
+  
+  // Comprehensive list of academic multi-label suffixes (keep last 3 parts)
+  const multiLabelSuffixes = [
+    // UK and Commonwealth
+    'ac.uk', 'edu.au', 'ac.nz', 'edu.sg', 'edu.hk', 'edu.my', 'edu.in',
+    // Europe
+    'ac.jp', 'edu.cn', 'edu.tw', 'ac.kr',
+    // Americas
+    'edu.br', 'edu.mx', 'edu.ar', 'edu.co', 'edu.pe', 'edu.cl',
+    // Others
+    'edu.za', 'edu.eg', 'edu.pk', 'edu.bd', 'edu.vn', 'edu.ph', 'edu.id'
+  ];
+  
+  // Check if domain ends with a multi-label academic suffix
+  const isMultiLabel = multiLabelSuffixes.some(suffix => emailDomain.endsWith('.' + suffix) || emailDomain === suffix);
+  
+  if (isMultiLabel) {
+    // Keep last 3 parts for multi-label suffixes (mail.ox.ac.uk -> ox.ac.uk)
+    return domainParts.length > 3 
+      ? domainParts.slice(-3).join('.') 
+      : emailDomain;
+  } else if (emailDomain.endsWith('.edu')) {
+    // Keep last 2 parts for .edu domains (student.mit.edu -> mit.edu)
+    return domainParts.length > 2 
+      ? domainParts.slice(-2).join('.') 
+      : emailDomain;
+  }
+  
+  // Return original domain for other TLDs (no normalization)
+  return emailDomain;
+}
+
 // Seed data function - idempotent, will skip users that already exist
 async function seedData() {
   console.log("Checking database seed status...");
@@ -198,10 +237,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Auto-detect university from .edu email domain
-      const emailDomain = data.email.split('@')[1]?.toLowerCase();
-      if (emailDomain && emailDomain.endsWith('.edu')) {
-        const university = await storage.getUniversityByDomain(emailDomain);
+      // Auto-detect university from email domain
+      const normalizedDomain = normalizeEmailDomain(data.email);
+      if (normalizedDomain) {
+        const university = await storage.getUniversityByDomain(normalizedDomain);
         if (university) {
           // Override university name with the one matching email domain
           data.universityName = university.name;
