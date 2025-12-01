@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, Music, Sparkles, GraduationCap, X, Search } from 'lucide-react';
+import { Check, Music, GraduationCap, X, Search } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 
@@ -95,47 +95,47 @@ export function OnboardingModal({ isOpen, onComplete, universityName }: Onboardi
 
   const remainingToSelect = Math.max(0, 5 - selectedArtists.size);
   const isSearchActive = debouncedQuery.length >= 2;
+  const hasUniversity = universityName && universityName.trim().length > 0;
 
   const sameUniversityArtists = useMemo(() => 
-    suggestedArtists?.filter(a => 
-      universityName && a.universityName.toLowerCase().includes(universityName.toLowerCase())
-    ) || [],
-    [suggestedArtists, universityName]
+    hasUniversity 
+      ? suggestedArtists?.filter(a => 
+          a.universityName.toLowerCase().includes(universityName!.toLowerCase())
+        ) || []
+      : [],
+    [suggestedArtists, universityName, hasUniversity]
   );
   
   const otherArtists = useMemo(() =>
-    suggestedArtists?.filter(a => 
-      !universityName || !a.universityName.toLowerCase().includes(universityName.toLowerCase())
-    ) || [],
-    [suggestedArtists, universityName]
+    hasUniversity
+      ? suggestedArtists?.filter(a => 
+          !a.universityName.toLowerCase().includes(universityName!.toLowerCase())
+        ) || []
+      : suggestedArtists || [],
+    [suggestedArtists, universityName, hasUniversity]
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="sm:max-w-xl max-h-[85vh] p-0 gap-0 overflow-hidden" 
+        className="sm:max-w-xl max-h-[85vh] p-0 gap-0 overflow-hidden [&>button]:hidden" 
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader className="px-5 pt-5 pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Sparkles className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold">Welcome to Campus Music!</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground mt-0.5">
-                  Follow at least 5 artists to personalize your feed
-                </DialogDescription>
-              </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <DialogTitle className="text-xl font-semibold">Welcome to Campus Music!</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Follow at least 5 artists to personalize your feed
+              </DialogDescription>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleSkip}
               disabled={skipMutation.isPending}
-              className="h-8 w-8 shrink-0"
+              className="h-8 w-8 shrink-0 -mr-1"
               data-testid="button-close-onboarding"
             >
               <X className="h-4 w-4" />
@@ -211,7 +211,7 @@ export function OnboardingModal({ isOpen, onComplete, universityName }: Onboardi
             ) : (
               // Default Suggested Artists
               <>
-                {sameUniversityArtists.length > 0 && (
+                {hasUniversity && sameUniversityArtists.length > 0 && (
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 px-1">
                       <GraduationCap className="h-4 w-4 text-primary" />
@@ -238,7 +238,9 @@ export function OnboardingModal({ isOpen, onComplete, universityName }: Onboardi
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 px-1">
                       <Music className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="font-medium text-sm text-foreground">Popular Artists</h3>
+                      <h3 className="font-medium text-sm text-foreground">
+                        {hasUniversity ? 'Popular Artists' : 'Discover Artists'}
+                      </h3>
                       <Badge variant="secondary" className="text-xs ml-auto">
                         {otherArtists.length}
                       </Badge>
@@ -250,6 +252,7 @@ export function OnboardingModal({ isOpen, onComplete, universityName }: Onboardi
                           artist={artist}
                           isSelected={selectedArtists.has(artist.id)}
                           onClick={() => toggleArtist(artist.id)}
+                          showUniversity={!hasUniversity}
                         />
                       ))}
                     </div>
