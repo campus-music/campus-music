@@ -51,6 +51,14 @@ import {
   type University,
   type ListenerFavoriteArtist,
   type ListenerFavoriteGenre,
+  type LiveStream,
+  type InsertLiveStream,
+  type LiveStreamViewer,
+  type InsertLiveStreamViewer,
+  type LiveStreamMessage,
+  type InsertLiveStreamMessage,
+  type LiveStreamWithArtist,
+  type LiveStreamMessageWithUser,
   commentStickers,
   universities,
   users,
@@ -76,7 +84,10 @@ import {
   postComments,
   postShares,
   listenerFavoriteArtists,
-  listenerFavoriteGenres
+  listenerFavoriteGenres,
+  liveStreams,
+  liveStreamViewers,
+  liveStreamMessages
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, ilike, or, and, inArray, count, gte, lt } from "drizzle-orm";
@@ -290,6 +301,25 @@ export interface IStorage {
   
   // Get shared music taste between two users
   getSharedMusicTaste(userId1: string, userId2: string): Promise<{ similarityScore: number; commonArtists: { id: string; artistName: string }[]; commonGenres: string[] }>;
+
+  // Live streaming
+  createLiveStream(data: InsertLiveStream): Promise<LiveStream>;
+  getLiveStream(id: string): Promise<LiveStreamWithArtist | undefined>;
+  getLiveStreamsByArtist(artistId: string): Promise<LiveStreamWithArtist[]>;
+  getActiveLiveStreams(): Promise<LiveStreamWithArtist[]>;
+  updateLiveStream(id: string, updates: Partial<LiveStream>): Promise<LiveStream | undefined>;
+  endLiveStream(id: string): Promise<LiveStream | undefined>;
+  getArtistActiveLiveStream(artistId: string): Promise<LiveStream | undefined>;
+  
+  // Live stream viewers
+  addStreamViewer(data: InsertLiveStreamViewer): Promise<LiveStreamViewer>;
+  removeStreamViewer(streamId: string, userId: string): Promise<void>;
+  getStreamViewerCount(streamId: string): Promise<number>;
+  getStreamViewers(streamId: string): Promise<User[]>;
+  
+  // Live stream messages
+  sendStreamMessage(data: InsertLiveStreamMessage): Promise<LiveStreamMessage>;
+  getStreamMessages(streamId: string, limit?: number): Promise<LiveStreamMessageWithUser[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2328,6 +2358,233 @@ export class DatabaseStorage implements IStorage {
       commonArtists,
       commonGenres,
     };
+  }
+
+  // Live streaming methods
+  async createLiveStream(data: InsertLiveStream): Promise<LiveStream> {
+    const [stream] = await db
+      .insert(liveStreams)
+      .values({
+        ...data,
+        startedAt: new Date(),
+        status: 'live',
+      })
+      .returning();
+    return stream;
+  }
+
+  async getLiveStream(id: string): Promise<LiveStreamWithArtist | undefined> {
+    const [stream] = await db
+      .select()
+      .from(liveStreams)
+      .where(eq(liveStreams.id, id));
+    
+    if (!stream) return undefined;
+
+    const [artist] = await db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.id, stream.artistId));
+
+    const viewerCount = await this.getStreamViewerCount(id);
+
+    return {
+      ...stream,
+      artist: artist!,
+      viewerCount,
+    };
+  }
+
+  async getLiveStreamsByArtist(artistId: string): Promise<LiveStreamWithArtist[]> {
+    const streamsList = await db
+      .select()
+      .from(liveStreams)
+      .where(eq(liveStreams.artistId, artistId))
+      .orderBy(desc(liveStreams.createdAt));
+
+    const [artist] = await db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.id, artistId));
+
+    const result: LiveStreamWithArtist[] = [];
+    for (const stream of streamsList) {
+      const viewerCount = await this.getStreamViewerCount(stream.id);
+      result.push({
+        ...stream,
+        artist: artist!,
+        viewerCount,
+      });
+    }
+    return result;
+  }
+
+  async getActiveLiveStreams(): Promise<LiveStreamWithArtist[]> {
+    const activeStreams = await db
+      .select()
+      .from(liveStreams)
+      .where(eq(liveStreams.status, 'live'))
+      .orderBy(desc(liveStreams.startedAt));
+
+    const result: LiveStreamWithArtist[] = [];
+    for (const stream of activeStreams) {
+      const [artist] = await db
+        .select()
+        .from(artistProfiles)
+        .where(eq(artistProfiles.id, stream.artistId));
+      
+      const viewerCount = await this.getStreamViewerCount(stream.id);
+      result.push({
+        ...stream,
+        artist: artist!,
+        viewerCount,
+      });
+    }
+    return result;
+  }
+
+  async updateLiveStream(id: string, updates: Partial<LiveStream>): Promise<LiveStream | undefined> {
+    const [stream] = await db
+      .update(liveStreams)
+      .set(updates)
+      .where(eq(liveStreams.id, id))
+      .returning();
+    return stream || undefined;
+  }
+
+  async endLiveStream(id: string): Promise<LiveStream | undefined> {
+    // Get current viewer count to set as peak
+    const viewerCount = await this.getStreamViewerCount(id);
+    const [stream] = await db
+      .select()
+      .from(liveStreams)
+      .where(eq(liveStreams.id, id));
+    
+    const peakViewerCount = Math.max(stream?.peakViewerCount || 0, viewerCount);
+
+    const [updated] = await db
+      .update(liveStreams)
+      .set({
+        status: 'ended',
+        endedAt: new Date(),
+        peakViewerCount,
+      })
+      .where(eq(liveStreams.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getArtistActiveLiveStream(artistId: string): Promise<LiveStream | undefined> {
+    const [stream] = await db
+      .select()
+      .from(liveStreams)
+      .where(and(
+        eq(liveStreams.artistId, artistId),
+        eq(liveStreams.status, 'live')
+      ));
+    return stream || undefined;
+  }
+
+  // Live stream viewers
+  async addStreamViewer(data: InsertLiveStreamViewer): Promise<LiveStreamViewer> {
+    // Remove existing viewer entry if they left and rejoined
+    await db
+      .delete(liveStreamViewers)
+      .where(and(
+        eq(liveStreamViewers.streamId, data.streamId),
+        eq(liveStreamViewers.userId, data.userId)
+      ));
+
+    const [viewer] = await db
+      .insert(liveStreamViewers)
+      .values(data)
+      .returning();
+    
+    // Update peak viewer count if needed
+    const viewerCount = await this.getStreamViewerCount(data.streamId);
+    const [stream] = await db
+      .select()
+      .from(liveStreams)
+      .where(eq(liveStreams.id, data.streamId));
+    
+    if (stream && viewerCount > stream.peakViewerCount) {
+      await db
+        .update(liveStreams)
+        .set({ peakViewerCount: viewerCount })
+        .where(eq(liveStreams.id, data.streamId));
+    }
+
+    return viewer;
+  }
+
+  async removeStreamViewer(streamId: string, userId: string): Promise<void> {
+    await db
+      .update(liveStreamViewers)
+      .set({ leftAt: new Date() })
+      .where(and(
+        eq(liveStreamViewers.streamId, streamId),
+        eq(liveStreamViewers.userId, userId)
+      ));
+  }
+
+  async getStreamViewerCount(streamId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(liveStreamViewers)
+      .where(and(
+        eq(liveStreamViewers.streamId, streamId),
+        sql`${liveStreamViewers.leftAt} IS NULL`
+      ));
+    return result?.count || 0;
+  }
+
+  async getStreamViewers(streamId: string): Promise<User[]> {
+    const viewers = await db
+      .select()
+      .from(liveStreamViewers)
+      .where(and(
+        eq(liveStreamViewers.streamId, streamId),
+        sql`${liveStreamViewers.leftAt} IS NULL`
+      ));
+
+    const userIds = viewers.map(v => v.userId);
+    if (userIds.length === 0) return [];
+
+    return await db
+      .select()
+      .from(users)
+      .where(inArray(users.id, userIds));
+  }
+
+  // Live stream messages
+  async sendStreamMessage(data: InsertLiveStreamMessage): Promise<LiveStreamMessage> {
+    const [message] = await db
+      .insert(liveStreamMessages)
+      .values(data)
+      .returning();
+    return message;
+  }
+
+  async getStreamMessages(streamId: string, limit: number = 100): Promise<LiveStreamMessageWithUser[]> {
+    const messages = await db
+      .select()
+      .from(liveStreamMessages)
+      .where(eq(liveStreamMessages.streamId, streamId))
+      .orderBy(desc(liveStreamMessages.sentAt))
+      .limit(limit);
+
+    const result: LiveStreamMessageWithUser[] = [];
+    for (const message of messages) {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, message.userId));
+      
+      if (user) {
+        result.push({ ...message, user });
+      }
+    }
+    return result.reverse(); // Return in chronological order
   }
 }
 
