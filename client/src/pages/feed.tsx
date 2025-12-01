@@ -176,17 +176,23 @@ export default function Feed() {
   );
 }
 
+// Post types that allow video uploads
+const VIDEO_ALLOWED_POST_TYPES = ['behind_scenes', 'live_show'];
+
 function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
   const [caption, setCaption] = useState('');
   const [trackId, setTrackId] = useState<string | undefined>(undefined);
   const [mediaUrl, setMediaUrl] = useState('');
   const [postType, setPostType] = useState('update');
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [usingTrackCover, setUsingTrackCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const allowsVideo = VIDEO_ALLOWED_POST_TYPES.includes(postType);
   
   const { data: myTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/artists', artistProfile.id, 'tracks'],
@@ -203,54 +209,78 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
     
     if (newTrackId && myTracks) {
       const selectedTrack = myTracks.find(t => t.id === newTrackId);
-      if (selectedTrack?.coverArtUrl && !selectedImage) {
-        setImagePreview(selectedTrack.coverArtUrl);
+      if (selectedTrack?.coverArtUrl && !selectedMedia) {
+        setMediaPreview(selectedTrack.coverArtUrl);
         setMediaUrl(selectedTrack.coverArtUrl);
+        setMediaType('image');
         setUsingTrackCover(true);
       }
     } else if (usingTrackCover) {
       // Clear the auto-filled cover when track is deselected
-      setImagePreview(null);
+      setMediaPreview(null);
       setMediaUrl('');
+      setMediaType(null);
       setUsingTrackCover(false);
     }
-  }, [myTracks, selectedImage, usingTrackCover]);
+  }, [myTracks, selectedMedia, usingTrackCover]);
 
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    
+    if (!isImage && !isVideo) {
+      alert('Please select an image or video file');
       return;
     }
     
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
-      return;
+    if (isVideo) {
+      // Video size limit: 50MB, must be allowed post type
+      if (file.size > 50 * 1024 * 1024) {
+        alert('Video must be less than 50MB');
+        return;
+      }
+      if (!allowsVideo) {
+        alert('Videos are only allowed for Behind the Scenes and Live Show posts');
+        return;
+      }
+    } else {
+      // Image size limit: 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        return;
+      }
     }
     
-    setSelectedImage(file);
+    setSelectedMedia(file);
+    setMediaType(isVideo ? 'video' : 'image');
     const previewUrl = URL.createObjectURL(file);
-    setImagePreview(previewUrl);
-  }, []);
+    setMediaPreview(previewUrl);
+    setUsingTrackCover(false);
+  }, [allowsVideo]);
 
-  const removeImage = useCallback(() => {
-    if (imagePreview && !usingTrackCover) {
-      URL.revokeObjectURL(imagePreview);
+  const removeMedia = useCallback(() => {
+    if (mediaPreview && !usingTrackCover) {
+      URL.revokeObjectURL(mediaPreview);
     }
-    setSelectedImage(null);
-    setImagePreview(null);
+    setSelectedMedia(null);
+    setMediaPreview(null);
     setMediaUrl('');
+    setMediaType(null);
     setUsingTrackCover(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [imagePreview, usingTrackCover]);
+  }, [mediaPreview, usingTrackCover]);
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const uploadMedia = async (file: File): Promise<string> => {
     setIsUploading(true);
     setUploadProgress(0);
+    
+    const isVideo = file.type.startsWith('video/');
+    const category = isVideo ? 'post-videos' : 'post-images';
     
     try {
       const response = await fetch('/api/upload/signed-url', {
@@ -259,7 +289,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
         body: JSON.stringify({
           filename: file.name,
           contentType: file.type,
-          category: 'post-images',
+          category,
         }),
       });
       
@@ -307,7 +337,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
   };
 
   const createPostMutation = useMutation({
-    mutationFn: async (data: { caption: string; trackId?: string; mediaUrl?: string; postType?: string }) => {
+    mutationFn: async (data: { caption: string; trackId?: string; mediaUrl?: string; postType?: string; mediaType?: string }) => {
       return apiRequest('POST', '/api/posts', data);
     },
     onSuccess: () => {
@@ -315,7 +345,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
       setTrackId(undefined);
       setMediaUrl('');
       setPostType('update');
-      removeImage();
+      removeMedia();
       queryClient.invalidateQueries({ queryKey: ['/api/feed'] });
     },
   });
@@ -324,18 +354,26 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
     if (!caption.trim()) return;
     
     // Validate: New Release posts require either an image or a linked track
-    if (postType === 'new_release' && !selectedImage && !mediaUrl && !trackId) {
+    if (postType === 'new_release' && !selectedMedia && !mediaUrl && !trackId) {
       alert('New Release posts require album art or a linked track');
       return;
     }
     
-    let finalMediaUrl = mediaUrl;
+    // Validate: Videos are only allowed for specific post types
+    if (mediaType === 'video' && !VIDEO_ALLOWED_POST_TYPES.includes(postType)) {
+      alert('Videos are only allowed for Behind the Scenes and Live Show posts');
+      return;
+    }
     
-    if (selectedImage) {
+    let finalMediaUrl = mediaUrl;
+    let finalMediaType = mediaType;
+    
+    if (selectedMedia) {
       try {
-        finalMediaUrl = await uploadImage(selectedImage);
+        finalMediaUrl = await uploadMedia(selectedMedia);
+        finalMediaType = selectedMedia.type.startsWith('video/') ? 'video' : 'image';
       } catch (error) {
-        alert('Failed to upload image');
+        alert('Failed to upload media');
         return;
       }
     }
@@ -345,6 +383,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
       trackId: trackId,
       mediaUrl: finalMediaUrl || undefined,
       postType,
+      mediaType: finalMediaType || undefined,
     });
   };
 
@@ -365,12 +404,19 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
             <div className="flex items-center gap-2 flex-wrap">
               {POST_TYPES.map((type) => {
                 const Icon = type.icon;
+                const handlePostTypeChange = () => {
+                  setPostType(type.value);
+                  // Clear video if switching to a post type that doesn't allow videos
+                  if (!VIDEO_ALLOWED_POST_TYPES.includes(type.value) && mediaType === 'video') {
+                    removeMedia();
+                  }
+                };
                 return (
                   <Button
                     key={type.value}
                     variant={postType === type.value ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setPostType(type.value)}
+                    onClick={handlePostTypeChange}
                     className={`gap-1.5 ${postType === type.value ? '' : 'hover:bg-muted'}`}
                     data-testid={`button-post-type-${type.value}`}
                   >
@@ -395,13 +441,22 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
               data-testid="input-post-caption"
             />
             
-            {imagePreview && (
+            {mediaPreview && (
               <div className="relative inline-block">
-                <img
-                  src={imagePreview}
-                  alt="Upload preview"
-                  className="max-h-48 rounded-lg object-cover aspect-square"
-                />
+                {mediaType === 'video' ? (
+                  <video
+                    src={mediaPreview}
+                    className="max-h-48 rounded-lg aspect-video"
+                    controls
+                    muted
+                  />
+                ) : (
+                  <img
+                    src={mediaPreview}
+                    alt="Upload preview"
+                    className="max-h-48 rounded-lg object-cover aspect-square"
+                  />
+                )}
                 {usingTrackCover && (
                   <Badge variant="secondary" className="absolute bottom-2 left-2 text-xs">
                     <Music className="h-3 w-3 mr-1" />
@@ -412,15 +467,15 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                   variant="destructive"
                   size="icon"
                   className="absolute top-2 right-2 h-7 w-7"
-                  onClick={removeImage}
-                  data-testid="button-remove-image"
+                  onClick={removeMedia}
+                  data-testid="button-remove-media"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             )}
             
-            {postType === 'new_release' && !imagePreview && !trackId && (
+            {postType === 'new_release' && !mediaPreview && !trackId && (
               <div className="flex items-center gap-2">
                 <p className="text-sm text-amber-500 flex items-center gap-1">
                   <Music className="h-4 w-4" />
@@ -457,20 +512,20 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
+                accept={allowsVideo ? "image/*,video/*" : "image/*"}
+                onChange={handleMediaSelect}
                 className="hidden"
-                data-testid="input-image-upload"
+                data-testid="input-media-upload"
               />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 className="gap-2"
-                data-testid="button-add-image"
+                data-testid="button-add-media"
               >
                 <ImageIcon className="h-4 w-4" />
-                Add Album Art
+                {allowsVideo ? 'Add Photo/Video' : 'Add Album Art'}
               </Button>
               
               {myTracks && myTracks.length > 0 && (
@@ -645,15 +700,29 @@ function PostCard({ post, currentUserId, showHotBadge }: { post: ArtistPostWithD
         
         {post.mediaUrl && !imageError && (
           <div className="relative rounded-xl overflow-hidden max-w-md mx-auto">
-            <div className="aspect-square">
-              <img
-                src={post.mediaUrl}
-                alt="Album art"
-                className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+            {(post as any).mediaType === 'video' ? (
+              <div className="aspect-video">
+                <video
+                  src={post.mediaUrl}
+                  className="w-full h-full object-cover rounded-xl"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="aspect-square">
+                  <img
+                    src={post.mediaUrl}
+                    alt="Album art"
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+              </>
+            )}
           </div>
         )}
         

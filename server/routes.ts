@@ -2049,6 +2049,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Post types that allow video uploads
+  const VIDEO_ALLOWED_POST_TYPES = ['behind_scenes', 'live_show'];
+
   // Create a new post (artist only)
   app.post("/api/posts", requireAuth, async (req: any, res) => {
     try {
@@ -2060,6 +2063,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const artistProfile = await storage.getArtistProfile(req.session.userId);
       if (!artistProfile) {
         return res.status(404).json({ error: "Artist profile not found" });
+      }
+
+      // Validate: Videos are only allowed for specific post types
+      if (req.body.mediaType === 'video' && !VIDEO_ALLOWED_POST_TYPES.includes(req.body.postType)) {
+        return res.status(400).json({ error: "Videos are only allowed for Behind the Scenes and Live Show posts" });
       }
 
       const parsed = insertArtistPostSchema.safeParse({

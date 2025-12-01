@@ -200,6 +200,7 @@ export const artistPosts = pgTable("artist_posts", {
   trackId: varchar("track_id").references(() => tracks.id, { onDelete: "set null" }),
   caption: text("caption").notNull(),
   mediaUrl: text("media_url"),
+  mediaType: text("media_type"), // 'image' or 'video'
   postType: text("post_type").notNull().default("update"), // update, new_release, behind_scenes, live_show, milestone
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
