@@ -87,6 +87,12 @@ export default function Feed() {
   const [offset, setOffset] = useState(0);
   const limit = 20;
   
+  // Fetch active live streams (API returns only live streams with artist info)
+  const { data: liveStreams } = useQuery<(LiveStream & { artist?: ArtistProfile; viewerCount?: number })[]>({
+    queryKey: ['/api/live-streams'],
+    refetchInterval: 30000, // Check every 30 seconds
+  });
+  
   const { data: posts, isLoading } = useQuery<ArtistPostWithDetails[]>({
     queryKey: ['/api/feed', offset, limit],
     queryFn: async () => {
@@ -119,6 +125,57 @@ export default function Feed() {
 
       {user?.role === 'artist' && isLoadingProfile && <ComposerSkeleton />}
       {isArtist && artistProfile && <PostComposer artistProfile={artistProfile} />}
+
+      {/* Active Live Streams Section */}
+      {liveStreams && liveStreams.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#E84A5F]/10">
+              <Radio className="h-3.5 w-3.5 text-[#E84A5F] animate-pulse" />
+              <span className="text-sm font-medium text-[#E84A5F]">Live Now</span>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {liveStreams.length} {liveStreams.length === 1 ? 'artist is' : 'artists are'} streaming
+            </span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2">
+            {liveStreams.map((stream) => (
+              <Link 
+                key={stream.id} 
+                href={`/live/${stream.id}`}
+                className="flex-shrink-0"
+                data-testid={`link-live-stream-${stream.id}`}
+              >
+                <Card className="w-64 hover-elevate cursor-pointer border-[#E84A5F]/30 bg-gradient-to-br from-[#E84A5F]/5 to-transparent">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="h-12 w-12 ring-2 ring-[#E84A5F]">
+                          <AvatarImage src={stream.artist?.profileImageUrl || undefined} />
+                          <AvatarFallback className="bg-[#E84A5F]/10">
+                            {stream.artist?.stageName?.charAt(0) || 'L'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-[#E84A5F] text-[10px] font-bold text-white">
+                          LIVE
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{stream.artist?.stageName || 'Artist'}</p>
+                        <p className="text-sm text-muted-foreground truncate">{stream.title}</p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Users className="h-3 w-3" />
+                          <span>{stream.peakViewerCount || 0} watching</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
