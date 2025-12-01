@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Headphones, Mic2 } from 'lucide-react';
+import { Headphones, Mic2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { UniversityAutocomplete } from '@/components/university-autocomplete';
 import logoUrl from '@assets/campus music logo_1764112870484.png';
@@ -23,6 +23,58 @@ export default function Signup() {
     country: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [autoDetectedUniversity, setAutoDetectedUniversity] = useState<string | null>(null);
+  const emailDebounceRef = useRef<NodeJS.Timeout>();
+
+  // Auto-detect university from .edu email domain
+  useEffect(() => {
+    if (emailDebounceRef.current) {
+      clearTimeout(emailDebounceRef.current);
+    }
+
+    // Only auto-detect for .edu emails to avoid unnecessary API calls
+    const emailLower = formData.email.toLowerCase();
+    const hasEduDomain = emailLower.includes('@') && emailLower.includes('.edu');
+    
+    if (!hasEduDomain) {
+      return;
+    }
+
+    // Only auto-detect if user hasn't manually selected a university
+    // (autoDetectedUniversity is null when user manually types/selects)
+    if (formData.universityName && autoDetectedUniversity !== null) {
+      return;
+    }
+
+    emailDebounceRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/universities/detect?email=${encodeURIComponent(formData.email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.university) {
+            setAutoDetectedUniversity(data.university.name);
+            setFormData(prev => ({
+              ...prev,
+              universityName: data.university.name,
+              country: data.university.country || prev.country,
+            }));
+            toast({
+              title: 'University detected!',
+              description: `We found ${data.university.name} based on your email.`,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to auto-detect university:', error);
+      }
+    }, 500);
+
+    return () => {
+      if (emailDebounceRef.current) {
+        clearTimeout(emailDebounceRef.current);
+      }
+    };
+  }, [formData.email, formData.universityName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +245,7 @@ export default function Signup() {
                   id="universityName"
                   value={formData.universityName}
                   onChange={(value, university) => {
+                    setAutoDetectedUniversity(null);
                     setFormData({ 
                       ...formData, 
                       universityName: value,
@@ -203,9 +256,16 @@ export default function Signup() {
                   required
                   data-testid="input-university"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Search from thousands of universities worldwide
-                </p>
+                {autoDetectedUniversity && formData.universityName === autoDetectedUniversity ? (
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    Auto-detected from your email domain
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Search from thousands of universities worldwide
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
