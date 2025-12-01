@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   profileImageUrl: text("profile_image_url"),
   showUniversity: boolean("show_university").notNull().default(true),
   showMusicPreferences: boolean("show_music_preferences").notNull().default(true),
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -105,6 +105,8 @@ export interface IStorage {
   updateArtistProfile(id: string, updates: Partial<ArtistProfile>): Promise<ArtistProfile | undefined>;
   getArtistsByUniversity(university: string): Promise<ArtistProfile[]>;
   getAllArtists(): Promise<ArtistProfile[]>;
+  getSuggestedArtistsForOnboarding(universityName: string, limit?: number): Promise<ArtistProfile[]>;
+  completeOnboarding(userId: string): Promise<void>;
 
   getTrack(id: string): Promise<Track | undefined>;
   getTrackWithArtist(id: string): Promise<TrackWithArtist | undefined>;
@@ -405,6 +407,58 @@ export class DatabaseStorage implements IStorage {
 
   async getAllArtists(): Promise<ArtistProfile[]> {
     return await db.select().from(artistProfiles).orderBy(desc(artistProfiles.createdAt));
+  }
+
+  async getSuggestedArtistsForOnboarding(universityName: string, limit: number = 20): Promise<ArtistProfile[]> {
+    const results: ArtistProfile[] = [];
+    
+    // First, get artists from the same university (prioritized)
+    if (universityName) {
+      const universityArtists = await this.getArtistsByUniversity(universityName);
+      results.push(...universityArtists);
+    }
+    
+    // Then get popular artists globally based on stream counts
+    const popularArtistIds = await db
+      .select({ artistId: tracks.artistId, streamCount: count() })
+      .from(tracks)
+      .leftJoin(streams, eq(streams.trackId, tracks.id))
+      .groupBy(tracks.artistId)
+      .orderBy(desc(count()))
+      .limit(limit * 2);
+    
+    for (const { artistId } of popularArtistIds) {
+      if (results.length >= limit) break;
+      if (results.some(a => a.id === artistId)) continue;
+      
+      const artist = await this.getArtistProfileById(artistId);
+      if (artist) results.push(artist);
+    }
+    
+    // If still not enough, get newest artists
+    if (results.length < limit) {
+      const newestArtists = await db
+        .select()
+        .from(artistProfiles)
+        .orderBy(desc(artistProfiles.createdAt))
+        .limit(limit);
+      
+      for (const artist of newestArtists) {
+        if (results.length >= limit) break;
+        if (!results.some(a => a.id === artist.id)) {
+          results.push(artist);
+        }
+      }
+    }
+    
+    return results.slice(0, limit);
+  }
+
+  async completeOnboarding(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ onboardingCompleted: true })
+      .where(eq(users.id, userId));
   }
 
   async getTrack(id: string): Promise<Track | undefined> {

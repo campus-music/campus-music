@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackCard } from '@/components/track-card';
 import { TrackListItem } from '@/components/track-list-item';
@@ -13,6 +13,7 @@ import { Link } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/lib/auth-context';
 import { formatDistanceToNow } from 'date-fns';
+import { OnboardingModal } from '@/components/onboarding-modal';
 
 interface Artist extends ArtistProfile {
   trackCount: number;
@@ -30,6 +31,20 @@ interface FriendListenTrack extends TrackWithArtist {
 
 export default function Home() {
   const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if user needs onboarding
+  useEffect(() => {
+    if (user && user.onboardingCompleted === false) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/tracks/from-following'] });
+  };
   
   // Social home page queries
   const { data: fromFollowing, isLoading: followingLoading } = useQuery<TrackWithArtist[]>({
@@ -142,14 +157,21 @@ export default function Home() {
   );
 
   return (
-    <div className="space-y-12 pb-32">
-      {/* Hero Section */}
-      <section className="space-y-2">
-        <h1 className="text-4xl font-bold">Welcome back{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}</h1>
-        <p className="text-muted-foreground">
-          Your personalized music from campus artists
-        </p>
-      </section>
+    <>
+      <OnboardingModal 
+        isOpen={showOnboarding} 
+        onComplete={handleOnboardingComplete}
+        universityName={user?.universityName}
+      />
+      
+      <div className="space-y-12 pb-32">
+        {/* Hero Section */}
+        <section className="space-y-2">
+          <h1 className="text-4xl font-bold">Welcome back{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}</h1>
+          <p className="text-muted-foreground">
+            Your personalized music from campus artists
+          </p>
+        </section>
 
       {/* New From Artists You Follow */}
       <section>
@@ -229,7 +251,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* Friends Are Listening To */}
+      {/* Friends Are Listening To - Horizontal Scrollable */}
       <section>
         <SectionHeader 
           title="Friends Are Listening To" 
@@ -237,46 +259,55 @@ export default function Home() {
           subtitle="See what your friends are playing"
         />
         {friendsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-lg" />
-            ))}
-          </div>
+          <ScrollArea className="w-full">
+            <div className="flex gap-3 pb-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-64 flex-shrink-0 rounded-lg" />
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         ) : friendsListening && friendsListening.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {friendsListening.slice(0, 6).map((item) => (
-              <Card key={`${item.id}-${item.listenedBy.id}`} className="p-3 hover-elevate transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={item.coverImageUrl || undefined} />
-                      <AvatarFallback className="bg-primary/20">
-                        <Music className="h-5 w-5" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-sm">{item.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.artist?.stageName}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarImage src={item.listenedBy.profileImageUrl || undefined} />
-                      <AvatarFallback className="text-xs bg-muted">
-                        {item.listenedBy.fullName.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{item.listenedBy.fullName.split(' ')[0]}</p>
-                      <p className="text-xs text-muted-foreground/70">
-                        {formatDistanceToNow(new Date(item.playedAt), { addSuffix: true })}
-                      </p>
+          <ScrollArea className="w-full">
+            <div className="flex gap-3 pb-4">
+              {friendsListening.map((item) => (
+                <Card 
+                  key={`${item.id}-${item.listenedBy.id}`} 
+                  className="p-3 hover-elevate transition-all flex-shrink-0 w-72"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Avatar className="h-14 w-14">
+                        <AvatarImage src={item.coverImageUrl || undefined} />
+                        <AvatarFallback className="bg-primary/20">
+                          <Music className="h-6 w-6" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <Avatar className="h-6 w-6 absolute -bottom-1 -right-1 border-2 border-background">
+                        <AvatarImage src={item.listenedBy.profileImageUrl || undefined} />
+                        <AvatarFallback className="text-xs bg-muted">
+                          {item.listenedBy.fullName?.slice(0, 2).toUpperCase() || '??'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-sm">{item.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.artist?.stageName}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-muted-foreground/70">
+                          {item.listenedBy.fullName?.split(' ')[0] || 'Friend'} •
+                        </span>
+                        <span className="text-xs text-muted-foreground/70">
+                          {formatDistanceToNow(new Date(item.playedAt), { addSuffix: true })}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         ) : (
           <EmptyState 
             icon={Users}
@@ -352,6 +383,7 @@ export default function Home() {
           </ScrollArea>
         </section>
       )}
-    </div>
+      </div>
+    </>
   );
 }

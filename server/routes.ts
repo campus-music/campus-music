@@ -935,6 +935,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding endpoints
+  app.get("/api/onboarding/suggested-artists", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      const artists = await storage.getSuggestedArtistsForOnboarding(user.universityName, 20);
+      
+      // Enrich with metadata
+      const enrichedArtists = await Promise.all(artists.map(async (artist) => {
+        const user = await storage.getUser(artist.userId);
+        const stats = await storage.getArtistStats(artist.id);
+        const artistTracks = await storage.getTracksByArtist(artist.id);
+        
+        return {
+          id: artist.id,
+          stageName: artist.stageName,
+          profileImageUrl: artist.profileImageUrl,
+          mainGenre: artist.mainGenre,
+          universityName: user?.universityName || "Unknown",
+          trackCount: artistTracks.length,
+          streams: stats.totalPlays,
+        };
+      }));
+      
+      res.json(enrichedArtists);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/onboarding/complete", requireAuth, async (req, res) => {
+    try {
+      await storage.completeOnboarding(req.session.userId!);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/onboarding/follow-artists", requireAuth, async (req, res) => {
+    try {
+      const { artistIds } = req.body;
+      
+      if (!Array.isArray(artistIds) || artistIds.length < 5) {
+        return res.status(400).json({ error: "Please select at least 5 artists to follow" });
+      }
+      
+      // Get the user IDs for these artist profiles
+      for (const artistId of artistIds) {
+        const artist = await storage.getArtistProfileById(artistId);
+        if (artist) {
+          // Follow the artist's user account
+          try {
+            await storage.followArtist({
+              userId: artist.userId,
+              followerId: req.session.userId!,
+            });
+          } catch (e) {
+            // Ignore duplicate follow errors
+          }
+        }
+      }
+      
+      // Mark onboarding as complete
+      await storage.completeOnboarding(req.session.userId!);
+      
+      res.json({ success: true, followedCount: artistIds.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Support system endpoints
   // Send support to an artist
   app.post("/api/support", requireAuth, async (req, res) => {
