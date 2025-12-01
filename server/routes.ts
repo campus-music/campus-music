@@ -2373,6 +2373,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get shared music taste between current user and another user (requires friendship)
+  app.get("/api/social/shared-taste/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.session.userId;
+
+      if (userId === currentUserId) {
+        return res.json({ similarityScore: 100, commonArtists: [], commonGenres: [] });
+      }
+
+      // Verify the target user exists
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check if target user allows showing music preferences
+      if (!targetUser.showMusicPreferences) {
+        return res.json({ similarityScore: 0, commonArtists: [], commonGenres: [], visible: false });
+      }
+
+      // Verify there's an accepted friendship between the two users
+      const connection = await storage.getUserConnectionBetweenUsers(currentUserId, userId);
+      if (!connection || connection.status !== 'accepted') {
+        return res.status(403).json({ error: "You must be friends to view shared music taste" });
+      }
+
+      const sharedTaste = await storage.getSharedMusicTaste(currentUserId, userId);
+      res.json({ ...sharedTaste, visible: true });
+    } catch (error: any) {
+      console.error("Error getting shared music taste:", error);
+      res.status(500).json({ error: error.message || "Failed to get shared taste" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 

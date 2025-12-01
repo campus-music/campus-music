@@ -411,6 +411,13 @@ function EmptyState({ icon: Icon, title, description }: { icon: any; title: stri
   );
 }
 
+type SharedTaste = {
+  similarityScore: number;
+  commonArtists: { id: string; artistName: string }[];
+  commonGenres: string[];
+  visible?: boolean;
+};
+
 function FriendCard({ 
   user, 
   connectionId,
@@ -425,53 +432,124 @@ function FriendCard({
   isRemoving: boolean;
 }) {
   const initials = user.fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+  const [showTaste, setShowTaste] = useState(false);
+
+  const { data: sharedTaste } = useQuery<SharedTaste>({
+    queryKey: ['/api/social/shared-taste', user.id],
+    enabled: showTaste,
+  });
+
+  const hasSharedTaste = sharedTaste && (sharedTaste.commonArtists.length > 0 || sharedTaste.commonGenres.length > 0);
   
   return (
     <div 
-      className="flex items-center justify-between p-4 rounded-lg border bg-card hover-elevate"
+      className="p-4 rounded-lg border bg-card hover-elevate"
       data-testid={`card-friend-${user.id}`}
     >
-      <div className="flex items-center gap-3">
-        <Avatar className="h-12 w-12">
-          <AvatarFallback className="bg-primary/10 text-primary">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{user.fullName}</h3>
-            {user.role === 'artist' && (
-              <Badge variant="secondary" className="text-xs">
-                <Music className="h-3 w-3 mr-1" />
-                Artist
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <GraduationCap className="h-3 w-3" />
-            {user.universityName}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">{user.fullName}</h3>
+              {user.role === 'artist' && (
+                <Badge variant="secondary" className="text-xs">
+                  <Music className="h-3 w-3 mr-1" />
+                  Artist
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <GraduationCap className="h-3 w-3" />
+              {user.universityName}
+            </div>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="ghost"
+            onClick={() => setShowTaste(!showTaste)}
+            data-testid={`button-taste-${user.id}`}
+          >
+            <Heart className={`h-4 w-4 ${showTaste ? 'text-primary fill-primary' : ''}`} />
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={onMessage}
+            data-testid={`button-message-${user.id}`}
+          >
+            <MessageCircle className="h-4 w-4 mr-1" />
+            Message
+          </Button>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={onRemove}
+            disabled={isRemoving}
+            data-testid={`button-remove-friend-${user.id}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Button 
-          size="sm" 
-          onClick={onMessage}
-          data-testid={`button-message-${user.id}`}
-        >
-          <MessageCircle className="h-4 w-4 mr-1" />
-          Message
-        </Button>
-        <Button 
-          size="sm" 
-          variant="ghost" 
-          onClick={onRemove}
-          disabled={isRemoving}
-          data-testid={`button-remove-friend-${user.id}`}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+
+      {showTaste && sharedTaste && (
+        <div className="mt-3 pt-3 border-t">
+          {sharedTaste.visible === false ? (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              This user has chosen to keep their music preferences private.
+            </p>
+          ) : hasSharedTaste ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="shrink-0">
+                  <Heart className="h-3 w-3 mr-1 text-primary" />
+                  {sharedTaste.similarityScore}% match
+                </Badge>
+              </div>
+              {sharedTaste.commonArtists.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    <Music className="h-3 w-3 inline mr-1" />
+                    Common artists
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {sharedTaste.commonArtists.map((artist) => (
+                      <Badge key={artist.id} variant="outline" className="text-xs">
+                        {artist.artistName}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sharedTaste.commonGenres.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    <Sparkles className="h-3 w-3 inline mr-1" />
+                    Common genres
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {sharedTaste.commonGenres.map((genre) => (
+                      <Badge key={genre} variant="outline" className="text-xs">
+                        {genre}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              No shared music preferences found. Add your favorite artists and genres in your profile!
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -232,6 +232,9 @@ export interface IStorage {
   
   // Friend suggestions based on music taste
   getSuggestedFriends(userId: string, limit?: number): Promise<{ user: User; similarityScore: number; commonArtists: string[]; commonGenres: string[] }[]>;
+  
+  // Get shared music taste between two users
+  getSharedMusicTaste(userId1: string, userId2: string): Promise<{ similarityScore: number; commonArtists: { id: string; artistName: string }[]; commonGenres: string[] }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1834,6 +1837,74 @@ export class DatabaseStorage implements IStorage {
     return suggestions
       .sort((a, b) => b.similarityScore - a.similarityScore)
       .slice(0, limit);
+  }
+
+  async getSharedMusicTaste(userId1: string, userId2: string): Promise<{ similarityScore: number; commonArtists: { id: string; artistName: string }[]; commonGenres: string[] }> {
+    // Get both users' favorite artists
+    const user1Artists = await db
+      .select()
+      .from(listenerFavoriteArtists)
+      .where(eq(listenerFavoriteArtists.userId, userId1));
+    
+    const user2Artists = await db
+      .select()
+      .from(listenerFavoriteArtists)
+      .where(eq(listenerFavoriteArtists.userId, userId2));
+    
+    // Get both users' favorite genres
+    const user1Genres = await db
+      .select()
+      .from(listenerFavoriteGenres)
+      .where(eq(listenerFavoriteGenres.userId, userId1));
+    
+    const user2Genres = await db
+      .select()
+      .from(listenerFavoriteGenres)
+      .where(eq(listenerFavoriteGenres.userId, userId2));
+    
+    const user1ArtistIds = new Set(user1Artists.map(a => a.artistId));
+    const user2ArtistIds = new Set(user2Artists.map(a => a.artistId));
+    const user1GenreNames = new Set(user1Genres.map(g => g.genre));
+    const user2GenreNames = new Set(user2Genres.map(g => g.genre));
+    
+    // Find common artists
+    const commonArtistIds = [...user1ArtistIds].filter(id => user2ArtistIds.has(id));
+    const commonArtists: { id: string; artistName: string }[] = [];
+    
+    for (const artistId of commonArtistIds) {
+      const [artist] = await db
+        .select()
+        .from(artistProfiles)
+        .where(eq(artistProfiles.id, artistId));
+      if (artist) {
+        commonArtists.push({ id: artist.id, artistName: artist.stageName });
+      }
+    }
+    
+    // Find common genres
+    const commonGenres = [...user1GenreNames].filter(g => user2GenreNames.has(g));
+    
+    // Calculate similarity score
+    const artistWeight = 0.6;
+    const genreWeight = 0.4;
+    
+    const artistUnion = new Set([...user1ArtistIds, ...user2ArtistIds]);
+    const genreUnion = new Set([...user1GenreNames, ...user2GenreNames]);
+    
+    const artistSimilarity = artistUnion.size > 0 
+      ? commonArtistIds.length / artistUnion.size 
+      : 0;
+    const genreSimilarity = genreUnion.size > 0 
+      ? commonGenres.length / genreUnion.size 
+      : 0;
+    
+    const similarityScore = Math.round((artistWeight * artistSimilarity + genreWeight * genreSimilarity) * 100);
+    
+    return {
+      similarityScore,
+      commonArtists,
+      commonGenres,
+    };
   }
 }
 
