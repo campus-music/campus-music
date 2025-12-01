@@ -16,11 +16,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Heart, MessageCircle, Share2, Music, Trash2, Send, X, Image as ImageIcon, 
-  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker, GraduationCap, HelpCircle
+  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker, GraduationCap, HelpCircle,
+  Radio, Video, Calendar, Users
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import type { ArtistPostWithDetails, TrackWithArtist, User, PostCommentWithUser, ArtistProfile, CommentSticker } from '@shared/schema';
-import { Link } from 'wouter';
+import type { ArtistPostWithDetails, TrackWithArtist, User, PostCommentWithUser, ArtistProfile, CommentSticker, LiveStream } from '@shared/schema';
+import { Link, useLocation } from 'wouter';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // Predefined stickers for comments (iMessage-style)
 const STICKERS = [
@@ -180,6 +183,7 @@ export default function Feed() {
 const VIDEO_ALLOWED_POST_TYPES = ['behind_scenes', 'live_show'];
 
 function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
+  const [, navigate] = useLocation();
   const [caption, setCaption] = useState('');
   const [trackId, setTrackId] = useState<string | undefined>(undefined);
   const [mediaUrl, setMediaUrl] = useState('');
@@ -190,6 +194,9 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [usingTrackCover, setUsingTrackCover] = useState(false);
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false);
+  const [streamTitle, setStreamTitle] = useState('');
+  const [isStartingStream, setIsStartingStream] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const allowsVideo = VIDEO_ALLOWED_POST_TYPES.includes(postType);
@@ -387,6 +394,31 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
     });
   };
 
+  // Start a live stream
+  const handleStartStream = async () => {
+    if (!streamTitle.trim()) return;
+    
+    setIsStartingStream(true);
+    try {
+      const response = await fetch('/api/live-streams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: streamTitle.trim() }),
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to create stream');
+      const stream = await response.json() as LiveStream;
+      setShowGoLiveModal(false);
+      setStreamTitle('');
+      navigate(`/live/${stream.id}`);
+    } catch (error) {
+      console.error('Failed to start stream:', error);
+      alert('Failed to start live stream. Please try again.');
+    } finally {
+      setIsStartingStream(false);
+    }
+  };
+
   const selectedPostType = POST_TYPES.find(t => t.value === postType);
 
   return (
@@ -402,7 +434,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
           </Avatar>
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
-              {POST_TYPES.map((type) => {
+              {POST_TYPES.filter(t => t.value !== 'live_show').map((type) => {
                 const Icon = type.icon;
                 const handlePostTypeChange = () => {
                   setPostType(type.value);
@@ -425,6 +457,17 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                   </Button>
                 );
               })}
+              {/* Live Show button opens Go Live modal */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGoLiveModal(true)}
+                className="gap-1.5 bg-[#E84A5F]/10 text-[#E84A5F] border-[#E84A5F]/30 hover:bg-[#E84A5F]/20"
+                data-testid="button-go-live"
+              >
+                <Radio className="h-3.5 w-3.5" />
+                Live Show
+              </Button>
             </div>
             
             <Textarea
@@ -577,6 +620,79 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
           )}
         </Button>
       </CardFooter>
+
+      {/* Go Live Modal */}
+      <Dialog open={showGoLiveModal} onOpenChange={setShowGoLiveModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Radio className="h-5 w-5 text-[#E84A5F]" />
+              Go Live
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <p className="text-sm text-muted-foreground">
+              Start a live stream and connect with your fans in real-time. They'll be able to watch and chat with you.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="stream-title">Stream Title</Label>
+              <Input
+                id="stream-title"
+                placeholder="What are you streaming today?"
+                value={streamTitle}
+                onChange={(e) => setStreamTitle(e.target.value)}
+                data-testid="input-stream-title"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <Video className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Camera</span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <Mic className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Microphone</span>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <Users className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Up to 50</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowGoLiveModal(false);
+                  setPostType('live_show');
+                }}
+                data-testid="button-announce-show"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Announce Show
+              </Button>
+              <Button
+                className="flex-1 bg-[#E84A5F] hover:bg-[#E84A5F]/90 gap-2"
+                onClick={handleStartStream}
+                disabled={!streamTitle.trim() || isStartingStream}
+                data-testid="button-start-stream"
+              >
+                {isStartingStream ? (
+                  <>Starting...</>
+                ) : (
+                  <>
+                    <Radio className="h-4 w-4" />
+                    Go Live Now
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
