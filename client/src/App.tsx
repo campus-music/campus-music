@@ -41,6 +41,7 @@ import ArtistFriends from "@/pages/artist-friends";
 import ArtistMessages from "@/pages/artist-messages";
 import Social from "@/pages/social";
 import Chat from "@/pages/chat";
+import Feed from "@/pages/feed";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -392,6 +393,16 @@ function Router() {
           <ProtectedRoute component={() => (
             <AppLayout>
               <Chat />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/feed">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <Feed />
             </AppLayout>
           )} />
         )}

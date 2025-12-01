@@ -1,4 +1,4 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
@@ -38,6 +38,7 @@ const artistCollabItems = [
 ];
 
 const socialItems = [
+  { title: "Artist Feed", url: "/feed", icon: Newspaper },
   { title: "Connect", url: "/social", icon: Users },
   { title: "Chat", url: "/chat", icon: MessageCircle },
 ];
