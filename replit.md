@@ -28,12 +28,19 @@ Preferred communication style: Simple, everyday language.
 - **Type Safety**: Shared TypeScript types, Drizzle Zod integration for runtime validation.
 
 ### Social Features
+- **Artist Feed** (Twitter-like social feed):
+  - Artists can post album art + captions to promote new tracks
+  - Posts can optionally link to tracks in their catalog
+  - Listeners can like, comment, and share posts with connected friends
+  - Optimistic updates for instant like/unlike feedback
+  - Route: /feed
+  - Tables: artist_posts, post_likes, post_comments, post_shares
 - **Two Messaging Systems**:
   1. Artist Collaboration Network - For verified artists only, uses artist profile IDs
   2. Universal Social Chat - For all logged-in users (listeners and artists), uses user IDs
 - **User Connections**: Friend requests, accept/reject, unfriend functionality
 - **Direct Messages**: Real-time chat between connected friends with read receipts
-- **Routes**: /social (discovery and friend management), /chat (direct messaging)
+- **Routes**: /social (discovery and friend management), /chat (direct messaging), /feed (artist social feed)
 
 ### File Storage
 - **Abstraction**: S3-compatible storage (AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2) with local filesystem fallback for development.

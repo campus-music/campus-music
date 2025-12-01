@@ -18,7 +18,7 @@ import { Link } from 'wouter';
 export default function Feed() {
   const { user } = useAuth();
   
-  const { data: artistProfile } = useQuery<ArtistProfile | null>({
+  const { data: artistProfile, isLoading: isLoadingProfile } = useQuery<ArtistProfile | null>({
     queryKey: ['/api/artist/profile'],
     queryFn: async () => {
       const response = await fetch('/api/artist/profile');
@@ -29,7 +29,7 @@ export default function Feed() {
     enabled: user?.role === 'artist',
   });
   
-  const isArtist = user?.role === 'artist' && !!artistProfile;
+  const isArtist = user?.role === 'artist' && artistProfile !== undefined && artistProfile !== null;
   
   const [offset, setOffset] = useState(0);
   const limit = 20;
@@ -50,7 +50,21 @@ export default function Feed() {
         <h1 className="text-2xl font-bold">Artist Feed</h1>
       </div>
 
-      {isArtist && <PostComposer artistProfile={artistProfile} />}
+      {user?.role === 'artist' && isLoadingProfile && (
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </CardHeader>
+          <CardFooter className="flex justify-end border-t pt-4">
+            <Skeleton className="h-9 w-16" />
+          </CardFooter>
+        </Card>
+      )}
+      
+      {isArtist && artistProfile && <PostComposer artistProfile={artistProfile} />}
 
       {isLoading ? (
         <FeedSkeleton />
