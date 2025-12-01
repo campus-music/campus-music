@@ -41,7 +41,7 @@ export default function LivePage() {
 
   // Fetch artist profile if user is an artist
   const { data: artistProfile } = useQuery<ArtistProfile | null>({
-    queryKey: ["/api/artists/profile"],
+    queryKey: ["/api/artist/profile"],
     enabled: !!user && user.role === "artist",
   });
 
