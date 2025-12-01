@@ -735,71 +735,65 @@ function SuggestedFriendsCarousel({
   onConnect: (userId: string) => void;
   isConnecting: boolean;
 }) {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const containerRef = useState<HTMLDivElement | null>(null);
-
   const scroll = (direction: 'left' | 'right') => {
     const container = document.getElementById('suggestions-carousel');
     if (container) {
-      const scrollAmount = 320;
+      const scrollAmount = 200;
       const newPosition = direction === 'left' 
         ? container.scrollLeft - scrollAmount 
         : container.scrollLeft + scrollAmount;
       container.scrollTo({ left: newPosition, behavior: 'smooth' });
-      setScrollPosition(newPosition);
     }
   };
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Suggested Friends</CardTitle>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Sparkles className="h-4 w-4 text-primary" />
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => scroll('left')}
-              className="h-8 w-8"
-              data-testid="button-scroll-left"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => scroll('right')}
-              className="h-8 w-8"
-              data-testid="button-scroll-right"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <div>
+            <h2 className="text-base font-semibold">Suggested For You</h2>
+            <p className="text-xs text-muted-foreground">Based on your music taste</p>
           </div>
         </div>
-        <CardDescription>
-          People who share your music taste
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div 
-          id="suggestions-carousel"
-          className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {suggestions.map((suggestion) => (
-            <SuggestionCard
-              key={suggestion.user.id}
-              suggestion={suggestion}
-              onConnect={() => onConnect(suggestion.user.id)}
-              isConnecting={isConnecting}
-            />
-          ))}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scroll('left')}
+            className="h-7 w-7"
+            data-testid="button-scroll-left"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scroll('right')}
+            className="h-7 w-7"
+            data-testid="button-scroll-right"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div 
+        id="suggestions-carousel"
+        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {suggestions.map((suggestion) => (
+          <SuggestionCard
+            key={suggestion.user.id}
+            suggestion={suggestion}
+            onConnect={() => onConnect(suggestion.user.id)}
+            isConnecting={isConnecting}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -815,89 +809,76 @@ function SuggestionCard({
   const { user, similarityScore, commonArtists, commonGenres } = suggestion;
   const initials = user.fullName.split(' ').map(n => n[0]).join('').toUpperCase();
   
+  // Determine match quality for visual styling
+  const matchQuality = similarityScore >= 50 ? 'high' : similarityScore >= 25 ? 'medium' : 'low';
+  const matchColor = matchQuality === 'high' ? 'text-green-500' : matchQuality === 'medium' ? 'text-yellow-500' : 'text-primary';
+  
   return (
-    <div 
-      className="flex-shrink-0 w-72 p-4 rounded-lg border bg-card"
+    <Card 
+      className="flex-shrink-0 w-44 hover-elevate transition-all group"
       style={{ scrollSnapAlign: 'start' }}
       data-testid={`card-suggestion-${user.id}`}
     >
-      <div className="flex items-start gap-3 mb-3">
-        <Avatar className="h-12 w-12">
-          <AvatarFallback className="bg-primary/10 text-primary">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold truncate">{user.fullName}</h3>
+      <CardContent className="p-4 flex flex-col items-center text-center">
+        {/* Avatar with match indicator ring */}
+        <div className="relative mb-3">
+          <Avatar className="h-16 w-16 ring-2 ring-offset-2 ring-offset-background ring-primary/30">
+            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-lg">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          {/* Match percentage badge */}
+          <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-background border text-[10px] font-bold ${matchColor}`}>
+            {similarityScore}% match
           </div>
-          {user.universityName && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <GraduationCap className="h-3 w-3" />
-              <span className="truncate">{user.universityName}</span>
-            </div>
-          )}
         </div>
-        <Badge variant="secondary" className="shrink-0">
-          <Heart className="h-3 w-3 mr-1 text-primary" />
-          {similarityScore}%
-        </Badge>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {commonArtists.length > 0 && (
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">
-              <Music className="h-3 w-3 inline mr-1" />
-              Common artists
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {commonArtists.slice(0, 2).map((artist) => (
-                <Badge key={artist} variant="outline" className="text-xs">
+        
+        {/* Name */}
+        <h3 className="font-semibold text-sm truncate w-full mb-0.5">{user.fullName}</h3>
+        
+        {/* University */}
+        {user.universityName && (
+          <p className="text-[11px] text-muted-foreground truncate w-full mb-3">
+            {user.universityName}
+          </p>
+        )}
+        
+        {/* Common interests - compact */}
+        {(commonArtists.length > 0 || commonGenres.length > 0) && (
+          <div className="w-full mb-3">
+            <p className="text-[10px] text-muted-foreground mb-1.5">You both like</p>
+            <div className="flex flex-wrap gap-1 justify-center">
+              {commonArtists.slice(0, 1).map((artist) => (
+                <Badge key={artist} variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
                   {artist}
                 </Badge>
               ))}
-              {commonArtists.length > 2 && (
-                <Badge variant="outline" className="text-xs">
-                  +{commonArtists.length - 2}
-                </Badge>
-              )}
-            </div>
-          </div>
-        )}
-
-        {commonGenres.length > 0 && (
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">
-              <Sparkles className="h-3 w-3 inline mr-1" />
-              Common genres
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {commonGenres.slice(0, 2).map((genre) => (
-                <Badge key={genre} variant="outline" className="text-xs">
+              {commonGenres.slice(0, 1).map((genre) => (
+                <Badge key={genre} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
                   {genre}
                 </Badge>
               ))}
-              {commonGenres.length > 2 && (
-                <Badge variant="outline" className="text-xs">
-                  +{commonGenres.length - 2}
+              {(commonArtists.length + commonGenres.length) > 2 && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                  +{(commonArtists.length + commonGenres.length) - 2}
                 </Badge>
               )}
             </div>
           </div>
         )}
-      </div>
-
-      <Button 
-        size="sm"
-        className="w-full"
-        onClick={onConnect}
-        disabled={isConnecting}
-        data-testid={`button-connect-suggestion-${user.id}`}
-      >
-        <UserPlus className="h-4 w-4 mr-2" />
-        Connect
-      </Button>
-    </div>
+        
+        {/* Connect button */}
+        <Button 
+          size="sm"
+          className="w-full h-8 text-xs"
+          onClick={onConnect}
+          disabled={isConnecting}
+          data-testid={`button-connect-suggestion-${user.id}`}
+        >
+          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+          Connect
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
