@@ -1,10 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Check, X } from 'lucide-react';
+import { Check, X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SearchableFilterProps {
@@ -26,76 +24,105 @@ export function SearchableFilter({
 }: SearchableFilterProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredOptions = options.filter((option) =>
     option.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: string) => {
+    onSelect(option === selected ? null : option);
+    setOpen(false);
+    setSearchQuery('');
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-semibold">{label}</label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-            data-testid={`button-${testIdPrefix}-trigger`}
+      <div ref={containerRef} className="relative">
+        <div className="relative">
+          <Input
+            ref={inputRef}
+            placeholder={selected || placeholder}
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            className={cn(
+              "pr-8",
+              selected && !searchQuery && "text-foreground placeholder:text-foreground"
+            )}
+            data-testid={`input-${testIdPrefix}-search`}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(!open);
+              if (!open) inputRef.current?.focus();
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            data-testid={`button-${testIdPrefix}-toggle`}
           >
-            {selected || placeholder}
-            <span className="ml-2 opacity-50">↓</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <div className="p-2 space-y-2">
-            <Input
-              placeholder={placeholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8"
-              data-testid={`input-${testIdPrefix}-search`}
-            />
-            <ScrollArea className="h-48">
-              <div className="space-y-1 p-2">
+            <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+          </button>
+        </div>
+
+        {open && (
+          <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg">
+            <ScrollArea className="max-h-48">
+              <div className="p-1">
                 {filteredOptions.length > 0 ? (
                   filteredOptions.map((option) => (
                     <button
                       key={option}
-                      onClick={() => {
-                        onSelect(option === selected ? null : option);
-                        setOpen(false);
-                        setSearchQuery('');
-                      }}
+                      onClick={() => handleSelect(option)}
                       data-testid={`menu-item-${testIdPrefix}-${option}`}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-sm hover:bg-accent text-sm text-left"
                     >
                       <Check
                         className={cn(
                           'h-4 w-4 flex-shrink-0',
-                          selected === option ? 'opacity-100' : 'opacity-0'
+                          selected === option ? 'opacity-100 text-primary' : 'opacity-0'
                         )}
                       />
                       {option}
                     </button>
                   ))
                 ) : (
-                  <div className="text-sm text-muted-foreground p-2 text-center">
+                  <div className="text-sm text-muted-foreground p-3 text-center">
                     No results found
                   </div>
                 )}
               </div>
             </ScrollArea>
           </div>
-        </PopoverContent>
-      </Popover>
+        )}
+      </div>
 
       {selected && (
         <div className="flex items-center gap-2">
           <Badge
             variant="secondary"
             className="flex items-center gap-1 cursor-pointer hover-elevate"
-            onClick={() => onSelect(null)}
+            onClick={() => {
+              onSelect(null);
+              setSearchQuery('');
+            }}
+            data-testid={`badge-${testIdPrefix}-selected`}
           >
             {selected}
             <X className="h-3 w-3" />
