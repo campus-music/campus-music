@@ -781,6 +781,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced artist analytics with comprehensive metrics
+  app.get("/api/artists/:artistId/enhanced-analytics", requireAuth, async (req, res) => {
+    try {
+      // Security check: verify the requesting user owns this artist profile
+      const artistProfile = await storage.getArtistProfile(req.session.userId!);
+      if (!artistProfile || artistProfile.id !== req.params.artistId) {
+        return res.status(403).json({ error: "You can only view your own analytics" });
+      }
+      
+      const analytics = await storage.getEnhancedArtistAnalytics(req.params.artistId);
+      res.json(analytics);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Search routes
   app.get("/api/search/tracks", async (req, res) => {
     const { query } = req.query;

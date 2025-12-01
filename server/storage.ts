@@ -79,7 +79,7 @@ import {
   listenerFavoriteGenres
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, ilike, or, and, inArray, count } from "drizzle-orm";
+import { eq, desc, sql, ilike, or, and, inArray, count, gte, lt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -156,6 +156,60 @@ export interface IStorage {
     streams: Map<string, number>;
     topTracks: { trackId: string; plays: number }[];
     listenerCountries: Map<string, number>;
+  }>;
+
+  getEnhancedArtistAnalytics(artistId: string): Promise<{
+    // Core metrics
+    totalPlays: number;
+    totalLikes: number;
+    trackCount: number;
+    uniqueListeners: number;
+    followerCount: number;
+    totalSupport: number;
+    
+    // Trend data (vs previous period)
+    playsTrend: number;
+    likesTrend: number;
+    listenersTrend: number;
+    followersTrend: number;
+    
+    // Time series (last 30 days)
+    playsOverTime: { date: string; plays: number }[];
+    
+    // Top tracks with details
+    topTracks: { 
+      id: string;
+      title: string;
+      coverArt: string | null;
+      plays: number;
+      likes: number;
+      shares: number;
+    }[];
+    
+    // Listener insights
+    listenersByUniversity: { university: string; count: number }[];
+    peakListeningHours: { hour: number; count: number }[];
+    
+    // Recent activity
+    recentActivity: {
+      type: 'play' | 'like' | 'follow' | 'support' | 'share';
+      userId: string;
+      userName: string;
+      trackTitle?: string;
+      amount?: number;
+      timestamp: Date;
+    }[];
+    
+    // Milestones
+    milestones: {
+      id: string;
+      title: string;
+      description: string;
+      achieved: boolean;
+      progress: number;
+      target: number;
+      icon: string;
+    }[];
   }>;
 
   sendSupport(data: InsertSupport): Promise<Support>;
@@ -870,6 +924,366 @@ export class DatabaseStorage implements IStorage {
       streams: streamsMap,
       topTracks,
       listenerCountries,
+    };
+  }
+
+  async getEnhancedArtistAnalytics(artistId: string): Promise<{
+    totalPlays: number;
+    totalLikes: number;
+    trackCount: number;
+    uniqueListeners: number;
+    followerCount: number;
+    totalSupport: number;
+    playsTrend: number;
+    likesTrend: number;
+    listenersTrend: number;
+    followersTrend: number;
+    playsOverTime: { date: string; plays: number }[];
+    topTracks: { 
+      id: string;
+      title: string;
+      coverArt: string | null;
+      plays: number;
+      likes: number;
+      shares: number;
+    }[];
+    listenersByUniversity: { university: string; count: number }[];
+    peakListeningHours: { hour: number; count: number }[];
+    recentActivity: {
+      type: 'play' | 'like' | 'follow' | 'support' | 'share';
+      userId: string;
+      userName: string;
+      trackTitle?: string;
+      amount?: number;
+      timestamp: Date;
+    }[];
+    milestones: {
+      id: string;
+      title: string;
+      description: string;
+      achieved: boolean;
+      progress: number;
+      target: number;
+      icon: string;
+    }[];
+  }> {
+    const artistTracks = await this.getTracksByArtist(artistId);
+    const trackIds = artistTracks.map(t => t.id);
+    
+    // Get artist profile for user ID (needed for followers)
+    const [artistProfile] = await db.select().from(artistProfiles).where(eq(artistProfiles.id, artistId));
+    const artistUserId = artistProfile?.userId;
+
+    // Default empty response
+    const emptyResponse = {
+      totalPlays: 0,
+      totalLikes: 0,
+      trackCount: 0,
+      uniqueListeners: 0,
+      followerCount: 0,
+      totalSupport: 0,
+      playsTrend: 0,
+      likesTrend: 0,
+      listenersTrend: 0,
+      followersTrend: 0,
+      playsOverTime: [] as { date: string; plays: number }[],
+      topTracks: [] as { id: string; title: string; coverArt: string | null; plays: number; likes: number; shares: number }[],
+      listenersByUniversity: [] as { university: string; count: number }[],
+      peakListeningHours: [] as { hour: number; count: number }[],
+      recentActivity: [] as { type: 'play' | 'like' | 'follow' | 'support' | 'share'; userId: string; userName: string; trackTitle?: string; amount?: number; timestamp: Date }[],
+      milestones: [] as { id: string; title: string; description: string; achieved: boolean; progress: number; target: number; icon: string }[],
+    };
+
+    // Core metrics
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    // Total plays
+    const [totalPlaysResult] = trackIds.length > 0 
+      ? await db.select({ count: count() }).from(streams).where(inArray(streams.trackId, trackIds))
+      : [{ count: 0 }];
+    const totalPlays = totalPlaysResult?.count || 0;
+
+    // Total likes
+    const [totalLikesResult] = trackIds.length > 0
+      ? await db.select({ count: count() }).from(likes).where(inArray(likes.trackId, trackIds))
+      : [{ count: 0 }];
+    const totalLikes = totalLikesResult?.count || 0;
+
+    // Unique listeners
+    const uniqueListenersData = trackIds.length > 0
+      ? await db.selectDistinct({ userId: streams.userId }).from(streams).where(inArray(streams.trackId, trackIds))
+      : [];
+    const uniqueListeners = uniqueListenersData.length;
+
+    // Follower count
+    const [followerCountResult] = artistUserId
+      ? await db.select({ count: count() }).from(followers).where(eq(followers.userId, artistUserId))
+      : [{ count: 0 }];
+    const followerCount = followerCountResult?.count || 0;
+
+    // Total support received
+    const supportsData = await db.select().from(supports).where(eq(supports.artistId, artistId));
+    const totalSupport = supportsData.reduce((sum, s) => sum + s.amount, 0);
+
+    // Trend calculations (last 30 days vs previous 30 days)
+    const [currentPlays] = trackIds.length > 0
+      ? await db.select({ count: count() }).from(streams)
+          .where(and(inArray(streams.trackId, trackIds), gte(streams.playedAt, thirtyDaysAgo)))
+      : [{ count: 0 }];
+    const [previousPlays] = trackIds.length > 0
+      ? await db.select({ count: count() }).from(streams)
+          .where(and(inArray(streams.trackId, trackIds), gte(streams.playedAt, sixtyDaysAgo), lt(streams.playedAt, thirtyDaysAgo)))
+      : [{ count: 0 }];
+    const playsTrend = previousPlays?.count ? Math.round(((currentPlays?.count || 0) - previousPlays.count) / previousPlays.count * 100) : 0;
+
+    const [currentLikes] = trackIds.length > 0
+      ? await db.select({ count: count() }).from(likes)
+          .where(and(inArray(likes.trackId, trackIds), gte(likes.createdAt, thirtyDaysAgo)))
+      : [{ count: 0 }];
+    const [previousLikes] = trackIds.length > 0
+      ? await db.select({ count: count() }).from(likes)
+          .where(and(inArray(likes.trackId, trackIds), gte(likes.createdAt, sixtyDaysAgo), lt(likes.createdAt, thirtyDaysAgo)))
+      : [{ count: 0 }];
+    const likesTrend = previousLikes?.count ? Math.round(((currentLikes?.count || 0) - previousLikes.count) / previousLikes.count * 100) : 0;
+
+    // Plays over time (last 30 days)
+    const playsOverTime: { date: string; plays: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split('T')[0];
+      const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+      
+      const [dayPlays] = trackIds.length > 0
+        ? await db.select({ count: count() }).from(streams)
+            .where(and(inArray(streams.trackId, trackIds), gte(streams.playedAt, date), lt(streams.playedAt, nextDate)))
+        : [{ count: 0 }];
+      
+      playsOverTime.push({ date: dateStr, plays: dayPlays?.count || 0 });
+    }
+
+    // Top tracks with full details
+    const topTracksData: { id: string; title: string; coverArt: string | null; plays: number; likes: number; shares: number }[] = [];
+    for (const track of artistTracks.slice(0, 5)) {
+      const [playsCount] = await db.select({ count: count() }).from(streams).where(eq(streams.trackId, track.id));
+      const [likesCount] = await db.select({ count: count() }).from(likes).where(eq(likes.trackId, track.id));
+      const [sharesCount] = await db.select({ count: count() }).from(shares).where(eq(shares.trackId, track.id));
+      
+      topTracksData.push({
+        id: track.id,
+        title: track.title,
+        coverArt: track.coverImageUrl,
+        plays: playsCount?.count || 0,
+        likes: likesCount?.count || 0,
+        shares: sharesCount?.count || 0,
+      });
+    }
+    topTracksData.sort((a, b) => b.plays - a.plays);
+
+    // Listeners by university
+    const listenersByUniversity: { university: string; count: number }[] = [];
+    if (trackIds.length > 0) {
+      const listenerUserIds = await db.selectDistinct({ userId: streams.userId }).from(streams).where(inArray(streams.trackId, trackIds));
+      const userIds = listenerUserIds.map(u => u.userId);
+      
+      if (userIds.length > 0) {
+        const listenerUsers = await db.select().from(users).where(inArray(users.id, userIds));
+        const universityMap = new Map<string, number>();
+        
+        listenerUsers.forEach(user => {
+          const uni = user.universityName || 'Unknown';
+          universityMap.set(uni, (universityMap.get(uni) || 0) + 1);
+        });
+        
+        universityMap.forEach((count, university) => {
+          if (university !== 'Unknown') {
+            listenersByUniversity.push({ university, count });
+          }
+        });
+        listenersByUniversity.sort((a, b) => b.count - a.count);
+      }
+    }
+
+    // Peak listening hours (0-23)
+    const peakListeningHours: { hour: number; count: number }[] = [];
+    const hourCounts = new Array(24).fill(0);
+    if (trackIds.length > 0) {
+      const recentStreams = await db.select().from(streams)
+        .where(and(inArray(streams.trackId, trackIds), gte(streams.playedAt, thirtyDaysAgo)));
+      
+      recentStreams.forEach(stream => {
+        const hour = new Date(stream.playedAt).getHours();
+        hourCounts[hour]++;
+      });
+    }
+    for (let hour = 0; hour < 24; hour++) {
+      peakListeningHours.push({ hour, count: hourCounts[hour] });
+    }
+
+    // Recent activity (last 20 items)
+    const recentActivity: { type: 'play' | 'like' | 'follow' | 'support' | 'share'; userId: string; userName: string; trackTitle?: string; amount?: number; timestamp: Date }[] = [];
+    
+    // Get recent plays
+    if (trackIds.length > 0) {
+      const recentPlays = await db.select().from(streams)
+        .where(inArray(streams.trackId, trackIds))
+        .orderBy(desc(streams.playedAt))
+        .limit(10);
+      
+      for (const play of recentPlays) {
+        const user = await this.getUser(play.userId);
+        const track = artistTracks.find(t => t.id === play.trackId);
+        if (user) {
+          recentActivity.push({
+            type: 'play',
+            userId: user.id,
+            userName: user.fullName,
+            trackTitle: track?.title,
+            timestamp: play.playedAt,
+          });
+        }
+      }
+    }
+    
+    // Get recent likes
+    if (trackIds.length > 0) {
+      const recentLikes = await db.select().from(likes)
+        .where(inArray(likes.trackId, trackIds))
+        .orderBy(desc(likes.createdAt))
+        .limit(10);
+      
+      for (const like of recentLikes) {
+        const user = await this.getUser(like.userId);
+        const track = artistTracks.find(t => t.id === like.trackId);
+        if (user) {
+          recentActivity.push({
+            type: 'like',
+            userId: user.id,
+            userName: user.fullName,
+            trackTitle: track?.title,
+            timestamp: like.createdAt,
+          });
+        }
+      }
+    }
+    
+    // Get recent supports
+    const recentSupports = await db.select().from(supports)
+      .where(eq(supports.artistId, artistId))
+      .orderBy(desc(supports.createdAt))
+      .limit(5);
+    
+    for (const support of recentSupports) {
+      const user = await this.getUser(support.supporterId);
+      if (user) {
+        recentActivity.push({
+          type: 'support',
+          userId: user.id,
+          userName: user.fullName,
+          amount: support.amount,
+          timestamp: support.createdAt,
+        });
+      }
+    }
+    
+    // Sort by timestamp and limit
+    recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const limitedActivity = recentActivity.slice(0, 20);
+
+    // Milestones
+    const milestones = [
+      {
+        id: 'first_track',
+        title: 'First Track',
+        description: 'Upload your first track',
+        achieved: artistTracks.length >= 1,
+        progress: Math.min(artistTracks.length, 1),
+        target: 1,
+        icon: 'music',
+      },
+      {
+        id: 'five_tracks',
+        title: 'Rising Artist',
+        description: 'Upload 5 tracks',
+        achieved: artistTracks.length >= 5,
+        progress: Math.min(artistTracks.length, 5),
+        target: 5,
+        icon: 'disc',
+      },
+      {
+        id: 'hundred_plays',
+        title: 'Getting Noticed',
+        description: 'Reach 100 total plays',
+        achieved: totalPlays >= 100,
+        progress: Math.min(totalPlays, 100),
+        target: 100,
+        icon: 'play',
+      },
+      {
+        id: 'thousand_plays',
+        title: 'Campus Star',
+        description: 'Reach 1,000 total plays',
+        achieved: totalPlays >= 1000,
+        progress: Math.min(totalPlays, 1000),
+        target: 1000,
+        icon: 'star',
+      },
+      {
+        id: 'fifty_likes',
+        title: 'Fan Favorite',
+        description: 'Get 50 likes on your tracks',
+        achieved: totalLikes >= 50,
+        progress: Math.min(totalLikes, 50),
+        target: 50,
+        icon: 'heart',
+      },
+      {
+        id: 'ten_followers',
+        title: 'Building a Fanbase',
+        description: 'Get 10 followers',
+        achieved: followerCount >= 10,
+        progress: Math.min(followerCount, 10),
+        target: 10,
+        icon: 'users',
+      },
+      {
+        id: 'first_support',
+        title: 'First Supporter',
+        description: 'Receive your first tip',
+        achieved: supportsData.length >= 1,
+        progress: Math.min(supportsData.length, 1),
+        target: 1,
+        icon: 'dollar-sign',
+      },
+      {
+        id: 'five_universities',
+        title: 'Multi-Campus',
+        description: 'Listeners from 5 different universities',
+        achieved: listenersByUniversity.length >= 5,
+        progress: Math.min(listenersByUniversity.length, 5),
+        target: 5,
+        icon: 'graduation-cap',
+      },
+    ];
+
+    return {
+      totalPlays,
+      totalLikes,
+      trackCount: artistTracks.length,
+      uniqueListeners,
+      followerCount,
+      totalSupport,
+      playsTrend,
+      likesTrend,
+      listenersTrend: 0, // Would need more tracking to calculate
+      followersTrend: 0, // Would need more tracking to calculate
+      playsOverTime,
+      topTracks: topTracksData,
+      listenersByUniversity,
+      peakListeningHours,
+      recentActivity: limitedActivity,
+      milestones,
     };
   }
 
