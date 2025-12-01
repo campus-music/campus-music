@@ -221,20 +221,13 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
       });
       
       if (!response.ok) {
-        const localUploadResponse = await fetch('/api/upload/local/post-images', {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type },
-          body: file,
-        });
-        
-        if (!localUploadResponse.ok) throw new Error('Upload failed');
-        const { objectPath } = await localUploadResponse.json();
-        return objectPath;
+        throw new Error('Failed to get upload URL');
       }
       
       const { url } = await response.json();
+      const isLocalUpload = url.startsWith('/api/upload/local/');
       
-      await new Promise<void>((resolve, reject) => {
+      const objectPath = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
@@ -242,8 +235,20 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
           }
         };
         xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error('Upload failed'));
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (isLocalUpload) {
+              try {
+                const result = JSON.parse(xhr.responseText);
+                resolve(result.objectPath);
+              } catch {
+                reject(new Error('Invalid response from upload'));
+              }
+            } else {
+              resolve(url.split('?')[0]);
+            }
+          } else {
+            reject(new Error('Upload failed'));
+          }
         };
         xhr.onerror = () => reject(new Error('Upload failed'));
         xhr.open('PUT', url, true);
@@ -251,7 +256,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
         xhr.send(file);
       });
       
-      return url.split('?')[0];
+      return objectPath;
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

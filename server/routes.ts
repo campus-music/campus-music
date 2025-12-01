@@ -998,6 +998,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generic signed URL upload endpoint for images (used by post composer)
+  app.post("/api/upload/signed-url", requireAuth, async (req, res) => {
+    try {
+      const { filename, contentType, category } = req.body;
+      
+      if (!contentType || typeof contentType !== 'string') {
+        return res.status(400).json({ error: "Content type is required" });
+      }
+      
+      // Validate content type for images
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(contentType)) {
+        return res.status(400).json({ error: "Invalid file type. Only images are allowed." });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      
+      res.json({ 
+        url: uploadURL,
+        maxFileSize: 5 * 1024 * 1024,
+        allowedTypes
+      });
+    } catch (error: any) {
+      console.error("Error getting signed upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL. Please check object storage configuration." });
+    }
+  });
+
   // Local file upload endpoint for development mode (when S3 is not configured)
   app.put("/api/upload/local/:objectId(*)", requireAuth, async (req, res) => {
     try {
