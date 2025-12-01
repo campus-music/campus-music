@@ -128,36 +128,48 @@ export default function Feed() {
 
       {/* Active Live Streams Section - Twitter Spaces Style */}
       {liveStreams && liveStreams.length > 0 && (
-        <div className="py-3 border-b border-border/50">
-          <div className="flex items-center gap-4 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-hide">
-            {liveStreams.map((stream) => (
-              <Link 
-                key={stream.id} 
-                href={`/live/${stream.id}`}
-                className="flex flex-col items-center gap-1.5 flex-shrink-0 group"
-                data-testid={`link-live-stream-${stream.id}`}
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#E84A5F] via-[#ff6b7a] to-[#E84A5F] p-[2px] animate-pulse">
-                    <div className="w-full h-full rounded-full bg-background" />
+        <Card className="border-[#E84A5F]/20 bg-gradient-to-r from-[#E84A5F]/5 via-transparent to-transparent overflow-visible">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-[#E84A5F] animate-pulse" />
+                <span className="text-sm font-semibold text-[#E84A5F]">Live Now</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {liveStreams.length} {liveStreams.length === 1 ? 'artist' : 'artists'} streaming
+              </span>
+            </div>
+            <div className="flex items-start gap-6 overflow-x-auto pb-2 scrollbar-hide">
+              {liveStreams.map((stream) => (
+                <Link 
+                  key={stream.id} 
+                  href={`/live/${stream.id}`}
+                  className="flex flex-col items-center gap-2 flex-shrink-0 group"
+                  data-testid={`link-live-stream-${stream.id}`}
+                >
+                  <div className="relative p-1">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#E84A5F] via-[#ff6b7a] to-[#E84A5F] animate-pulse" />
+                    <Avatar className="h-14 w-14 relative border-2 border-background group-hover:scale-105 transition-transform">
+                      <AvatarImage src={stream.artist?.profileImageUrl || undefined} />
+                      <AvatarFallback className="bg-[#E84A5F]/20 text-[#E84A5F] font-semibold">
+                        {stream.artist?.stageName?.charAt(0) || 'L'}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                  <Avatar className="h-14 w-14 relative ring-2 ring-[#E84A5F] ring-offset-2 ring-offset-background group-hover:scale-105 transition-transform">
-                    <AvatarImage src={stream.artist?.profileImageUrl || undefined} />
-                    <AvatarFallback className="bg-[#E84A5F]/20 text-[#E84A5F] font-semibold">
-                      {stream.artist?.stageName?.charAt(0) || 'L'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-[#E84A5F] text-[9px] font-bold text-white uppercase tracking-wide">
-                    Live
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-xs font-medium max-w-[80px] truncate text-center group-hover:text-foreground transition-colors">
+                      {stream.artist?.stageName || 'Artist'}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-[#E84A5F]/10 text-[#E84A5F] border-none">
+                      <Users className="h-2.5 w-2.5 mr-0.5" />
+                      {stream.peakViewerCount || 0}
+                    </Badge>
                   </div>
-                </div>
-                <span className="text-xs text-muted-foreground max-w-[72px] truncate text-center group-hover:text-foreground transition-colors">
-                  {stream.artist?.stageName || 'Artist'}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -473,7 +485,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 flex-wrap">
               {POST_TYPES.filter(t => t.value !== 'live_show').map((type) => {
                 const Icon = type.icon;
                 const handlePostTypeChange = () => {
@@ -489,7 +501,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                     variant={postType === type.value ? 'default' : 'outline'}
                     size="sm"
                     onClick={handlePostTypeChange}
-                    className={`gap-1.5 flex-shrink-0 ${postType === type.value ? '' : 'hover:bg-muted'}`}
+                    className={`gap-1.5 ${postType === type.value ? '' : 'hover:bg-muted'}`}
                     data-testid={`button-post-type-${type.value}`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -502,7 +514,7 @@ function PostComposer({ artistProfile }: { artistProfile: ArtistProfile }) {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowGoLiveModal(true)}
-                className="gap-1.5 flex-shrink-0 bg-[#E84A5F]/10 text-[#E84A5F] border-[#E84A5F]/30 hover:bg-[#E84A5F]/20"
+                className="gap-1.5 bg-[#E84A5F]/10 text-[#E84A5F] border-[#E84A5F]/30 hover:bg-[#E84A5F]/20"
                 data-testid="button-go-live"
               >
                 <Radio className="h-3.5 w-3.5" />
