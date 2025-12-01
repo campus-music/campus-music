@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, createContext, useContext } from 'react';
+import { useState, useRef, useCallback, createContext, useContext, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -12,13 +12,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Heart, MessageCircle, Share2, Music, Trash2, Send, X, Image as ImageIcon, 
-  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame
+  Upload, Play, Pause, TrendingUp, Sparkles, Mic, Camera, Star, Flame, Sticker
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import type { ArtistPostWithDetails, TrackWithArtist, User, PostCommentWithUser, ArtistProfile } from '@shared/schema';
+import type { ArtistPostWithDetails, TrackWithArtist, User, PostCommentWithUser, ArtistProfile, CommentSticker } from '@shared/schema';
 import { Link } from 'wouter';
+
+// Predefined stickers for comments (iMessage-style)
+const STICKERS = [
+  { id: 'fire', emoji: '🔥', name: 'Fire' },
+  { id: 'heart', emoji: '❤️', name: 'Heart' },
+  { id: 'laugh', emoji: '😂', name: 'Laugh' },
+  { id: 'wow', emoji: '😮', name: 'Wow' },
+  { id: 'clap', emoji: '👏', name: 'Clap' },
+  { id: 'hundred', emoji: '💯', name: '100' },
+  { id: 'music', emoji: '🎵', name: 'Music' },
+  { id: 'headphones', emoji: '🎧', name: 'Headphones' },
+  { id: 'mic', emoji: '🎤', name: 'Mic' },
+  { id: 'guitar', emoji: '🎸', name: 'Guitar' },
+  { id: 'crown', emoji: '👑', name: 'Crown' },
+  { id: 'star', emoji: '⭐', name: 'Star' },
+  { id: 'party', emoji: '🎉', name: 'Party' },
+  { id: 'cool', emoji: '😎', name: 'Cool' },
+  { id: 'think', emoji: '🤔', name: 'Think' },
+  { id: 'mind_blown', emoji: '🤯', name: 'Mind Blown' },
+];
 
 const FeedAudioContext = createContext<{
   currentlyPlaying: string | null;
@@ -722,26 +743,174 @@ function CommentsSection({ postId, currentUserId }: { postId: string; currentUse
       ) : comments && comments.length > 0 ? (
         <div className="space-y-3">
           {comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors" data-testid={`comment-${comment.id}`}>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={undefined} alt={comment.user?.fullName} />
-                <AvatarFallback className="text-xs">{comment.user?.fullName?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">{comment.user?.fullName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {comment.createdAt && formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">{comment.content}</p>
-              </div>
-            </div>
+            <CommentWithStickers 
+              key={comment.id} 
+              comment={comment} 
+              currentUserId={currentUserId}
+              postId={postId}
+            />
           ))}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground text-center py-2">No comments yet. Be the first!</p>
       )}
+    </div>
+  );
+}
+
+// Individual comment with sticker support
+function CommentWithStickers({ 
+  comment, 
+  currentUserId,
+  postId 
+}: { 
+  comment: PostCommentWithUser; 
+  currentUserId?: string;
+  postId: string;
+}) {
+  const [hiddenStickers, setHiddenStickers] = useState<Set<string>>(new Set());
+  const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
+  const commentRef = useRef<HTMLDivElement>(null);
+
+  // Fetch stickers for this comment
+  const { data: stickers } = useQuery<CommentSticker[]>({
+    queryKey: ['/api/comments', comment.id, 'stickers'],
+    queryFn: async () => {
+      const response = await fetch(`/api/comments/${comment.id}/stickers`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  // Add sticker mutation
+  const addStickerMutation = useMutation({
+    mutationFn: async (data: { stickerId: string; positionX: number; positionY: number }) => {
+      return apiRequest('POST', `/api/comments/${comment.id}/stickers`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/comments', comment.id, 'stickers'] });
+      setStickerPickerOpen(false);
+    },
+  });
+
+  // Delete sticker mutation
+  const deleteStickerMutation = useMutation({
+    mutationFn: async (stickerId: string) => {
+      return apiRequest('DELETE', `/api/stickers/${stickerId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/comments', comment.id, 'stickers'] });
+    },
+  });
+
+  // Handle sticker placement with random position near corners
+  const handleAddSticker = (stickerId: string) => {
+    // Random position in the top-right area of the comment
+    const positionX = 70 + Math.random() * 25; // 70-95%
+    const positionY = Math.random() * 60; // 0-60%
+    addStickerMutation.mutate({ stickerId, positionX, positionY });
+  };
+
+  // Handle press and hold to hide stickers
+  const handlePressStart = (stickerId: string) => {
+    setHiddenStickers(prev => new Set(prev).add(stickerId));
+  };
+
+  const handlePressEnd = (stickerId: string) => {
+    setHiddenStickers(prev => {
+      const next = new Set(prev);
+      next.delete(stickerId);
+      return next;
+    });
+  };
+
+  const getStickerEmoji = (stickerId: string) => {
+    return STICKERS.find(s => s.id === stickerId)?.emoji || '✨';
+  };
+
+  return (
+    <div 
+      ref={commentRef}
+      className="relative flex gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+      data-testid={`comment-${comment.id}`}
+    >
+      <Avatar className="h-8 w-8 flex-shrink-0">
+        <AvatarImage src={undefined} alt={comment.user?.fullName} />
+        <AvatarFallback className="text-xs">{comment.user?.fullName?.charAt(0)}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm">{comment.user?.fullName}</p>
+          <p className="text-xs text-muted-foreground">
+            {comment.createdAt && formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+          </p>
+        </div>
+        <p className="text-sm text-muted-foreground">{comment.content}</p>
+      </div>
+
+      {/* Sticker button - appears on hover */}
+      {currentUserId && (
+        <Popover open={stickerPickerOpen} onOpenChange={setStickerPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+              data-testid={`button-add-sticker-${comment.id}`}
+            >
+              <Sticker className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-2" align="end">
+            <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Add a sticker</p>
+            <div className="grid grid-cols-4 gap-1">
+              {STICKERS.map((sticker) => (
+                <Button
+                  key={sticker.id}
+                  variant="ghost"
+                  className="h-10 w-10 text-xl p-0 hover:scale-110 transition-transform"
+                  onClick={() => handleAddSticker(sticker.id)}
+                  data-testid={`sticker-option-${sticker.id}`}
+                  title={sticker.name}
+                >
+                  {sticker.emoji}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 px-1">Press and hold stickers to peek underneath</p>
+          </PopoverContent>
+        </Popover>
+      )}
+
+      {/* Render stickers overlaid on comment */}
+      {stickers && stickers.map((sticker) => (
+        <div
+          key={sticker.id}
+          className={`absolute text-2xl cursor-pointer select-none transition-all duration-150 z-10 ${
+            hiddenStickers.has(sticker.id) ? 'opacity-20 scale-75' : 'opacity-100 hover:scale-110'
+          }`}
+          style={{
+            left: `${sticker.positionX}%`,
+            top: `${sticker.positionY}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+          onMouseDown={() => handlePressStart(sticker.id)}
+          onMouseUp={() => handlePressEnd(sticker.id)}
+          onMouseLeave={() => handlePressEnd(sticker.id)}
+          onTouchStart={() => handlePressStart(sticker.id)}
+          onTouchEnd={() => handlePressEnd(sticker.id)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            if (sticker.userId === currentUserId) {
+              deleteStickerMutation.mutate(sticker.id);
+            }
+          }}
+          title={hiddenStickers.has(sticker.id) ? 'Release to show sticker' : 'Press and hold to peek underneath. Right-click to remove your sticker.'}
+          data-testid={`sticker-${sticker.id}`}
+        >
+          {getStickerEmoji(sticker.stickerId)}
+        </div>
+      ))}
     </div>
   );
 }
