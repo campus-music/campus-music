@@ -106,6 +106,7 @@ export interface IStorage {
   getArtistsByUniversity(university: string): Promise<ArtistProfile[]>;
   getAllArtists(): Promise<ArtistProfile[]>;
   getSuggestedArtistsForOnboarding(universityName: string, limit?: number): Promise<ArtistProfile[]>;
+  searchArtistsForOnboarding(query: string, limit?: number): Promise<ArtistProfile[]>;
   completeOnboarding(userId: string): Promise<void>;
 
   getTrack(id: string): Promise<Track | undefined>;
@@ -459,6 +460,47 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ onboardingCompleted: true })
       .where(eq(users.id, userId));
+  }
+
+  async searchArtistsForOnboarding(query: string, limit: number = 20): Promise<ArtistProfile[]> {
+    if (!query || query.length < 2) return [];
+    
+    const searchPattern = `%${query.toLowerCase()}%`;
+    
+    // Search by artist stage name
+    const artistResults = await db
+      .select()
+      .from(artistProfiles)
+      .where(ilike(artistProfiles.stageName, searchPattern))
+      .limit(limit);
+    
+    // Search by university name (through users table)
+    const universityResults = await db
+      .select({ artist: artistProfiles })
+      .from(artistProfiles)
+      .innerJoin(users, eq(users.id, artistProfiles.userId))
+      .where(ilike(users.universityName, searchPattern))
+      .limit(limit);
+    
+    // Combine and dedupe results
+    const seen = new Set<string>();
+    const combined: ArtistProfile[] = [];
+    
+    for (const artist of artistResults) {
+      if (!seen.has(artist.id)) {
+        seen.add(artist.id);
+        combined.push(artist);
+      }
+    }
+    
+    for (const { artist } of universityResults) {
+      if (!seen.has(artist.id)) {
+        seen.add(artist.id);
+        combined.push(artist);
+      }
+    }
+    
+    return combined.slice(0, limit);
   }
 
   async getTrack(id: string): Promise<Track | undefined> {

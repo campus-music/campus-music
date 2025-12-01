@@ -968,6 +968,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/onboarding/search", requireAuth, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+      
+      const artists = await storage.searchArtistsForOnboarding(query, 20);
+      
+      // Enrich with metadata
+      const enrichedArtists = await Promise.all(artists.map(async (artist) => {
+        const user = await storage.getUser(artist.userId);
+        const stats = await storage.getArtistStats(artist.id);
+        const artistTracks = await storage.getTracksByArtist(artist.id);
+        
+        return {
+          id: artist.id,
+          stageName: artist.stageName,
+          profileImageUrl: artist.profileImageUrl,
+          mainGenre: artist.mainGenre,
+          universityName: user?.universityName || "Unknown",
+          trackCount: artistTracks.length,
+          streams: stats.totalPlays,
+        };
+      }));
+      
+      res.json(enrichedArtists);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/onboarding/complete", requireAuth, async (req, res) => {
     try {
       await storage.completeOnboarding(req.session.userId!);
