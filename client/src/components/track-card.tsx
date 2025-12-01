@@ -39,7 +39,7 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
         )}
         data-testid={`card-track-${track.id}`}
       >
-        <div className="relative aspect-square">
+        <div className="relative aspect-square overflow-hidden">
           <Avatar className="h-full w-full rounded-none">
             <AvatarImage 
               src={track.coverImageUrl || undefined} 
@@ -60,25 +60,24 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
               <Play className="h-6 w-6 ml-0.5" />
             </Button>
           </div>
-          {(onLike || !user) && (
-            <Button
-              size="icon"
-              variant={isLiked ? "default" : "secondary"}
-              className={cn(
-                "absolute top-2 right-2 transition-opacity",
-                isLiked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              )}
-              onClick={handleLike}
-              data-testid={`button-like-${track.id}`}
-            >
-              <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
-            </Button>
-          )}
         </div>
         <div className="p-3 space-y-1">
-          <h3 className="font-semibold truncate text-sm" data-testid={`text-track-title-${track.id}`}>
-            {track.title}
-          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold truncate text-sm flex-1" data-testid={`text-track-title-${track.id}`}>
+              {track.title}
+            </h3>
+            {(onLike || !user) && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 flex-shrink-0"
+                onClick={handleLike}
+                data-testid={`button-like-${track.id}`}
+              >
+                <Heart className={cn("h-4 w-4", isLiked ? "fill-primary text-primary" : "")} />
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground truncate" data-testid={`text-artist-name-${track.id}`}>
             {track.artist.stageName}
           </p>
