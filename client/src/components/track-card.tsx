@@ -77,7 +77,11 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
                 }}
                 data-testid={`button-like-${track.id}`}
               >
-                <Heart className={cn("h-4 w-4 transition-colors", isLiked && "fill-current text-primary")} />
+                {isLiked ? (
+                  <Heart className="h-4 w-4 fill-[#E84A5F] text-[#E84A5F]" />
+                ) : (
+                  <Heart className="h-4 w-4" />
+                )}
               </Button>
             )}
           </div>
