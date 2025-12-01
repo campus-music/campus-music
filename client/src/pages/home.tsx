@@ -28,10 +28,10 @@ export default function Home() {
     queryKey: ['/api/tracks/trending'],
   });
 
-  // Extract unique genres and universities from top 20 trending tracks
-  const top20Tracks = trendingTracks?.slice(0, 20) || [];
-  const availableGenres = Array.from(new Set(top20Tracks.map(t => t.genre))).sort();
-  const availableUniversities = Array.from(new Set(top20Tracks.map(t => t.universityName))).sort();
+  // Extract unique genres and universities from top 100 trending tracks for better filter variety
+  const top100Tracks = trendingTracks?.slice(0, 100) || [];
+  const availableGenres = Array.from(new Set(top100Tracks.map(t => t.genre))).sort();
+  const availableUniversities = Array.from(new Set(top100Tracks.map(t => t.universityName))).sort();
 
   const { data: allArtists, isLoading: artistsLoading } = useQuery<Artist[]>({
     queryKey: ['/api/artists'],
