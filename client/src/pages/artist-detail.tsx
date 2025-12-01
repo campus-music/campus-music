@@ -3,15 +3,14 @@ import { useRoute, useLocation } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Music, MapPin, Wallet, Heart } from 'lucide-react';
+import { Music, MapPin, Users } from 'lucide-react';
 import { SupportModal } from '@/components/support-modal';
 import { SupportHistory } from '@/components/support-history';
 import { TrackCard } from '@/components/track-card';
-import type { ArtistProfile, Track, ArtistWallet } from '@shared/schema';
+import type { ArtistProfile, Track } from '@shared/schema';
 
 interface ArtistWithTracks extends ArtistProfile {
   tracks: Track[];
-  totalSupport: number;
 }
 
 export default function ArtistDetail() {
@@ -24,8 +23,8 @@ export default function ArtistDetail() {
     enabled: !!artistId,
   });
 
-  const { data: wallet } = useQuery<ArtistWallet>({
-    queryKey: ['/api/artist', artistId, 'wallet'],
+  const { data: supporterData } = useQuery<{ count: number }>({
+    queryKey: ['/api/artist', artistId, 'supporter-count'],
     enabled: !!artistId,
   });
 
@@ -89,29 +88,18 @@ export default function ArtistDetail() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+            <div className="grid grid-cols-2 gap-4 pt-4">
               <div>
                 <p className="text-sm text-muted-foreground">Total Tracks</p>
                 <p className="text-2xl font-bold">{artist.tracks?.length || 0}</p>
               </div>
-              {wallet && (
-                <div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Heart className="h-4 w-4" />
-                    <span>Total Support</span>
-                  </div>
-                  <p className="text-2xl font-bold">${(wallet.totalReceived / 100).toFixed(2)}</p>
+              <div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>Supporters</span>
                 </div>
-              )}
-              {wallet && (
-                <div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Wallet className="h-4 w-4" />
-                    <span>Balance</span>
-                  </div>
-                  <p className="text-2xl font-bold">${(wallet.balance / 100).toFixed(2)}</p>
-                </div>
-              )}
+                <p className="text-2xl font-bold">{supporterData?.count || 0}</p>
+              </div>
             </div>
           </div>
         </div>

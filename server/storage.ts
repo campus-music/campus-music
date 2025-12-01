@@ -214,6 +214,7 @@ export interface IStorage {
 
   sendSupport(data: InsertSupport): Promise<Support>;
   getArtistSupports(artistId: string): Promise<Support[]>;
+  getArtistSupporterCount(artistId: string): Promise<number>;
   getArtistWallet(artistId: string): Promise<ArtistWallet | undefined>;
   createArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
   createOrUpdateArtistWallet(data: InsertArtistWallet): Promise<ArtistWallet>;
@@ -1321,6 +1322,14 @@ export class DatabaseStorage implements IStorage {
       .from(supports)
       .where(eq(supports.artistId, artistId))
       .orderBy(desc(supports.createdAt));
+  }
+
+  async getArtistSupporterCount(artistId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(distinct ${supports.supporterId})` })
+      .from(supports)
+      .where(eq(supports.artistId, artistId));
+    return result[0]?.count || 0;
   }
 
   async getArtistWallet(artistId: string): Promise<ArtistWallet | undefined> {

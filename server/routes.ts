@@ -938,6 +938,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get supporter count for an artist (public - doesn't expose financial data)
+  app.get("/api/artist/:artistId/supporter-count", async (req, res) => {
+    try {
+      const { artistId } = req.params;
+      const count = await storage.getArtistSupporterCount(artistId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Get artist wallet info
   app.get("/api/artist/:artistId/wallet", async (req, res) => {
     try {
