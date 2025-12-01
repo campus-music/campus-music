@@ -72,7 +72,7 @@ export default function LivePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Live Streams</h1>
-            <p className="text-muted-foreground mt-1">Watch your favorite artists perform live</p>
+            <p className="text-muted-foreground mt-1">Connect and interact with your favorite artists in real-time</p>
           </div>
           
           {isArtist && !myLiveStatus?.isLive && (
