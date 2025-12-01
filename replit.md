@@ -102,3 +102,45 @@ Preferred communication style: Simple, everyday language.
 
 ### Styling
 - PostCSS with Tailwind CSS and Autoprefixer.
+
+## Mobile App (React Native + Expo)
+
+### Structure
+- **Location**: `mobile/` directory
+- **Framework**: React Native with Expo SDK 51, TypeScript
+- **Routing**: Expo Router v3 with file-based routing
+- **Styling**: NativeWind (Tailwind CSS for React Native)
+
+### Mobile Architecture
+- **Auth Stack**: Login, Signup, Forgot Password screens
+- **Main Tabs**: Home Feed, Explore, Live Streaming, Profile
+- **Modal Screens**: Full-screen audio player
+- **Dynamic Routes**: Artist profiles (`/artist/[id]`), Live streams (`/live/[id]`)
+
+### Key Features
+- Session-based auth with Expo SecureStore
+- Audio playback with expo-av (background audio support)
+- Mini player component in tab bar
+- Live streaming viewer with real-time chat
+- Genre-based music exploration
+- Artist profile pages with track listings
+
+### Shared Code
+- **Location**: `shared/` directory
+- **Contents**: TypeScript types, API client, validation helpers
+- **Usage**: Both web and mobile apps import from shared/
+
+### Running the Mobile App
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+### Mobile Dependencies
+- `expo-router`: File-based routing
+- `expo-av`: Audio/video playback
+- `expo-secure-store`: Secure session storage
+- `nativewind`: Tailwind CSS styling
+- `@tanstack/react-query`: Data fetching
+- `@expo/vector-icons`: Ionicons

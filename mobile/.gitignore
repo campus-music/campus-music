@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native builds
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+android/
+ios/
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
