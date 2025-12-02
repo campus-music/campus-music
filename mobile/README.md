@@ -1,38 +1,121 @@
 # Campus Music Mobile App
 
-React Native + Expo mobile app for Campus Music that connects to the existing Node/Express/PostgreSQL backend.
+React Native + Expo mobile app for Campus Music - a music streaming platform for university students.
+
+## Tech Stack
+
+- **Framework**: React Native + Expo SDK 54
+- **Routing**: Expo Router v4
+- **Styling**: NativeWind (Tailwind CSS for React Native)
+- **Animations**: React Native Reanimated
+- **State**: React Query + Context API
+- **Audio**: expo-av (background audio support)
+- **Secure Storage**: expo-secure-store
 
 ## Prerequisites
 
 - Node.js 18+
 - npm or yarn
-- Expo CLI (`npm install -g expo-cli`)
-- Expo Go app on your mobile device (iOS/Android)
+- For Android Studio: Android Studio with SDK 34+
+- For EAS Build: Expo account (free at expo.dev)
 
-## Getting Started
+---
 
-1. Navigate to the mobile directory:
+## Build Options
+
+### Option 1: EAS Build (Recommended - No Local Setup Required)
+
+EAS Build compiles your app in the cloud. No Android Studio or Xcode needed!
+
+```bash
+# 1. Install EAS CLI
+npm install -g eas-cli
+
+# 2. Login to Expo
+eas login
+
+# 3. Navigate to mobile folder
+cd mobile
+
+# 4. Install dependencies
+npm install
+
+# 5. Build APK for Android
+eas build --platform android --profile preview
+
+# 6. Download the APK from the link provided
+```
+
+The build takes about 10-15 minutes. You'll get a download link for the APK.
+
+---
+
+### Option 2: Android Studio (Local Build)
+
+Build locally with full control over the native code.
+
+#### Setup
+
+1. **Install Android Studio** from https://developer.android.com/studio
+
+2. **Configure SDK**: Open Android Studio > SDK Manager
+   - Install Android SDK 34
+   - Install Android SDK Build-Tools
+   - Install Android Emulator (optional)
+
+3. **Set environment variables**:
    ```bash
-   cd mobile
+   # Add to ~/.bashrc or ~/.zshrc
+   export ANDROID_HOME=$HOME/Android/Sdk
+   export PATH=$PATH:$ANDROID_HOME/emulator
+   export PATH=$PATH:$ANDROID_HOME/platform-tools
    ```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+#### Build Steps
 
-3. Configure environment:
-   - Copy `.env.example` to `.env`
-   - Update `API_URL` to point to your backend
+```bash
+# 1. Navigate to mobile folder
+cd mobile
 
-4. Start the development server:
-   ```bash
-   npx expo start
-   ```
+# 2. Install dependencies
+npm install
 
-5. Scan the QR code with:
-   - **iOS**: Camera app or Expo Go
-   - **Android**: Expo Go app
+# 3. Generate native Android project
+npx expo prebuild --platform android
+
+# 4. Open in Android Studio
+# File > Open > select mobile/android folder
+
+# 5. Build APK
+# Build > Build Bundle(s) / APK(s) > Build APK(s)
+
+# APK location: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Or build from command line:
+```bash
+cd android
+./gradlew assembleDebug
+
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+### Option 3: iOS Build (Mac Required)
+
+```bash
+# EAS Build (cloud - no Mac needed for build, but needs Apple Developer account)
+eas build --platform ios --profile preview
+
+# Local build (Mac only)
+npx expo prebuild --platform ios
+cd ios && pod install
+open CampusMusic.xcworkspace
+# Build from Xcode
+```
+
+---
 
 ## Project Structure
 
@@ -53,8 +136,13 @@ mobile/
 │   ├── auth.tsx          # Auth context provider
 │   └── audio.tsx         # Audio player context
 ├── constants/            # App constants
-│   └── Colors.ts         # Color palette
-└── assets/               # Images, fonts, etc.
+│   └── Colors.ts         # Color palette matching web app
+├── assets/               # App icons and splash screens
+├── global.css            # Tailwind CSS imports
+├── tailwind.config.js    # NativeWind theme configuration
+├── metro.config.js       # Metro bundler with NativeWind
+├── babel.config.js       # Babel with Reanimated plugin
+└── eas.json              # EAS Build profiles
 ```
 
 ## Features
@@ -63,74 +151,103 @@ mobile/
 - Login/Signup with session-based auth
 - Secure session storage using Expo SecureStore
 - Role-based access (listener vs artist)
+- .edu email validation for artists
 
 ### Main Screens
-- **Home**: Trending tracks + Artist Feed
+- **Home**: Trending tracks + personalized feed
 - **Explore**: Search artists/tracks, browse by genre
 - **Live**: Watch/host live streams
-- **Profile**: User profile and settings
+- **Profile**: User profile, settings, music taste
 
 ### Audio Player
-- Background audio playback
+- Background audio playback (works when app is minimized)
 - Mini player in tab bar
-- Full-screen player modal
+- Full-screen player modal with album art
+- Track progress and seek
 
-### Live Streaming (Beta)
-- Watch live streams
+### Live Streaming
+- Watch live streams from artists
 - Real-time chat
-- Go Live for artists
+- Go Live for verified artists
 
-## Tech Stack
+### Styling
+- Dark theme matching web app (Apple Music/Spotify inspired)
+- Coral brand color (#E84A5F)
+- Smooth animations with Reanimated
 
-- **Framework**: React Native + Expo SDK 51
-- **Routing**: Expo Router v3
-- **Styling**: NativeWind (Tailwind CSS)
-- **State**: React Query + Context API
-- **Audio**: expo-av
-- **Secure Storage**: expo-secure-store
-- **Icons**: @expo/vector-icons (Ionicons)
+---
 
-## API Connection
+## Configuration
 
-The app connects to the Campus Music backend API. Configure the API URL in your `.env`:
+### API Connection
 
+Update `.env` with your backend URL:
 ```
-API_URL=https://your-api-url.com/api
+API_URL=https://your-replit-app.replit.app/api
 ```
 
-For local development, use your machine's IP address or tunnel URL.
+### App Icons
 
-## Building for Production
+Replace placeholder icons in `assets/`:
+- `icon.png` - 1024x1024 app icon
+- `adaptive-icon.png` - 1024x1024 Android adaptive icon
+- `splash.png` - 1284x2778 splash screen
+- `favicon.png` - 48x48 web favicon
 
-### iOS
-```bash
-npx expo build:ios
-# or with EAS
-eas build --platform ios
-```
-
-### Android
-```bash
-npx expo build:android
-# or with EAS
-eas build --platform android
-```
-
-## Next Steps
-
-- [ ] Implement push notifications
-- [ ] Add offline support
-- [ ] Implement track queue/playlist
-- [ ] Add social sharing
-- [ ] Implement in-app purchases
-- [ ] Add analytics
-- [ ] Implement deep linking
+---
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Metro bundler errors**: Clear cache with `npx expo start -c`
-2. **Module not found**: Delete `node_modules` and reinstall
-3. **iOS simulator issues**: Run `npx expo run:ios`
-4. **Android emulator issues**: Run `npx expo run:android`
+1. **"Cannot find module" errors**
+   ```bash
+   rm -rf node_modules
+   npm install
+   npx expo start -c
+   ```
+
+2. **Metro bundler cache**
+   ```bash
+   npx expo start -c  # Clear cache
+   ```
+
+3. **Android build fails**
+   ```bash
+   cd android
+   ./gradlew clean
+   cd ..
+   npx expo prebuild --clean
+   ```
+
+4. **NativeWind styles not applying**
+   - Ensure `global.css` is imported in `_layout.tsx`
+   - Run `npx expo start -c` to clear cache
+
+---
+
+## Development
+
+### Running Locally
+
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+### Available Scripts
+
+- `npm start` - Start Expo development server
+- `npm run android` - Start Android development
+- `npm run ios` - Start iOS development
+- `npm run prebuild` - Generate native projects
+- `npm run build:android` - Build Android APK via EAS
+- `npm run build:ios` - Build iOS via EAS
+
+---
+
+## Credits
+
+Built with Expo, React Native, and NativeWind.
+Part of the Campus Music platform for university student artists.
