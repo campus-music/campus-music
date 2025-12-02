@@ -3,13 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    "jsxImportSource": "nativewind",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@shared/*": [
-        "../shared/*"
-      ]
+      "@/*": ["./*"],
+      "@shared/*": ["../shared/*"]
     }
   },
   "include": [

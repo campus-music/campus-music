@@ -4,13 +4,8 @@ const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
-// Allow importing from shared folder
+// Allow importing from shared folder for shared types/utilities
 config.watchFolders = [path.resolve(__dirname, "../shared")];
-
-config.resolver.nodeModulesPaths = [
-  path.resolve(__dirname, "node_modules"),
-  path.resolve(__dirname, "../shared"),
-];
 
 // Enable NativeWind (Tailwind CSS for React Native)
 module.exports = withNativeWind(config, { input: "./global.css" });
