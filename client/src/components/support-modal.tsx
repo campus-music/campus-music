@@ -69,7 +69,8 @@ export function SupportModal({ artistId, artistName, artistImageUrl }: SupportMo
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.location.href = data.url;
+        setOpen(false);
+        window.open(data.url, '_blank');
       }
     },
     onError: (error: any) => {
