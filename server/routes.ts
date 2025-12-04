@@ -1515,10 +1515,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stripe/config", async (_req, res) => {
     try {
       const { getStripePublishableKey, isStripeConfigured } = await import("./stripeClient");
-      if (!isStripeConfigured()) {
+      const configured = await isStripeConfigured();
+      if (!configured) {
         return res.status(503).json({ error: "Stripe is not configured" });
       }
-      const publishableKey = getStripePublishableKey();
+      const publishableKey = await getStripePublishableKey();
       res.json({ publishableKey });
     } catch (error: any) {
       console.error("Error getting Stripe config:", error);
@@ -1550,12 +1551,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const { stripe, isStripeConfigured } = await import("./stripeClient");
-      if (!isStripeConfigured() || !stripe) {
+      const { getStripeClient, isStripeConfigured } = await import("./stripeClient");
+      const configured = await isStripeConfigured();
+      const stripe = await getStripeClient();
+      if (!configured || !stripe) {
         return res.status(503).json({ error: "Payment system is not configured" });
       }
 
-      const baseUrl = process.env.APP_URL || 'http://localhost:5000';
+      const baseUrl = process.env.REPLIT_DOMAINS 
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : 'http://localhost:5000';
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
