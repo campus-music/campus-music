@@ -1558,9 +1558,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: "Payment system is not configured" });
       }
 
-      const baseUrl = process.env.REPLIT_DOMAINS 
-        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-        : 'http://localhost:5000';
+      const baseUrl = process.env.APP_URL 
+        || (process.env.REPLIT_DOMAINS 
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+          : 'http://localhost:5000');
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
