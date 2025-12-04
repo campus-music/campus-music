@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackListItem } from '@/components/track-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Music } from 'lucide-react';
+import { Plus, Music, Image, X, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { TrackWithArtist, PlaylistWithTracks } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -16,7 +17,11 @@ import { useToast } from '@/hooks/use-toast';
 export default function Library() {
   const { toast } = useToast();
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: likedTracks, isLoading: likedLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/liked'],
@@ -26,15 +31,68 @@ export default function Library() {
     queryKey: ['/api/playlists'],
   });
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Image too large', description: 'Max size is 5MB', variant: 'destructive' });
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setCoverPreview(previewUrl);
+    setUploading(true);
+
+    try {
+      const urlRes = await apiRequest('POST', '/api/upload/signed-url', {
+        filename: file.name,
+        contentType: file.type,
+        category: 'playlist-cover'
+      });
+      const { url } = await urlRes.json();
+
+      const uploadRes = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+      });
+
+      if (!uploadRes.ok) throw new Error('Upload failed');
+
+      const objectPath = new URL(url).pathname;
+      setCoverImageUrl(objectPath);
+      toast({ title: 'Cover uploaded!' });
+    } catch (error) {
+      toast({ title: 'Upload failed', variant: 'destructive' });
+      setCoverPreview(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeCover = () => {
+    setCoverImageUrl(null);
+    setCoverPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const createPlaylistMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const res = await apiRequest('POST', '/api/playlists', { name, description: '', isPublic: false });
+    mutationFn: async ({ name, coverImageUrl }: { name: string; coverImageUrl: string | null }) => {
+      const res = await apiRequest('POST', '/api/playlists', { 
+        name, 
+        description: '', 
+        isPublic: false,
+        coverImageUrl 
+      });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/playlists'] });
       setDialogOpen(false);
       setNewPlaylistName('');
+      setCoverImageUrl(null);
+      setCoverPreview(null);
       toast({ title: 'Playlist created successfully' });
     },
   });
@@ -42,7 +100,7 @@ export default function Library() {
   const handleCreatePlaylist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPlaylistName.trim()) {
-      await createPlaylistMutation.mutateAsync(newPlaylistName);
+      await createPlaylistMutation.mutateAsync({ name: newPlaylistName, coverImageUrl });
     }
   };
 
@@ -106,6 +164,44 @@ export default function Library() {
                   <DialogTitle>Create New Playlist</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreatePlaylist} className="space-y-4">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="relative">
+                      <div 
+                        className="h-32 w-32 rounded-lg bg-muted flex items-center justify-center cursor-pointer hover-elevate transition-all overflow-hidden border-2 border-dashed border-muted-foreground/30"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploading ? (
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        ) : coverPreview ? (
+                          <img src={coverPreview} alt="Cover" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="text-center">
+                            <Image className="h-8 w-8 mx-auto text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground mt-1">Add Cover</p>
+                          </div>
+                        )}
+                      </div>
+                      {coverPreview && !uploading && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                          onClick={removeCover}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleCoverUpload}
+                    />
+                    <p className="text-xs text-muted-foreground">Optional: Click to add cover art</p>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="playlist-name">Playlist Name</Label>
                     <Input
@@ -116,8 +212,20 @@ export default function Library() {
                       data-testid="input-playlist-name"
                     />
                   </div>
-                  <Button type="submit" className="w-full" data-testid="button-submit-playlist">
-                    Create
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={uploading || createPlaylistMutation.isPending}
+                    data-testid="button-submit-playlist"
+                  >
+                    {createPlaylistMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create'
+                    )}
                   </Button>
                 </form>
               </DialogContent>
