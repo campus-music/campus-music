@@ -48,74 +48,70 @@ export function AudioPlayer() {
   return (
     <>
       <div className="sticky bottom-0 bg-card/95 backdrop-blur-lg border-t border-card-border z-50">
-        <div className="px-4 py-2">
+        <div className="px-4 py-3">
           <div className="flex items-center gap-4 max-w-7xl mx-auto">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Avatar className="h-14 w-14 rounded-md">
+            <div className="flex items-center gap-3 min-w-0 w-48">
+              <Avatar className="h-10 w-10 rounded-md flex-shrink-0">
                 <AvatarImage src={currentTrack.coverImageUrl || undefined} alt={currentTrack.title} />
                 <AvatarFallback className="rounded-md">{currentTrack.title[0]}</AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <p className="font-medium truncate" data-testid="text-current-track-title">{currentTrack.title}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate text-sm" data-testid="text-current-track-title">{currentTrack.title}</p>
                 <Link 
                   href={`/artist/${currentTrack.artist.id}`}
-                  className="text-sm text-muted-foreground truncate hover:text-primary hover:underline block"
+                  className="text-xs text-muted-foreground truncate hover:text-primary hover:underline block"
                   data-testid="link-current-artist"
                 >
                   {currentTrack.artist.stageName}
                 </Link>
-                <p className="text-xs text-muted-foreground/70 truncate">
-                  {currentTrack.universityName}
-                </p>
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-2 flex-1">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={previousTrack}
-                  data-testid="button-previous-track"
-                >
-                  <SkipBack className="h-5 w-5" />
-                </Button>
-                <Button
-                  size="icon"
-                  onClick={togglePlayPause}
-                  data-testid="button-play-pause"
-                >
-                  {isPlaying ? (
-                    <Pause className="h-5 w-5" />
-                  ) : (
-                    <Play className="h-5 w-5 ml-0.5" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={nextTrack}
-                  data-testid="button-next-track"
-                >
-                  <SkipForward className="h-5 w-5" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-2 w-full max-w-md">
-                <span className="text-xs text-muted-foreground w-12 text-right">
-                  {formatTime(currentTime)}
-                </span>
-                <Slider
-                  value={[currentTime]}
-                  max={displayDuration || 100}
-                  step={1}
-                  onValueChange={([value]) => seekTo(value)}
-                  className="flex-1"
-                  data-testid="slider-seek"
-                />
-                <span className="text-xs text-muted-foreground w-12">
-                  {formatTime(displayDuration)}
-                </span>
-              </div>
+            <div className="flex items-center gap-3 flex-1 justify-center">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={previousTrack}
+                data-testid="button-previous-track"
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                className="h-9 w-9"
+                onClick={togglePlayPause}
+                data-testid="button-play-pause"
+              >
+                {isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4 ml-0.5" />
+                )}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={nextTrack}
+                data-testid="button-next-track"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {formatTime(currentTime)}
+              </span>
+              <Slider
+                value={[currentTime]}
+                max={displayDuration || 100}
+                step={1}
+                onValueChange={([value]) => seekTo(value)}
+                className="w-48"
+                data-testid="slider-seek"
+              />
+              <span className="text-xs text-muted-foreground w-10">
+                {formatTime(displayDuration)}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 flex-1 justify-end">
