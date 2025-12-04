@@ -825,6 +825,7 @@ export type LiveConcertWithDetails = LiveConcert & {
   interestedCount: number;
   checkedInCount: number;
   userRsvpStatus?: string | null;
+  userCheckedIn?: boolean;
 };
 
 // Badge definitions

@@ -1,4 +1,4 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
@@ -42,6 +42,12 @@ const socialItems = [
   { title: "Live Streams", url: "/live", icon: Radio },
   { title: "Connect", url: "/social", icon: Users },
   { title: "Chat", url: "/chat", icon: MessageCircle },
+];
+
+const realConnectionItems = [
+  { title: "Phone Down", url: "/phone-down", icon: PhoneOff },
+  { title: "Listening Parties", url: "/listening-party", icon: Headphones },
+  { title: "Live Concerts", url: "/concerts", publicUrl: "/concerts", icon: Music2 },
 ];
 
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
@@ -127,6 +133,27 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Real Connection</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {realConnectionItems.map((item) => {
+                    const itemUrl = isPublic && 'publicUrl' in item && item.publicUrl ? item.publicUrl : item.url;
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild isActive={location === itemUrl || location.startsWith(itemUrl + '/')}>
+                          <Link href={itemUrl} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

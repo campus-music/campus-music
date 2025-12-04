@@ -3302,9 +3302,11 @@ export class DatabaseStorage implements IStorage {
     const checkedInCount = rsvps.filter(r => r.checkedIn).length;
     
     let userRsvpStatus = null;
+    let userCheckedIn = false;
     if (userId) {
       const userRsvp = rsvps.find(r => r.userId === userId);
       userRsvpStatus = userRsvp?.status || null;
+      userCheckedIn = userRsvp?.checkedIn || false;
     }
     
     return {
@@ -3313,7 +3315,8 @@ export class DatabaseStorage implements IStorage {
       rsvpCount,
       interestedCount,
       checkedInCount,
-      userRsvpStatus
+      userRsvpStatus,
+      userCheckedIn
     };
   }
 

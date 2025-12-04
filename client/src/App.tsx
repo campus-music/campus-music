@@ -45,6 +45,9 @@ import Chat from "@/pages/chat";
 import Feed from "@/pages/feed";
 import Live from "@/pages/live";
 import LiveStream from "@/pages/live-stream";
+import PhoneDown from "@/pages/phone-down";
+import ListeningParty from "@/pages/listening-party";
+import Concerts from "@/pages/concerts";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -433,6 +436,44 @@ function Router() {
         {() => (
           <AppLayout>
             <LiveStream />
+          </AppLayout>
+        )}
+      </Route>
+
+      <Route path="/phone-down">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <PhoneDown />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/listening-party">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <ListeningParty />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/listening-party/:id">
+        {() => (
+          <ProtectedRoute component={() => (
+            <AppLayout>
+              <ListeningParty />
+            </AppLayout>
+          )} />
+        )}
+      </Route>
+
+      <Route path="/concerts">
+        {() => (
+          <AppLayout>
+            <Concerts />
           </AppLayout>
         )}
       </Route>
