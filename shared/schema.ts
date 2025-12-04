@@ -598,3 +598,251 @@ export type LiveStreamWithArtist = LiveStream & {
 export type LiveStreamMessageWithUser = LiveStreamMessage & {
   user: User;
 };
+
+// ============================================
+// REAL CONNECTION FEATURES
+// Ethical features to encourage in-person connection
+// ============================================
+
+// Phone Down Challenges - Gamified breaks from the app
+export const phoneDownChallenges = pgTable("phone_down_challenges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hostUserId: varchar("host_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 6 }).notNull().unique(), // 6-character join code
+  title: text("title"),
+  isGroup: boolean("is_group").notNull().default(false),
+  status: text("status").notNull().default("active"), // 'active', 'completed', 'cancelled'
+  targetDurationMinutes: integer("target_duration_minutes").notNull().default(30),
+  actualDurationMinutes: integer("actual_duration_minutes"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Participants in phone down challenges
+export const phoneDownParticipants = pgTable("phone_down_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  challengeId: varchar("challenge_id").notNull().references(() => phoneDownChallenges.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  completed: boolean("completed").notNull().default(false),
+  pointsEarned: integer("points_earned").notNull().default(0),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+});
+
+// User points for gamification
+export const userPoints = pgTable("user_points", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  totalPoints: integer("total_points").notNull().default(0),
+  phoneDownPoints: integer("phone_down_points").notNull().default(0),
+  listeningPartyPoints: integer("listening_party_points").notNull().default(0),
+  concertPoints: integer("concert_points").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// User badges for achievements
+export const userBadges = pgTable("user_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badgeCode: varchar("badge_code", { length: 50 }).notNull(),
+  badgeName: text("badge_name").notNull(),
+  badgeDescription: text("badge_description"),
+  badgeIcon: text("badge_icon"), // Lucide icon name
+  earnedAt: timestamp("earned_at").notNull().defaultNow(),
+});
+
+// Listening Parties - Synchronized listening for friends together
+export const listeningParties = pgTable("listening_parties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hostUserId: varchar("host_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 6 }).notNull().unique(), // 6-character join code
+  title: text("title").notNull(),
+  description: text("description"),
+  locationHint: text("location_hint"), // "Library Study Room 3", "Jake's dorm"
+  status: text("status").notNull().default("active"), // 'active', 'paused', 'ended'
+  currentTrackId: varchar("current_track_id").references(() => tracks.id, { onDelete: "set null" }),
+  playbackPositionMs: integer("playback_position_ms").notNull().default(0),
+  isPlaying: boolean("is_playing").notNull().default(false),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Members of listening parties
+export const listeningPartyMembers = pgTable("listening_party_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyId: varchar("party_id").notNull().references(() => listeningParties.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  isHost: boolean("is_host").notNull().default(false),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  leftAt: timestamp("left_at"),
+});
+
+// Queue of tracks for listening party
+export const listeningPartyQueue = pgTable("listening_party_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyId: varchar("party_id").notNull().references(() => listeningParties.id, { onDelete: "cascade" }),
+  trackId: varchar("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+  addedByUserId: varchar("added_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+  played: boolean("played").notNull().default(false),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+// Live Concert Meetups - Real-world events for student artists
+export const liveConcerts = pgTable("live_concerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artistProfiles.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  venue: text("venue").notNull(),
+  address: text("address"),
+  universityName: text("university_name").notNull(),
+  coverImageUrl: text("cover_image_url"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  capacity: integer("capacity"), // null means unlimited
+  ticketPrice: integer("ticket_price").default(0), // in cents, 0 = free
+  status: text("status").notNull().default("upcoming"), // 'upcoming', 'live', 'ended', 'cancelled'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// RSVPs for concerts
+export const concertRsvps = pgTable("concert_rsvps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  concertId: varchar("concert_id").notNull().references(() => liveConcerts.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("going"), // 'going', 'interested', 'cancelled'
+  checkedIn: boolean("checked_in").notNull().default(false),
+  checkedInAt: timestamp("checked_in_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schemas for new tables
+export const insertPhoneDownChallengeSchema = createInsertSchema(phoneDownChallenges).omit({ 
+  id: true, 
+  createdAt: true,
+  code: true,
+  startedAt: true 
+});
+
+export const insertPhoneDownParticipantSchema = createInsertSchema(phoneDownParticipants).omit({ 
+  id: true, 
+  joinedAt: true,
+  completed: true,
+  pointsEarned: true 
+});
+
+export const insertUserPointsSchema = createInsertSchema(userPoints).omit({ 
+  id: true, 
+  updatedAt: true 
+});
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ 
+  id: true, 
+  earnedAt: true 
+});
+
+export const insertListeningPartySchema = createInsertSchema(listeningParties).omit({ 
+  id: true, 
+  createdAt: true,
+  code: true,
+  startedAt: true,
+  playbackPositionMs: true,
+  isPlaying: true 
+});
+
+export const insertListeningPartyMemberSchema = createInsertSchema(listeningPartyMembers).omit({ 
+  id: true, 
+  joinedAt: true 
+});
+
+export const insertListeningPartyQueueSchema = createInsertSchema(listeningPartyQueue).omit({ 
+  id: true, 
+  addedAt: true,
+  played: true 
+});
+
+export const insertLiveConcertSchema = createInsertSchema(liveConcerts, {
+  title: z.string().min(1, 'Concert title is required'),
+  venue: z.string().min(1, 'Venue is required'),
+}).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertConcertRsvpSchema = createInsertSchema(concertRsvps).omit({ 
+  id: true, 
+  createdAt: true,
+  checkedIn: true,
+  checkedInAt: true 
+});
+
+// Types for new tables
+export type InsertPhoneDownChallenge = z.infer<typeof insertPhoneDownChallengeSchema>;
+export type PhoneDownChallenge = typeof phoneDownChallenges.$inferSelect;
+
+export type InsertPhoneDownParticipant = z.infer<typeof insertPhoneDownParticipantSchema>;
+export type PhoneDownParticipant = typeof phoneDownParticipants.$inferSelect;
+
+export type InsertUserPoints = z.infer<typeof insertUserPointsSchema>;
+export type UserPoints = typeof userPoints.$inferSelect;
+
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+export type UserBadge = typeof userBadges.$inferSelect;
+
+export type InsertListeningParty = z.infer<typeof insertListeningPartySchema>;
+export type ListeningParty = typeof listeningParties.$inferSelect;
+
+export type InsertListeningPartyMember = z.infer<typeof insertListeningPartyMemberSchema>;
+export type ListeningPartyMember = typeof listeningPartyMembers.$inferSelect;
+
+export type InsertListeningPartyQueue = z.infer<typeof insertListeningPartyQueueSchema>;
+export type ListeningPartyQueue = typeof listeningPartyQueue.$inferSelect;
+
+export type InsertLiveConcert = z.infer<typeof insertLiveConcertSchema>;
+export type LiveConcert = typeof liveConcerts.$inferSelect;
+
+export type InsertConcertRsvp = z.infer<typeof insertConcertRsvpSchema>;
+export type ConcertRsvp = typeof concertRsvps.$inferSelect;
+
+// Extended types
+export type PhoneDownChallengeWithParticipants = PhoneDownChallenge & {
+  participants: (PhoneDownParticipant & { user: User })[];
+  host: User;
+};
+
+export type ListeningPartyWithDetails = ListeningParty & {
+  host: User;
+  members: (ListeningPartyMember & { user: User })[];
+  currentTrack?: TrackWithArtist | null;
+  queue: (ListeningPartyQueue & { track: TrackWithArtist; addedBy: User })[];
+};
+
+export type LiveConcertWithDetails = LiveConcert & {
+  artist: ArtistProfile;
+  rsvpCount: number;
+  interestedCount: number;
+  checkedInCount: number;
+  userRsvpStatus?: string | null;
+};
+
+// Badge definitions
+export const BADGES = {
+  // Phone Down Badges
+  FIRST_BREAK: { code: 'first_break', name: 'First Break', description: 'Completed your first phone down challenge', icon: 'Phone' },
+  CONVERSATION_STARTER: { code: 'conversation_starter', name: 'Conversation Starter', description: 'Completed 5 phone down challenges', icon: 'MessageCircle' },
+  REAL_CONNECTION_CHAMPION: { code: 'real_connection_champion', name: 'Real Connection Champion', description: 'Completed 25 phone down challenges', icon: 'Heart' },
+  GROUP_LEADER: { code: 'group_leader', name: 'Group Leader', description: 'Hosted 10 group phone down challenges', icon: 'Users' },
+  HOUR_UNPLUGGED: { code: 'hour_unplugged', name: 'Hour Unplugged', description: 'Completed a 60-minute phone down challenge', icon: 'Clock' },
+  
+  // Listening Party Badges
+  PARTY_STARTER: { code: 'party_starter', name: 'Party Starter', description: 'Hosted your first listening party', icon: 'Music' },
+  DJ_MODE: { code: 'dj_mode', name: 'DJ Mode', description: 'Hosted 10 listening parties', icon: 'Disc' },
+  PARTY_REGULAR: { code: 'party_regular', name: 'Party Regular', description: 'Joined 20 listening parties', icon: 'PartyPopper' },
+  
+  // Concert Badges
+  CONCERT_GOER: { code: 'concert_goer', name: 'Concert Goer', description: 'Attended your first campus concert', icon: 'Ticket' },
+  SUPER_FAN: { code: 'super_fan', name: 'Super Fan', description: 'Attended 10 campus concerts', icon: 'Star' },
+  ARTIST_SUPPORTER: { code: 'artist_supporter', name: 'Artist Supporter', description: 'Attended concerts from 5 different artists', icon: 'Award' },
+} as const;
