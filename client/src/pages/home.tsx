@@ -117,7 +117,7 @@ export default function Home() {
   };
 
   const topArtists = allArtists
-    ? [...allArtists].sort((a, b) => b.streams - a.streams).slice(0, 6)
+    ? [...allArtists].sort((a, b) => b.streams - a.streams).slice(0, 10)
     : [];
 
   const SectionHeader = ({ title, icon: Icon, href, subtitle }: { title: string; icon: any; href?: string; subtitle?: string }) => (
