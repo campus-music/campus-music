@@ -191,7 +191,7 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
           <div className="flex items-center gap-3">
             <Link href="/profile" data-testid="link-user-avatar">
               <Avatar className="h-10 w-10 cursor-pointer hover-elevate">
-                <AvatarImage src={undefined} alt={user.fullName} />
+                <AvatarImage src={user.profileImageUrl || undefined} alt={user.fullName} />
                 <AvatarFallback className="bg-primary/20 text-sm font-medium">
                   {user.fullName?.slice(0, 2).toUpperCase() || 'U'}
                 </AvatarFallback>
