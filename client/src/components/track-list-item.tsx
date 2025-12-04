@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Heart, MoreVertical } from 'lucide-react';
+import { Play, Pause, Heart, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -19,11 +19,20 @@ interface TrackListItemProps {
 }
 
 export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemProps) {
-  const { playTrack, currentTrack } = useAudioPlayer();
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = useAudioPlayer();
   const { user } = useAuth();
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [authAction, setAuthAction] = useState<'like' | 'playlist'>('like');
   const isCurrentTrack = currentTrack?.id === track.id;
+  const isCurrentlyPlaying = isCurrentTrack && isPlaying;
+
+  const handlePlayClick = () => {
+    if (isCurrentTrack) {
+      togglePlayPause();
+    } else {
+      playTrack(track);
+    }
+  };
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -63,16 +72,23 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
             {index + 1}
           </span>
         )}
-        <div className="relative cursor-pointer" onClick={() => playTrack(track)}>
+        <div className="relative cursor-pointer" onClick={handlePlayClick}>
           <Avatar className="h-12 w-12 rounded-md">
             <AvatarImage src={track.coverImageUrl || undefined} alt={track.title} />
             <AvatarFallback className="rounded-md bg-primary/20">{track.title[0]}</AvatarFallback>
           </Avatar>
           <div
-            className="absolute inset-0 h-12 w-12 rounded-md bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className={cn(
+              "absolute inset-0 h-12 w-12 rounded-md bg-black/60 flex items-center justify-center transition-opacity",
+              isCurrentlyPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}
             data-testid={`button-play-${track.id}`}
           >
-            <Play className="h-5 w-5 text-white fill-white" />
+            {isCurrentlyPlaying ? (
+              <Pause className="h-5 w-5 text-white fill-white" />
+            ) : (
+              <Play className="h-5 w-5 text-white fill-white" />
+            )}
           </div>
         </div>
         <div className="flex-1 min-w-0">
