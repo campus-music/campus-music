@@ -1,4 +1,4 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2 } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
@@ -11,7 +11,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
 
 const browseItems = [
   { title: "Home", url: "/", publicUrl: "/browse", icon: Home },
@@ -47,10 +51,16 @@ const realConnectionItems = [
 ];
 
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user, logout } = useAuth();
 
   const getUrl = (item: { url: string; publicUrl?: string }) => 
     isPublic && item.publicUrl ? item.publicUrl : item.url;
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation('/login');
+  };
 
   return (
     <Sidebar>
@@ -174,6 +184,58 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
           </>
         )}
       </SidebarContent>
+
+      {/* User Footer - Only for logged-in users */}
+      {!isPublic && user && (
+        <SidebarFooter className="p-4 border-t border-border">
+          <div className="flex items-center gap-3">
+            <Link href="/profile" data-testid="link-user-avatar">
+              <Avatar className="h-10 w-10 cursor-pointer hover-elevate">
+                <AvatarImage src={undefined} alt={user.fullName} />
+                <AvatarFallback className="bg-primary/20 text-sm font-medium">
+                  {user.fullName?.slice(0, 2).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user.fullName}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="flex-shrink-0 text-muted-foreground hover:text-destructive"
+              data-testid="button-logout-sidebar"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </SidebarFooter>
+      )}
+
+      {/* Public Footer - Login prompt */}
+      {isPublic && (
+        <SidebarFooter className="p-4 border-t border-border">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setLocation('/login')}
+              data-testid="button-login-sidebar"
+            >
+              Log In
+            </Button>
+            <Button 
+              className="flex-1"
+              onClick={() => setLocation('/signup')}
+              data-testid="button-signup-sidebar"
+            >
+              Sign Up
+            </Button>
+          </div>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
