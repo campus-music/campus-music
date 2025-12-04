@@ -86,10 +86,10 @@ export default function Genres() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">All Genres</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {genresLoading ? (
             Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
+              <Skeleton key={i} className="h-24 rounded-xl" />
             ))
           ) : genres && genres.length > 0 ? (
             genres.map((genre) => {
@@ -101,22 +101,19 @@ export default function Genres() {
                 <button
                   key={genre}
                   onClick={() => handleGenreSelect(genre)}
-                  className={`relative aspect-[4/3] rounded-xl bg-gradient-to-br ${config.gradient} overflow-hidden hover-elevate transition-all cursor-pointer group ${
+                  className={`relative h-24 rounded-xl bg-gradient-to-br ${config.gradient} overflow-hidden hover-elevate transition-all cursor-pointer group text-left ${
                     isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-background scale-[1.02]' : ''
                   }`}
                   data-testid={`tile-genre-${genre.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                  <div className="absolute top-4 right-4 opacity-30 group-hover:opacity-50 transition-opacity">
-                    <IconComponent className="h-12 w-12 text-white" />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                  <div className="absolute top-3 right-3 opacity-20 group-hover:opacity-30 transition-opacity">
+                    <IconComponent className="h-10 w-10 text-white" />
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <p className={`font-bold text-xl ${config.textColor} drop-shadow-lg`}>
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="font-semibold text-white text-sm drop-shadow-lg">
                       {genre}
                     </p>
-                    {isSelected && (
-                      <p className="text-white/80 text-sm mt-1">Selected</p>
-                    )}
                   </div>
                 </button>
               );
