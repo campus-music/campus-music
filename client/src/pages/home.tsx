@@ -301,7 +301,12 @@ export default function Home() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate text-sm">{item.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.artist?.stageName}</p>
+                      <Link 
+                        href={`/artist/${item.artist?.id}`}
+                        className="text-xs text-muted-foreground truncate hover:text-primary hover:underline block"
+                      >
+                        {item.artist?.stageName}
+                      </Link>
                       <div className="flex items-center gap-1 mt-1">
                         <span className="text-xs text-muted-foreground/70">
                           {item.listenedBy.fullName?.split(' ')[0] || 'Friend'} •

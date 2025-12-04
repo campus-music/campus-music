@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Play, Pause, Heart, MoreVertical } from 'lucide-react';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -95,9 +96,13 @@ export function TrackListItem({ track, index, onLike, isLiked }: TrackListItemPr
           <p className="font-medium truncate" data-testid={`text-track-title-${track.id}`}>
             {track.title}
           </p>
-          <p className="text-sm text-muted-foreground truncate">
+          <Link 
+            href={`/artist/${track.artist.id}`}
+            className="text-sm text-muted-foreground truncate hover:text-primary hover:underline block"
+            data-testid={`link-artist-${track.id}`}
+          >
             {track.artist.stageName}
-          </p>
+          </Link>
         </div>
         <Badge variant="secondary" className="text-xs">
           {track.universityName}
