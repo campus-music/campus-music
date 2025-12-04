@@ -1,5 +1,6 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2, LogOut } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
   Sidebar,
@@ -16,6 +17,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import type { ArtistProfile } from "@shared/schema";
 
 const browseItems = [
   { title: "Home", url: "/", publicUrl: "/browse", icon: Home },
@@ -52,15 +54,25 @@ const realConnectionItems = [
 
 export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
   const [location, setLocation] = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+
+  // Fetch artist profile to get profile image for artists
+  const { data: artistProfile } = useQuery<ArtistProfile | null>({
+    queryKey: ['/api/artist/profile'],
+    queryFn: async () => {
+      const response = await fetch('/api/artist/profile');
+      if (response.status === 404) return null;
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: user?.role === 'artist',
+  });
 
   const getUrl = (item: { url: string; publicUrl?: string }) => 
     isPublic && item.publicUrl ? item.publicUrl : item.url;
 
-  const handleLogout = async () => {
-    await logout();
-    setLocation('/login');
-  };
+  // Get profile image - prefer artist profile image, fallback to user profile image
+  const profileImageUrl = artistProfile?.profileImageUrl || user?.profileImageUrl;
 
   return (
     <Sidebar>
@@ -188,29 +200,20 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
       {/* User Footer - Only for logged-in users */}
       {!isPublic && user && (
         <SidebarFooter className="p-4 border-t border-border">
-          <div className="flex items-center gap-3">
-            <Link href="/profile" data-testid="link-user-avatar">
-              <Avatar className="h-10 w-10 cursor-pointer hover-elevate">
-                <AvatarImage src={user.profileImageUrl || undefined} alt={user.fullName} />
+          <Link href="/profile" data-testid="link-user-profile" className="block">
+            <div className="flex items-center gap-3 hover-elevate rounded-lg p-2 -m-2 cursor-pointer">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
                 <AvatarFallback className="bg-primary/20 text-sm font-medium">
                   {user.fullName?.slice(0, 2).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-            </Link>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user.fullName}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.fullName}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="flex-shrink-0 text-muted-foreground hover:text-destructive"
-              data-testid="button-logout-sidebar"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          </Link>
         </SidebarFooter>
       )}
 
