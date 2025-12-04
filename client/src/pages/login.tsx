@@ -24,7 +24,7 @@ export default function Login() {
       setLocation('/');
     } catch (error: any) {
       toast({
-        title: 'Login failed',
+        title: 'Unable to sign in',
         description: error.message || 'Invalid email or password',
         variant: 'destructive',
       });

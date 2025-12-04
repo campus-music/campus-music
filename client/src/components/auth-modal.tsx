@@ -65,7 +65,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'login' }: AuthModa
       handleOpenChange(false);
     } catch (error: any) {
       toast({
-        title: 'Login failed',
+        title: 'Unable to sign in',
         description: error.message || 'Invalid email or password',
         variant: 'destructive',
       });

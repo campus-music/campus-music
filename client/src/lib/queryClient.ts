@@ -3,6 +3,26 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    
+    // For authentication errors, use a generic user-friendly message
+    // This follows security best practices to prevent user enumeration
+    if (res.status === 401) {
+      throw new Error('Invalid email or password');
+    }
+    
+    // Try to parse JSON error for a cleaner message
+    try {
+      const errorData = JSON.parse(text);
+      if (errorData.error) {
+        throw new Error(errorData.error);
+      }
+      if (errorData.message) {
+        throw new Error(errorData.message);
+      }
+    } catch (parseError) {
+      // If not JSON, fall through to default error
+    }
+    
     throw new Error(`${res.status}: ${text}`);
   }
 }
