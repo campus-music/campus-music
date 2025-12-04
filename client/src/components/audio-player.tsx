@@ -48,7 +48,7 @@ export function AudioPlayer() {
   return (
     <>
       <div className="sticky bottom-0 bg-card/95 backdrop-blur-lg border-t border-card-border z-50">
-        <div className="px-4 py-3">
+        <div className="px-4 py-4">
           <div className="flex items-center gap-4 max-w-7xl mx-auto">
             <div className="flex items-center gap-3 min-w-0 w-48">
               <Avatar className="h-10 w-10 rounded-md flex-shrink-0">
