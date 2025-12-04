@@ -1,4 +1,4 @@
-import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2 } from "lucide-react";
+import { Home, TrendingUp, GraduationCap, Library, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
@@ -31,7 +31,6 @@ const libraryItems = [
   { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "My Library", url: "/library", icon: Library },
   { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
-  { title: "Profile", url: "/profile", icon: User },
 ];
 
 const artistCollabItems = [

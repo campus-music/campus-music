@@ -136,44 +136,26 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-40">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-3 ml-auto">
-              {user ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/profile')}
-                  className="flex items-center gap-2 hover-elevate rounded-full px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  data-testid="user-avatar-header"
-                  aria-label={`View profile for ${user.fullName}`}
+            {isPublic && !user && (
+              <div className="flex items-center gap-3 ml-auto">
+                <Button
+                  variant="ghost"
+                  onClick={openLogin}
+                  data-testid="button-header-login"
+                  size="sm"
                 >
-                  <Avatar className="h-8 w-8 border border-border">
-                    <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                      {getInitials(user.fullName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm hidden sm:block">{user.fullName}</span>
-                </button>
-              ) : isPublic ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={openLogin}
-                    data-testid="button-header-login"
-                    size="sm"
-                  >
-                    Log In
-                  </Button>
-                  <Button
-                    onClick={openSignup}
-                    size="sm"
-                    className="rounded-full"
-                    data-testid="button-header-signup"
-                  >
-                    Sign Up
-                  </Button>
-                </>
-              ) : null}
-            </div>
+                  Log In
+                </Button>
+                <Button
+                  onClick={openSignup}
+                  size="sm"
+                  className="rounded-full"
+                  data-testid="button-header-signup"
+                >
+                  Sign Up
+                </Button>
+              </div>
+            )}
           </header>
           <main className="flex-1 overflow-y-auto">
             <div className="container mx-auto p-6">
