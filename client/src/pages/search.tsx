@@ -8,7 +8,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Search as SearchIcon, Music } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { SupportModal } from '@/components/support-modal';
 import { Link } from 'wouter';
 import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
@@ -19,14 +18,14 @@ interface Artist extends ArtistProfile {
 }
 
 const popularSearches = [
-  "summer vibes",
-  "study music", 
-  "chill beats",
-  "workout",
-  "party mix",
-  "acoustic",
-  "lofi hip hop",
-  "campus anthems"
+  { term: "summer vibes", gradient: "from-orange-500 to-yellow-500" },
+  { term: "study music", gradient: "from-blue-500 to-cyan-500" },
+  { term: "chill beats", gradient: "from-purple-500 to-pink-500" },
+  { term: "workout", gradient: "from-red-500 to-orange-500" },
+  { term: "party mix", gradient: "from-pink-500 to-rose-500" },
+  { term: "acoustic", gradient: "from-amber-500 to-yellow-600" },
+  { term: "lofi hip hop", gradient: "from-indigo-500 to-purple-500" },
+  { term: "campus anthems", gradient: "from-green-500 to-emerald-500" },
 ];
 
 export default function Search() {
@@ -152,21 +151,24 @@ export default function Search() {
           </TabsContent>
         </Tabs>
       ) : (
-        /* Popular Searches - Shown when no search query */
+        /* Popular Searches Tiles - Shown when no search query */
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Popular searches</p>
-          <div className="flex flex-wrap gap-2">
-            {popularSearches.map((term) => (
-              <Button
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {popularSearches.map(({ term, gradient }) => (
+              <button
                 key={term}
-                variant="outline"
-                size="sm"
                 onClick={() => handleQuickSearch(term)}
-                className="rounded-full"
-                data-testid={`button-popular-search-${term.replace(/\s+/g, '-')}`}
+                className={`relative aspect-square rounded-lg bg-gradient-to-br ${gradient} overflow-hidden hover-elevate transition-transform cursor-pointer group`}
+                data-testid={`tile-popular-search-${term.replace(/\s+/g, '-')}`}
               >
-                {term}
-              </Button>
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <p className="text-white font-bold text-lg capitalize drop-shadow-lg">
+                    {term}
+                  </p>
+                </div>
+              </button>
             ))}
           </div>
         </div>
