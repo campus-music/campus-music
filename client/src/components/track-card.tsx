@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Play, Pause, Heart } from 'lucide-react';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -101,9 +102,14 @@ export function TrackCard({ track, onLike, isLiked }: TrackCardProps) {
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground truncate" data-testid={`text-artist-name-${track.id}`}>
+          <Link 
+            href={`/artist/${track.artist.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-muted-foreground truncate hover:text-primary hover:underline block"
+            data-testid={`link-artist-${track.id}`}
+          >
             {track.artist.stageName}
-          </p>
+          </Link>
           <p className="text-xs text-muted-foreground/70 truncate">
             {track.universityName}
           </p>

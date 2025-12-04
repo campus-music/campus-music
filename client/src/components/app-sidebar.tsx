@@ -198,7 +198,7 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
 
       {/* User Footer - Only for logged-in users */}
       {!isPublic && user && (
-        <SidebarFooter className="p-4 border-t border-border">
+        <SidebarFooter className="p-4 pb-20 border-t border-border">
           <Link href="/profile" data-testid="link-user-profile" className="block">
             <div className="flex items-center gap-3 hover-elevate rounded-lg p-2 -m-2 cursor-pointer">
               <Avatar className="h-10 w-10">
@@ -218,7 +218,7 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
 
       {/* Public Footer - Login prompt */}
       {isPublic && (
-        <SidebarFooter className="p-4 border-t border-border">
+        <SidebarFooter className="p-4 pb-20 border-t border-border">
           <div className="flex gap-2">
             <Button 
               variant="outline" 

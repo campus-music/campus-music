@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'wouter';
 import { useAudioPlayer } from '@/lib/audio-player-context';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -56,9 +57,13 @@ export function AudioPlayer() {
               </Avatar>
               <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="font-medium truncate" data-testid="text-current-track-title">{currentTrack.title}</p>
-                <p className="text-sm text-muted-foreground truncate" data-testid="text-current-artist-name">
+                <Link 
+                  href={`/artist/${currentTrack.artist.id}`}
+                  className="text-sm text-muted-foreground truncate hover:text-primary hover:underline block"
+                  data-testid="link-current-artist"
+                >
                   {currentTrack.artist.stageName}
-                </p>
+                </Link>
                 <p className="text-xs text-muted-foreground/70 truncate">
                   {currentTrack.universityName}
                 </p>
