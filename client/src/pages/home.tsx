@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Music, Flame, Star, Users, GraduationCap, Heart, UserPlus } from 'lucide-react';
+import { Music, Flame, Star, Users, GraduationCap, Heart, UserPlus, Sparkles } from 'lucide-react';
 import type { TrackWithArtist, ArtistProfile, User } from '@shared/schema';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Link } from 'wouter';
@@ -59,6 +59,11 @@ export default function Home() {
 
   const { data: friendsListening, isLoading: friendsLoading } = useQuery<FriendListenTrack[]>({
     queryKey: ['/api/tracks/friends-listening'],
+    enabled: !!user,
+  });
+
+  const { data: recommendations, isLoading: recommendationsLoading } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/user/recommendations'],
     enabled: !!user,
   });
 
@@ -318,6 +323,51 @@ export default function Home() {
           />
         )}
       </section>
+
+      {/* Recommended For You */}
+      {user && (
+        <section>
+          <SectionHeader 
+            title="Recommended For You" 
+            icon={Sparkles} 
+            href="/recommendations"
+            subtitle="Based on your listening taste"
+          />
+          {recommendationsLoading ? (
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-64 w-48 flex-shrink-0 rounded-lg" />
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          ) : recommendations && recommendations.length > 0 ? (
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                {recommendations.slice(0, 10).map((track) => (
+                  <div key={track.id} className="w-48 flex-shrink-0">
+                    <TrackCard 
+                      track={track} 
+                      isLiked={likedTrackIds.has(track.id)}
+                      onLike={() => handleLike(track.id)}
+                    />
+                  </div>
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          ) : (
+            <EmptyState 
+              icon={Sparkles}
+              title="Like more tracks to get recommendations"
+              description="We'll suggest music based on your taste once you like a few songs"
+              actionLabel="Explore Trending"
+              actionHref="/all-trending"
+            />
+          )}
+        </section>
+      )}
 
       {/* Global Trending - Fallback discovery */}
       <section>

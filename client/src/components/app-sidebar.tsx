@@ -21,10 +21,6 @@ const browseItems = [
   { title: "Browse Genres", url: "/genres", publicUrl: "/genres", icon: Sparkles },
 ];
 
-const discoveryItems = [
-  { title: "Recommended For You", url: "/recommendations", icon: Sparkles },
-];
-
 const libraryItems = [
   { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "My Library", url: "/library", icon: Library },
@@ -98,27 +94,9 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Discovery & Library Sections - Only for logged-in users */}
+        {/* Sections for logged-in users only */}
         {!isPublic && (
           <>
-            <SidebarGroup>
-              <SidebarGroupLabel>Discovery</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {discoveryItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={location === item.url}>
-                        <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
             <SidebarGroup>
               <SidebarGroupLabel>Social</SidebarGroupLabel>
               <SidebarGroupContent>
