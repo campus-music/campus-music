@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrackCard } from '@/components/track-card';
 import { TrackListItem } from '@/components/track-list-item';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search as SearchIcon, Music, TrendingUp, Clock, Sparkles, Disc, Radio, Headphones, Mic2, Guitar, Piano, Zap } from 'lucide-react';
+import { Search as SearchIcon, Music } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,29 +18,7 @@ interface Artist extends ArtistProfile {
   streams: number;
 }
 
-const genreIcons: Record<string, typeof Music> = {
-  "Hip-Hop": Mic2,
-  "R&B": Headphones,
-  "Pop": Radio,
-  "Rock": Guitar,
-  "Electronic": Zap,
-  "Jazz": Piano,
-  "Classical": Music,
-  "Indie": Disc,
-};
-
-const genreColors: Record<string, string> = {
-  "Hip-Hop": "from-orange-500/20 to-orange-500/5 border-orange-500/30",
-  "R&B": "from-purple-500/20 to-purple-500/5 border-purple-500/30",
-  "Pop": "from-pink-500/20 to-pink-500/5 border-pink-500/30",
-  "Rock": "from-red-500/20 to-red-500/5 border-red-500/30",
-  "Electronic": "from-cyan-500/20 to-cyan-500/5 border-cyan-500/30",
-  "Jazz": "from-amber-500/20 to-amber-500/5 border-amber-500/30",
-  "Classical": "from-blue-500/20 to-blue-500/5 border-blue-500/30",
-  "Indie": "from-green-500/20 to-green-500/5 border-green-500/30",
-};
-
-const trendingSearches = [
+const popularSearches = [
   "summer vibes",
   "study music", 
   "chill beats",
@@ -63,18 +40,6 @@ export default function Search() {
   const { data: artists, isLoading: artistsLoading } = useQuery<Artist[]>({
     queryKey: ['/api/search/artists', query],
     enabled: query.length > 0,
-  });
-
-  const { data: genres } = useQuery<string[]>({
-    queryKey: ['/api/genres'],
-  });
-
-  const { data: trendingTracks, isLoading: trendingLoading } = useQuery<TrackWithArtist[]>({
-    queryKey: ['/api/tracks/trending'],
-  });
-
-  const { data: latestTracks, isLoading: latestLoading } = useQuery<TrackWithArtist[]>({
-    queryKey: ['/api/tracks/latest'],
   });
 
   const handleQuickSearch = (term: string) => {
@@ -187,155 +152,23 @@ export default function Search() {
           </TabsContent>
         </Tabs>
       ) : (
-        /* Discovery Content - Shown when no search query */
-        <div className="space-y-10">
-          {/* Trending Searches */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">Trending Searches</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {trendingSearches.map((term) => (
-                <Button
-                  key={term}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickSearch(term)}
-                  className="rounded-full hover-elevate"
-                  data-testid={`button-quick-search-${term.replace(/\s+/g, '-')}`}
-                >
-                  {term}
-                </Button>
-              ))}
-            </div>
-          </section>
-
-          {/* Browse by Genre */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">Browse by Genre</h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(genres || ["Hip-Hop", "R&B", "Pop", "Rock", "Electronic", "Jazz", "Indie", "Classical"]).slice(0, 8).map((genre) => {
-                const IconComponent = genreIcons[genre] || Music;
-                const colorClass = genreColors[genre] || "from-primary/20 to-primary/5 border-primary/30";
-                return (
-                  <Link key={genre} href={`/genres?genre=${encodeURIComponent(genre)}`}>
-                    <Card 
-                      className={`hover-elevate bg-gradient-to-br ${colorClass} transition-all cursor-pointer`}
-                      data-testid={`card-genre-${genre.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-                    >
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-background/50">
-                          <IconComponent className="h-5 w-5" />
-                        </div>
-                        <span className="font-medium">{genre}</span>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Trending Tracks */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-orange-500" />
-                <h2 className="text-xl font-semibold">Trending Now</h2>
-              </div>
-              <Link href="/trending">
-                <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="button-see-all-trending">
-                  See all
-                </Button>
-              </Link>
-            </div>
-            {trendingLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="space-y-3">
-                    <Skeleton className="aspect-square rounded-lg" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                ))}
-              </div>
-            ) : trendingTracks && trendingTracks.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {trendingTracks.slice(0, 4).map((track) => (
-                  <TrackCard key={track.id} track={track} />
-                ))}
-              </div>
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Music className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>No trending tracks yet</p>
-                </CardContent>
-              </Card>
-            )}
-          </section>
-
-          {/* New Releases */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-green-500" />
-                <h2 className="text-xl font-semibold">New Releases</h2>
-              </div>
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="button-see-all-releases">
-                  See all
-                </Button>
-              </Link>
-            </div>
-            {latestLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full rounded-md" />
-                ))}
-              </div>
-            ) : latestTracks && latestTracks.length > 0 ? (
-              <div className="space-y-2">
-                {latestTracks.slice(0, 5).map((track, index) => (
-                  <TrackListItem key={track.id} track={track} index={index + 1} />
-                ))}
-              </div>
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Clock className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>No new releases yet</p>
-                </CardContent>
-              </Card>
-            )}
-          </section>
-
-          {/* Discover Artists CTA */}
-          <section>
-            <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <CardContent className="relative p-6 md:p-8 flex flex-col md:flex-row items-center gap-6">
-                <div className="p-4 rounded-2xl bg-primary/20 shrink-0">
-                  <Mic2 className="h-10 w-10 text-primary" />
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-xl font-bold mb-2">Discover Campus Artists</h3>
-                  <p className="text-muted-foreground">
-                    Explore talented student musicians from universities around the world
-                  </p>
-                </div>
-                <Link href="/discover">
-                  <Button size="lg" className="shrink-0" data-testid="button-discover-artists">
-                    Explore Now
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </section>
+        /* Popular Searches - Shown when no search query */
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Popular searches</p>
+          <div className="flex flex-wrap gap-2">
+            {popularSearches.map((term) => (
+              <Button
+                key={term}
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickSearch(term)}
+                className="rounded-full"
+                data-testid={`button-popular-search-${term.replace(/\s+/g, '-')}`}
+              >
+                {term}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
     </div>
