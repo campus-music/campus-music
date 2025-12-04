@@ -31,7 +31,6 @@ const libraryItems = [
   { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "My Library", url: "/library", icon: Library },
   { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
-  { title: "Profile", url: "/profile", icon: User },
 ];
 
 const artistCollabItems = [
