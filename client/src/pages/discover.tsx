@@ -2,15 +2,29 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TrackListItem } from '@/components/track-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { GraduationCap, Music, Users, Search } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
+import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
+
+const UNIVERSITY_COLORS = [
+  'from-blue-500 to-indigo-600',
+  'from-purple-500 to-violet-600',
+  'from-pink-500 to-rose-600',
+  'from-orange-500 to-amber-600',
+  'from-green-500 to-emerald-600',
+  'from-cyan-500 to-blue-600',
+  'from-red-500 to-rose-600',
+  'from-yellow-500 to-orange-600',
+];
+
+function getUniversityColor(index: number): string {
+  return UNIVERSITY_COLORS[index % UNIVERSITY_COLORS.length];
+}
 
 export default function Discover() {
   const [selectedUniversity, setSelectedUniversity] = useState<string>('');
@@ -77,37 +91,61 @@ export default function Discover() {
             />
           </div>
         </div>
-        <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-4 flex-wrap">
-            {universitiesLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-40 rounded-full flex-shrink-0" />
-              ))
-            ) : filteredUniversities.length > 0 ? (
-              filteredUniversities.map((uni) => (
-                <Badge
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {universitiesLoading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))
+          ) : filteredUniversities.length > 0 ? (
+            filteredUniversities.map((uni, index) => {
+              const isSelected = selectedUniversity === uni;
+              const colorClass = getUniversityColor(index);
+              
+              return (
+                <button
                   key={uni}
-                  variant={selectedUniversity === uni ? 'default' : 'outline'}
-                  className="cursor-pointer px-4 py-2 text-sm hover-elevate flex-shrink-0 whitespace-nowrap"
                   onClick={() => setSelectedUniversity(uni)}
-                  data-testid={`badge-university-${uni.replace(/\s+/g, '-').toLowerCase()}`}
+                  className={`relative h-24 rounded-xl bg-gradient-to-br ${colorClass} overflow-hidden hover-elevate transition-all cursor-pointer group text-left ${
+                    isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-background scale-[1.02]' : ''
+                  }`}
+                  data-testid={`tile-university-${uni.replace(/\s+/g, '-').toLowerCase()}`}
                 >
-                  <GraduationCap className="h-3 w-3 mr-2" />
-                  {uni}
-                </Badge>
-              ))
-            ) : searchQuery ? (
-              <p className="text-muted-foreground">No universities matching "{searchQuery}"</p>
-            ) : (
-              <p className="text-muted-foreground">No universities found</p>
-            )}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                  <div className="absolute top-3 right-3 opacity-20 group-hover:opacity-30 transition-opacity">
+                    <GraduationCap className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="font-semibold text-white text-sm drop-shadow-lg line-clamp-2">
+                      {uni}
+                    </p>
+                  </div>
+                </button>
+              );
+            })
+          ) : searchQuery ? (
+            <div className="col-span-full text-center py-12 text-muted-foreground">
+              <Search className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>No universities matching "{searchQuery}"</p>
+            </div>
+          ) : (
+            <div className="col-span-full text-center py-12 text-muted-foreground">
+              <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>No universities found</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {selectedUniversity ? (
         <Tabs defaultValue="tracks" className="w-full">
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`p-2 rounded-lg bg-gradient-to-br ${getUniversityColor(universities?.indexOf(selectedUniversity) || 0)}`}>
+              <GraduationCap className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold">{selectedUniversity}</h2>
+          </div>
+
           <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b rounded-none">
             <TabsTrigger 
               value="tracks" 
@@ -164,7 +202,9 @@ export default function Discover() {
                         </AvatarFallback>
                       </Avatar>
                       <h3 className="font-semibold truncate">{artist.stageName}</h3>
-                      <p className="text-sm text-muted-foreground">{artist.mainGenre}</p>
+                      <Badge variant="secondary" className="mt-2 text-xs">
+                        {artist.mainGenre}
+                      </Badge>
                     </Card>
                   </Link>
                 ))

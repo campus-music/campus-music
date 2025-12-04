@@ -6,22 +6,24 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Music, Users, Sparkles, Search, X } from 'lucide-react';
+import { Music, Users, Sparkles, Search, X, Mic2, Headphones, Radio, Guitar, Zap, Piano, Disc } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import type { TrackWithArtist, ArtistProfile } from '@shared/schema';
 
-const GENRE_COLORS: Record<string, string> = {
-  'Pop': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  'Hip-Hop': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  'Electronic': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  'Rock': 'bg-red-500/20 text-red-400 border-red-500/30',
-  'R&B': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  'Indie': 'bg-green-500/20 text-green-400 border-green-500/30',
-  'Jazz': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  'Classical': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+const GENRE_CONFIG: Record<string, { gradient: string; icon: typeof Music; textColor: string }> = {
+  'Pop': { gradient: 'from-pink-500 to-rose-500', icon: Radio, textColor: 'text-white' },
+  'Hip-Hop': { gradient: 'from-orange-500 to-amber-500', icon: Mic2, textColor: 'text-white' },
+  'Electronic': { gradient: 'from-cyan-500 to-blue-500', icon: Zap, textColor: 'text-white' },
+  'Rock': { gradient: 'from-red-500 to-rose-600', icon: Guitar, textColor: 'text-white' },
+  'R&B': { gradient: 'from-purple-500 to-violet-500', icon: Headphones, textColor: 'text-white' },
+  'Indie': { gradient: 'from-green-500 to-emerald-500', icon: Disc, textColor: 'text-white' },
+  'Jazz': { gradient: 'from-amber-500 to-yellow-500', icon: Piano, textColor: 'text-white' },
+  'Classical': { gradient: 'from-slate-500 to-gray-600', icon: Music, textColor: 'text-white' },
 };
+
+const DEFAULT_CONFIG = { gradient: 'from-primary to-primary/70', icon: Music, textColor: 'text-white' };
 
 export default function Genres() {
   const [selectedGenre, setSelectedGenre] = useState<string>('');
@@ -84,34 +86,41 @@ export default function Genres() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">All Genres</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {genresLoading ? (
             Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-lg" />
+              <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
             ))
           ) : genres && genres.length > 0 ? (
-            genres.map((genre) => (
-              <Card
-                key={genre}
-                className={`cursor-pointer p-4 text-center transition-all hover-elevate ${
-                  selectedGenre === genre 
-                    ? 'ring-2 ring-primary bg-primary/10' 
-                    : ''
-                }`}
-                onClick={() => handleGenreSelect(genre)}
-                data-testid={`card-genre-${genre.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <Badge 
-                  variant="outline" 
-                  className={`mb-2 ${GENRE_COLORS[genre] || 'bg-primary/20'}`}
+            genres.map((genre) => {
+              const config = GENRE_CONFIG[genre] || DEFAULT_CONFIG;
+              const IconComponent = config.icon;
+              const isSelected = selectedGenre === genre;
+              
+              return (
+                <button
+                  key={genre}
+                  onClick={() => handleGenreSelect(genre)}
+                  className={`relative aspect-[4/3] rounded-xl bg-gradient-to-br ${config.gradient} overflow-hidden hover-elevate transition-all cursor-pointer group ${
+                    isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-background scale-[1.02]' : ''
+                  }`}
+                  data-testid={`tile-genre-${genre.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  {genre}
-                </Badge>
-                <p className="text-xs text-muted-foreground">
-                  {selectedGenre === genre ? 'Selected' : 'Click to explore'}
-                </p>
-              </Card>
-            ))
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                  <div className="absolute top-4 right-4 opacity-30 group-hover:opacity-50 transition-opacity">
+                    <IconComponent className="h-12 w-12 text-white" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className={`font-bold text-xl ${config.textColor} drop-shadow-lg`}>
+                      {genre}
+                    </p>
+                    {isSelected && (
+                      <p className="text-white/80 text-sm mt-1">Selected</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })
           ) : (
             <p className="text-muted-foreground col-span-full">No genres available</p>
           )}
@@ -121,10 +130,14 @@ export default function Genres() {
       {selectedGenre ? (
         <Tabs defaultValue="tracks" className="w-full">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Badge className={GENRE_COLORS[selectedGenre] || 'bg-primary/20'}>
-                {selectedGenre}
-              </Badge>
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <div className={`p-2 rounded-lg bg-gradient-to-br ${GENRE_CONFIG[selectedGenre]?.gradient || DEFAULT_CONFIG.gradient}`}>
+                {(() => {
+                  const IconComponent = GENRE_CONFIG[selectedGenre]?.icon || Music;
+                  return <IconComponent className="h-5 w-5 text-white" />;
+                })()}
+              </div>
+              {selectedGenre}
             </h2>
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
