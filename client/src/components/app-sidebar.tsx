@@ -31,6 +31,7 @@ const libraryItems = [
   { title: "Playlists", url: "/playlists", icon: ListMusic },
   { title: "My Library", url: "/library", icon: Library },
   { title: "Artist Analytics", url: "/artist/analytics", icon: BarChart3 },
+  { title: "Profile", url: "/profile", icon: User },
 ];
 
 const artistCollabItems = [
@@ -206,14 +207,12 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
       {!isPublic && user && (
         <SidebarFooter className="p-4 border-t border-border">
           <div className="flex items-center gap-3">
-            <Link href="/profile" data-testid="link-user-avatar">
-              <Avatar className="h-10 w-10 cursor-pointer hover-elevate border border-border">
-                <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
-                <AvatarFallback className="bg-primary/20 text-sm font-medium">
-                  {getInitials(user.fullName)}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
+            <Avatar className="h-10 w-10 border border-border">
+              <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
+              <AvatarFallback className="bg-primary/20 text-sm font-medium">
+                {getInitials(user.fullName)}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user.fullName}</p>
               <p className="text-xs text-muted-foreground truncate">{user.email}</p>
