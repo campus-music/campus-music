@@ -16,7 +16,7 @@ export default function Trending() {
   });
 
   const { data: likedTracks } = useQuery<TrackWithArtist[]>({
-    queryKey: ['/api/user/liked-tracks'],
+    queryKey: ['/api/tracks/liked'],
   });
 
   const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
@@ -45,7 +45,7 @@ export default function Trending() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracks/liked'] });
     },
   });
 

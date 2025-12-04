@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackListItem } from '@/components/track-list-item';
 import { SearchableFilter } from '@/components/searchable-filter';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Flame, Music } from 'lucide-react';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import type { TrackWithArtist } from '@shared/schema';
 
 export default function AllTrending() {
@@ -13,6 +14,46 @@ export default function AllTrending() {
   const { data: tracks, isLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/trending'],
   });
+
+  const { data: likedTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/tracks/liked'],
+  });
+
+  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
+  
+  const likedTrackIds = new Set([
+    ...(likedTracks?.map(t => t.id) || []),
+    ...Array.from(localLikedIds)
+  ]);
+
+  const likeMutation = useMutation({
+    mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
+      if (isLiked) {
+        await apiRequest('DELETE', `/api/tracks/${trackId}/like`, {});
+      } else {
+        await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tracks/liked'] });
+    },
+  });
+
+  const handleLike = (trackId: string) => {
+    const isLiked = likedTrackIds.has(trackId);
+    
+    setLocalLikedIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+    
+    likeMutation.mutate({ trackId, isLiked });
+  };
 
   // Extract unique genres and universities from top 100 trending tracks for better filter variety
   const top100Tracks = tracks?.slice(0, 100) || [];
@@ -63,7 +104,13 @@ export default function AllTrending() {
           ))
         ) : filteredTracks.length > 0 ? (
           filteredTracks.map((track, index) => (
-            <TrackListItem key={track.id} track={track} index={index} />
+            <TrackListItem 
+              key={track.id} 
+              track={track} 
+              index={index}
+              isLiked={likedTrackIds.has(track.id)}
+              onLike={() => handleLike(track.id)}
+            />
           ))
         ) : (
           <div className="text-center py-20 text-muted-foreground">

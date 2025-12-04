@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { TrackListItem } from '@/components/track-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ObjectUploader } from '@/components/ObjectUploader';
 import { ChevronLeft, Music, Trash2, ListMusic, ImagePlus } from 'lucide-react';
-import type { PlaylistWithTracks } from '@shared/schema';
+import type { PlaylistWithTracks, TrackWithArtist } from '@shared/schema';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -74,6 +75,46 @@ export default function PlaylistDetail() {
     if (id) {
       removeTrackMutation.mutate({ playlistId: id, trackId });
     }
+  };
+
+  const { data: likedTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/tracks/liked'],
+  });
+
+  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
+  
+  const likedTrackIds = new Set([
+    ...(likedTracks?.map(t => t.id) || []),
+    ...Array.from(localLikedIds)
+  ]);
+
+  const likeMutation = useMutation({
+    mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
+      if (isLiked) {
+        await apiRequest('DELETE', `/api/tracks/${trackId}/like`, {});
+      } else {
+        await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tracks/liked'] });
+    },
+  });
+
+  const handleLike = (trackId: string) => {
+    const isLiked = likedTrackIds.has(trackId);
+    
+    setLocalLikedIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+    
+    likeMutation.mutate({ trackId, isLiked });
   };
 
   if (isLoading) {
@@ -176,7 +217,12 @@ export default function PlaylistDetail() {
           playlist.tracks.map((track, index) => (
             <div key={track.id} className="flex items-center gap-2 group">
               <div className="flex-1">
-                <TrackListItem track={track} index={index + 1} />
+                <TrackListItem 
+                  track={track} 
+                  index={index + 1}
+                  isLiked={likedTrackIds.has(track.id)}
+                  onLike={() => handleLike(track.id)}
+                />
               </div>
               <Button
                 size="sm"

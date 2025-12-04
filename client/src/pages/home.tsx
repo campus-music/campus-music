@@ -76,7 +76,8 @@ export default function Home() {
   });
 
   const { data: likedTracks } = useQuery<TrackWithArtist[]>({
-    queryKey: ['/api/user/liked-tracks'],
+    queryKey: ['/api/tracks/liked'],
+    enabled: !!user,
   });
 
   const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
@@ -95,7 +96,7 @@ export default function Home() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user/liked-tracks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracks/liked'] });
     },
   });
 

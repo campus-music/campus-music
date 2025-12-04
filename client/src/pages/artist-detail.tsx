@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useRoute, useLocation } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,8 @@ import { Music, MapPin, Users, Radio } from 'lucide-react';
 import { SupportModal } from '@/components/support-modal';
 import { SupportHistory } from '@/components/support-history';
 import { TrackCard } from '@/components/track-card';
-import type { ArtistProfile, Track, LiveStream } from '@shared/schema';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import type { ArtistProfile, Track, LiveStream, TrackWithArtist } from '@shared/schema';
 
 interface ArtistWithTracks extends ArtistProfile {
   tracks: Track[];
@@ -35,6 +37,46 @@ export default function ArtistDetail() {
     enabled: !!artistId,
     refetchInterval: 30000, // Check every 30 seconds
   });
+
+  const { data: likedTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ['/api/tracks/liked'],
+  });
+
+  const [localLikedIds, setLocalLikedIds] = useState<Set<string>>(new Set());
+  
+  const likedTrackIds = new Set([
+    ...(likedTracks?.map(t => t.id) || []),
+    ...Array.from(localLikedIds)
+  ]);
+
+  const likeMutation = useMutation({
+    mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
+      if (isLiked) {
+        await apiRequest('DELETE', `/api/tracks/${trackId}/like`, {});
+      } else {
+        await apiRequest('POST', `/api/tracks/${trackId}/like`, {});
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tracks/liked'] });
+    },
+  });
+
+  const handleLike = (trackId: string) => {
+    const isLiked = likedTrackIds.has(trackId);
+    
+    setLocalLikedIds(prev => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+    
+    likeMutation.mutate({ trackId, isLiked });
+  };
 
   if (!artistId) {
     navigate('/');
@@ -145,6 +187,8 @@ export default function ArtistDetail() {
               <TrackCard
                 key={track.id}
                 track={{ ...track, artist }}
+                isLiked={likedTrackIds.has(track.id)}
+                onLike={() => handleLike(track.id)}
                 data-testid={`card-track-${track.id}`}
               />
             ))}
