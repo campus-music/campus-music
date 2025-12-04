@@ -33,15 +33,20 @@ import {
   Ticket,
   Building,
   DollarSign,
-  QrCode
+  QrCode,
+  Sparkles,
+  Radio,
+  PartyPopper
 } from "lucide-react";
-import { format, formatDistanceToNow, isPast, isFuture } from "date-fns";
+import { format, formatDistanceToNow, isPast, isFuture, isToday } from "date-fns";
 
-function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onRsvp?: () => void }) {
+function ConcertCard({ concert, featured = false }: { concert: LiveConcertWithDetails; featured?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const isUpcoming = isFuture(new Date(concert.startTime));
   const isHappeningNow = !isUpcoming && (!concert.endTime || isFuture(new Date(concert.endTime)));
+  const isPastEvent = isPast(new Date(concert.endTime || concert.startTime)) && !isHappeningNow;
+  const isEventToday = isToday(new Date(concert.startTime));
   
   const rsvpMutation = useMutation({
     mutationFn: async (status: 'going' | 'interested') => {
@@ -52,7 +57,6 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
       queryClient.invalidateQueries({ queryKey: ['/api/concerts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/concerts/my-university'] });
       toast({ description: "RSVP updated!" });
-      onRsvp?.();
     },
     onError: (error: Error) => {
       toast({
@@ -85,7 +89,7 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
       queryClient.invalidateQueries({ queryKey: ['/api/user/points'] });
       toast({
         title: "Checked In!",
-        description: "Enjoy the show! Points awarded.",
+        description: "Enjoy the show! +50 points awarded.",
       });
     },
     onError: (error: Error) => {
@@ -98,13 +102,20 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
   });
   
   return (
-    <Card className="hover-elevate overflow-hidden">
-      <div className="h-2 bg-gradient-to-r from-primary to-primary/50" />
+    <Card className={`hover-elevate overflow-hidden ${featured ? 'border-primary/30' : ''} ${isHappeningNow ? 'border-green-500/50 ring-1 ring-green-500/20' : ''}`}>
+      {isHappeningNow && (
+        <div className="h-1.5 bg-gradient-to-r from-green-500 via-green-400 to-green-500 animate-pulse" />
+      )}
+      {!isHappeningNow && (
+        <div className="h-1.5 bg-gradient-to-r from-primary/80 to-primary/30" />
+      )}
+      
       <CardContent className="p-5 space-y-4">
+        {/* Header with Artist */}
         <div className="flex items-start gap-4">
-          <Avatar className="h-14 w-14 border-2 border-primary/20">
+          <Avatar className={`h-14 w-14 ring-2 ${isHappeningNow ? 'ring-green-500/50' : 'ring-primary/20'}`}>
             <AvatarImage src={concert.artist?.profileImageUrl || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary">
+            <AvatarFallback className="bg-primary/10 text-primary text-lg font-bold">
               {concert.artist?.stageName?.charAt(0) || 'A'}
             </AvatarFallback>
           </Avatar>
@@ -112,71 +123,103 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-lg font-bold truncate">{concert.title}</h3>
               {isHappeningNow && (
-                <Badge variant="default" className="bg-green-500 animate-pulse">LIVE NOW</Badge>
+                <Badge variant="default" className="bg-green-500 gap-1 animate-pulse">
+                  <Radio className="h-3 w-3" />
+                  LIVE NOW
+                </Badge>
               )}
-              {isPast(new Date(concert.endTime || concert.startTime)) && !isHappeningNow && (
-                <Badge variant="secondary">Past</Badge>
+              {isEventToday && !isHappeningNow && isUpcoming && (
+                <Badge variant="default" className="bg-yellow-500 gap-1">
+                  <Clock className="h-3 w-3" />
+                  TODAY
+                </Badge>
+              )}
+              {isPastEvent && (
+                <Badge variant="secondary">Past Event</Badge>
               )}
             </div>
             <p className="text-muted-foreground">{concert.artist?.stageName}</p>
           </div>
-          {(concert.ticketPrice ?? 0) > 0 && (
-            <Badge variant="outline" className="gap-1">
+          {(concert.ticketPrice ?? 0) > 0 ? (
+            <Badge variant="outline" className="gap-1 shrink-0 border-yellow-500/30 text-yellow-500">
               <DollarSign className="h-3 w-3" />
               {concert.ticketPrice}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1 shrink-0 border-green-500/30 text-green-500">
+              FREE
             </Badge>
           )}
         </div>
         
-        <div className="grid sm:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4 flex-shrink-0" />
-            <span>{format(new Date(concert.startTime), 'EEE, MMM d • h:mm a')}</span>
+        {/* Event Details Grid */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="flex items-center gap-2.5 text-sm">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <Calendar className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-muted-foreground">
+              {format(new Date(concert.startTime), 'EEE, MMM d')}
+              <span className="text-foreground font-medium"> at {format(new Date(concert.startTime), 'h:mm a')}</span>
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{concert.venue}</span>
+          <div className="flex items-center gap-2.5 text-sm">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <MapPin className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-muted-foreground truncate">{concert.venue}</span>
           </div>
           {concert.universityName && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Building className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{concert.universityName}</span>
+            <div className="flex items-center gap-2.5 text-sm">
+              <div className="p-1.5 rounded-lg bg-muted">
+                <Building className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-muted-foreground truncate">{concert.universityName}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="h-4 w-4 flex-shrink-0" />
-            <span>
-              {concert.rsvpCount || 0} attending
-              {concert.capacity && ` / ${concert.capacity} spots`}
+          <div className="flex items-center gap-2.5 text-sm">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-muted-foreground">
+              <span className="text-foreground font-medium">{concert.rsvpCount || 0}</span> attending
+              {concert.capacity && (
+                <span className="text-border"> / {concert.capacity} spots</span>
+              )}
             </span>
           </div>
         </div>
         
+        {/* Description */}
         {concert.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{concert.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2 bg-muted/30 rounded-lg p-3">
+            {concert.description}
+          </p>
         )}
         
-        {user && isUpcoming && (
-          <div className="flex flex-wrap gap-2 pt-2">
+        {/* RSVP Buttons */}
+        {user && isUpcoming && !isHappeningNow && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             {concert.userRsvpStatus === 'going' ? (
               <>
-                <Badge variant="default" className="gap-1 bg-green-500">
-                  <Check className="h-3 w-3" />
-                  Going
+                <Badge variant="default" className="gap-1.5 py-1.5 px-3 bg-green-500">
+                  <Check className="h-3.5 w-3.5" />
+                  You're Going!
                 </Badge>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => cancelRsvpMutation.mutate()}
                   disabled={cancelRsvpMutation.isPending}
+                  className="text-muted-foreground"
                 >
                   Cancel RSVP
                 </Button>
               </>
             ) : concert.userRsvpStatus === 'interested' ? (
               <>
-                <Badge variant="secondary" className="gap-1">
-                  <Heart className="h-3 w-3" />
+                <Badge variant="secondary" className="gap-1.5 py-1.5 px-3">
+                  <Heart className="h-3.5 w-3.5 text-pink-500" />
                   Interested
                 </Badge>
                 <Button
@@ -185,6 +228,7 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
                   disabled={rsvpMutation.isPending}
                   data-testid={`button-rsvp-going-${concert.id}`}
                 >
+                  <Ticket className="h-4 w-4 mr-1.5" />
                   I'm Going
                 </Button>
                 <Button
@@ -192,6 +236,7 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
                   size="sm"
                   onClick={() => cancelRsvpMutation.mutate()}
                   disabled={cancelRsvpMutation.isPending}
+                  className="text-muted-foreground"
                 >
                   Remove
                 </Button>
@@ -199,22 +244,20 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
             ) : (
               <>
                 <Button
-                  size="sm"
                   onClick={() => rsvpMutation.mutate('going')}
                   disabled={rsvpMutation.isPending}
                   data-testid={`button-rsvp-going-${concert.id}`}
                 >
-                  <Ticket className="h-4 w-4 mr-2" />
+                  <Ticket className="h-4 w-4 mr-1.5" />
                   I'm Going
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => rsvpMutation.mutate('interested')}
                   disabled={rsvpMutation.isPending}
                   data-testid={`button-rsvp-interested-${concert.id}`}
                 >
-                  <Heart className="h-4 w-4 mr-2" />
+                  <Heart className="h-4 w-4 mr-1.5" />
                   Interested
                 </Button>
               </>
@@ -222,23 +265,29 @@ function ConcertCard({ concert, onRsvp }: { concert: LiveConcertWithDetails; onR
           </div>
         )}
         
+        {/* Check-in Button */}
         {user && isHappeningNow && concert.userRsvpStatus === 'going' && !concert.userCheckedIn && (
           <Button
-            className="w-full"
+            size="lg"
+            className="w-full bg-green-500 hover:bg-green-600 gap-2"
             onClick={() => checkInMutation.mutate()}
             disabled={checkInMutation.isPending}
             data-testid={`button-check-in-${concert.id}`}
           >
-            <QrCode className="h-4 w-4 mr-2" />
-            Check In & Earn Points
+            <QrCode className="h-5 w-5" />
+            Check In & Earn 50 Points
           </Button>
         )}
         
+        {/* Checked In Badge */}
         {concert.userCheckedIn && (
-          <Badge variant="default" className="w-full justify-center gap-2 py-2 bg-green-500">
-            <Check className="h-4 w-4" />
-            Checked In!
-          </Badge>
+          <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-green-500/10 border border-green-500/30">
+            <div className="p-1.5 rounded-full bg-green-500">
+              <Check className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-semibold text-green-500">You're Checked In!</span>
+            <PartyPopper className="h-5 w-5 text-yellow-500" />
+          </div>
         )}
       </CardContent>
     </Card>
@@ -304,23 +353,25 @@ function CreateConcertDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="gap-2" data-testid="button-create-concert">
+        <Button size="lg" className="gap-2 shadow-lg shadow-primary/25" data-testid="button-create-concert">
           <Plus className="h-5 w-5" />
           Create Concert
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Music2 className="h-5 w-5 text-primary" />
-            Create a Live Concert
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <div className="p-2 rounded-lg bg-primary/20">
+              <Music2 className="h-5 w-5 text-primary" />
+            </div>
+            Create a Concert
           </DialogTitle>
           <DialogDescription>
             Promote your campus performance and connect with fans
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
           <div className="space-y-2">
             <Label htmlFor="concert-title">Event Title</Label>
             <Input
@@ -328,6 +379,7 @@ function CreateConcertDialog() {
               placeholder="My Album Release Party"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="h-11"
               data-testid="input-concert-title"
             />
           </div>
@@ -339,17 +391,21 @@ function CreateConcertDialog() {
               placeholder="Student Center Ballroom"
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
+              className="h-11"
               data-testid="input-concert-venue"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="address">Address (optional)</Label>
+            <Label htmlFor="address">
+              Address <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Input
               id="address"
               placeholder="123 Campus Drive"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              className="h-11"
               data-testid="input-concert-address"
             />
           </div>
@@ -362,16 +418,20 @@ function CreateConcertDialog() {
                 type="datetime-local"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
+                className="h-11"
                 data-testid="input-concert-start"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-time">End Time (optional)</Label>
+              <Label htmlFor="end-time">
+                End Time <span className="text-muted-foreground text-xs">(opt.)</span>
+              </Label>
               <Input
                 id="end-time"
                 type="datetime-local"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
+                className="h-11"
                 data-testid="input-concert-end"
               />
             </div>
@@ -379,13 +439,16 @@ function CreateConcertDialog() {
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="capacity">Capacity (optional)</Label>
+              <Label htmlFor="capacity">
+                Capacity <span className="text-muted-foreground text-xs">(opt.)</span>
+              </Label>
               <Input
                 id="capacity"
                 type="number"
                 placeholder="100"
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
+                className="h-11"
                 data-testid="input-concert-capacity"
               />
             </div>
@@ -395,16 +458,19 @@ function CreateConcertDialog() {
                 id="ticket-price"
                 type="number"
                 step="0.01"
-                placeholder="0 (free)"
+                placeholder="0 = free"
                 value={ticketPrice}
                 onChange={(e) => setTicketPrice(e.target.value)}
+                className="h-11"
                 data-testid="input-concert-price"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
+            <Label htmlFor="description">
+              Description <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Textarea
               id="description"
               placeholder="Tell people what to expect..."
@@ -419,6 +485,7 @@ function CreateConcertDialog() {
         <Button
           onClick={() => createMutation.mutate()}
           disabled={!title.trim() || !venue.trim() || !startTime || createMutation.isPending}
+          size="lg"
           className="w-full"
           data-testid="button-confirm-create-concert"
         >
@@ -454,108 +521,140 @@ export default function ConcertsPage() {
   
   const universityConcerts = myConcerts?.filter(c => isFuture(new Date(c.startTime))) || [];
   const upcomingConcerts = allConcerts?.filter(c => isFuture(new Date(c.startTime))) || [];
+  const liveConcerts = allConcerts?.filter(c => {
+    const now = new Date();
+    const start = new Date(c.startTime);
+    const end = c.endTime ? new Date(c.endTime) : null;
+    return start <= now && (!end || end > now);
+  }) || [];
   
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Music2 className="h-8 w-8 text-primary" />
-            Live Concerts
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Discover and attend live music events on campus
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <Card className="bg-gradient-to-br from-purple-500/20 to-background border-purple-500/20">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-full bg-purple-500/20">
-                <Star className="h-6 w-6 text-purple-500" />
+    <div className="space-y-8 pb-8">
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-background p-8 border border-purple-500/20">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-purple-500/20">
+                <Music2 className="h-8 w-8 text-purple-500" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Concert Points</p>
-                <p className="text-2xl font-bold" data-testid="text-concert-points">
-                  {points?.concertPoints || 0}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+              Campus Concerts
+            </h1>
+            <p className="text-lg text-muted-foreground mt-2 max-w-md">
+              Discover live music events on campus. RSVP, attend, and earn points for checking in!
+            </p>
+          </div>
           
-          {isArtist && <CreateConcertDialog />}
+          <div className="flex flex-wrap items-center gap-4">
+            <Card className="border-purple-500/30 bg-background/80 backdrop-blur">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-full bg-purple-500/20">
+                  <Sparkles className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold" data-testid="text-concert-points">
+                    {points?.concertPoints || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Concert Points</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {isArtist && <CreateConcertDialog />}
+          </div>
         </div>
       </div>
       
-      <Tabs defaultValue="my-university" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="my-university">My University</TabsTrigger>
+      {/* Live Now Section */}
+      {liveConcerts.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Radio className="h-5 w-5 text-green-500 animate-pulse" />
+            Happening Now
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {liveConcerts.map((concert) => (
+              <ConcertCard key={concert.id} concert={concert} featured />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Tabs */}
+      <Tabs defaultValue={user ? "my-university" : "all"} className="space-y-6">
+        <TabsList className="bg-muted/50">
+          {user && <TabsTrigger value="my-university">My University</TabsTrigger>}
           <TabsTrigger value="all">All Concerts</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="my-university" className="space-y-4">
-          {user?.universityName && (
-            <Badge variant="secondary" className="gap-1">
-              <Building className="h-3 w-3" />
-              {user.universityName}
-            </Badge>
-          )}
-          
-          {loadingMy ? (
-            <div className="grid md:grid-cols-2 gap-4">
-              {[1, 2].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardContent className="p-5 space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-full bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-5 bg-muted rounded w-1/2" />
-                        <div className="h-4 bg-muted rounded w-1/3" />
+        {user && (
+          <TabsContent value="my-university" className="space-y-4">
+            {user?.universityName && (
+              <Badge variant="secondary" className="gap-1.5 py-1.5 px-3">
+                <Building className="h-3.5 w-3.5" />
+                {user.universityName}
+              </Badge>
+            )}
+            
+            {loadingMy ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <div className="h-1.5 bg-muted" />
+                    <CardContent className="p-5 space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-muted" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-5 bg-muted rounded w-2/3" />
+                          <div className="h-4 bg-muted rounded w-1/3" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="h-20 bg-muted rounded" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : universityConcerts.length > 0 ? (
-            <div className="grid md:grid-cols-2 gap-4">
-              {universityConcerts.map((concert) => (
-                <ConcertCard key={concert.id} concert={concert} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Music2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Upcoming Concerts</h3>
-                <p className="text-muted-foreground mb-4">
-                  {user?.universityName 
-                    ? `No concerts scheduled at ${user.universityName} yet.`
-                    : "Check out all concerts or set your university in your profile."}
-                </p>
-                {isArtist && (
-                  <CreateConcertDialog />
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+                      <div className="h-24 bg-muted rounded-lg" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : universityConcerts.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {universityConcerts.map((concert) => (
+                  <ConcertCard key={concert.id} concert={concert} />
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed">
+                <CardContent className="p-12 text-center">
+                  <div className="mx-auto w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                    <Music2 className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No Upcoming Concerts</h3>
+                  <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                    {user?.universityName 
+                      ? `No concerts scheduled at ${user.universityName} yet. Be the first to create one!`
+                      : "Set your university in your profile to see local events."}
+                  </p>
+                  {isArtist && <CreateConcertDialog />}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
         
         <TabsContent value="all" className="space-y-4">
           {loadingAll ? (
             <div className="grid md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="animate-pulse">
+                  <div className="h-1.5 bg-muted" />
                   <CardContent className="p-5 space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-full bg-muted" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-5 bg-muted rounded w-1/2" />
+                        <div className="h-5 bg-muted rounded w-2/3" />
                         <div className="h-4 bg-muted rounded w-1/3" />
                       </div>
                     </div>
-                    <div className="h-20 bg-muted rounded" />
+                    <div className="h-24 bg-muted rounded-lg" />
                   </CardContent>
                 </Card>
               ))}
@@ -567,18 +666,16 @@ export default function ConcertsPage() {
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Music2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Upcoming Concerts</h3>
-                <p className="text-muted-foreground">
+            <Card className="border-dashed">
+              <CardContent className="p-12 text-center">
+                <div className="mx-auto w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                  <Music2 className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No Upcoming Concerts</h3>
+                <p className="text-muted-foreground mb-6">
                   Be the first to create a campus concert event!
                 </p>
-                {isArtist && (
-                  <div className="mt-4">
-                    <CreateConcertDialog />
-                  </div>
-                )}
+                {isArtist && <CreateConcertDialog />}
               </CardContent>
             </Card>
           )}
