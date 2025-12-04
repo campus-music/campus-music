@@ -16,6 +16,7 @@ import { ObjectUploader } from '@/components/ObjectUploader';
 export default function Playlists() {
   const { toast } = useToast();
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [newPlaylistCoverUrl, setNewPlaylistCoverUrl] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
@@ -26,14 +27,20 @@ export default function Playlists() {
   const selectedPlaylist = playlists?.find(p => p.id === selectedPlaylistId);
 
   const createPlaylistMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const res = await apiRequest('POST', '/api/playlists', { name, description: '', isPublic: false });
+    mutationFn: async ({ name, coverImageUrl }: { name: string; coverImageUrl?: string }) => {
+      const res = await apiRequest('POST', '/api/playlists', { 
+        name, 
+        description: '', 
+        isPublic: false,
+        coverImageUrl: coverImageUrl || null
+      });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/playlists'] });
       setDialogOpen(false);
       setNewPlaylistName('');
+      setNewPlaylistCoverUrl('');
       toast({ title: 'Playlist created successfully' });
     },
   });
@@ -85,7 +92,16 @@ export default function Playlists() {
   const handleCreatePlaylist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPlaylistName.trim()) {
-      await createPlaylistMutation.mutateAsync(newPlaylistName);
+      await createPlaylistMutation.mutateAsync({ 
+        name: newPlaylistName, 
+        coverImageUrl: newPlaylistCoverUrl || undefined 
+      });
+    }
+  };
+
+  const handleNewPlaylistCoverUploaded = (result: { successful: Array<{ uploadURL: string }>; failed: Array<{ error: string }> }) => {
+    if (result.successful.length > 0) {
+      setNewPlaylistCoverUrl(result.successful[0].uploadURL);
     }
   };
 
@@ -204,7 +220,13 @@ export default function Playlists() {
           </div>
 
           <div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setNewPlaylistName('');
+                setNewPlaylistCoverUrl('');
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="rounded-full" data-testid="button-create-playlist">
                   <Plus className="h-4 w-4 mr-2" />
@@ -216,6 +238,36 @@ export default function Playlists() {
                   <DialogTitle>Create New Playlist</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreatePlaylist} className="space-y-4">
+                  <div className="flex justify-center">
+                    <div className="relative group">
+                      <div className="h-32 w-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        {newPlaylistCoverUrl ? (
+                          <img
+                            src={newPlaylistCoverUrl}
+                            alt="Playlist cover"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-primary/30 to-primary/5">
+                            <ListMusic className="h-12 w-12 text-primary/40" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                        <ObjectUploader
+                          allowedFileTypes={['image/jpeg', 'image/png', 'image/webp']}
+                          maxFileSize={5 * 1024 * 1024}
+                          onGetUploadParameters={getUploadParameters}
+                          onComplete={handleNewPlaylistCoverUploaded}
+                          buttonVariant="secondary"
+                          buttonSize="sm"
+                        >
+                          <ImagePlus className="h-4 w-4 mr-2" />
+                          {newPlaylistCoverUrl ? 'Change' : 'Add Cover'}
+                        </ObjectUploader>
+                      </div>
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="playlist-name">Playlist Name</Label>
                     <Input
