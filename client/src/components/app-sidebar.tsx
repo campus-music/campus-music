@@ -1,6 +1,5 @@
 import { Home, TrendingUp, GraduationCap, Library, User, Search, Sparkles, BarChart3, ListMusic, Users, MessageCircle, Newspaper, Radio, PhoneOff, Headphones, Music2, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
 import logoUrl from '@assets/campus music logo_1764112870484.png';
 import {
   Sidebar,
@@ -17,7 +16,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import type { ArtistProfile } from "@shared/schema";
 
 const browseItems = [
   { title: "Home", url: "/", publicUrl: "/browse", icon: Home },
@@ -56,28 +54,12 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
-  const { data: artistProfile } = useQuery<ArtistProfile>({
-    queryKey: ['/api/artist/profile'],
-    enabled: !!user && user.role === 'artist',
-  });
-
-  const profileImageUrl = artistProfile?.profileImageUrl;
-
   const getUrl = (item: { url: string; publicUrl?: string }) => 
     isPublic && item.publicUrl ? item.publicUrl : item.url;
 
   const handleLogout = async () => {
     await logout();
     setLocation('/login');
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
@@ -207,12 +189,14 @@ export function AppSidebar({ isPublic }: { isPublic?: boolean } = {}) {
       {!isPublic && user && (
         <SidebarFooter className="p-4 border-t border-border">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border border-border">
-              <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
-              <AvatarFallback className="bg-primary/20 text-sm font-medium">
-                {getInitials(user.fullName)}
-              </AvatarFallback>
-            </Avatar>
+            <Link href="/profile" data-testid="link-user-avatar">
+              <Avatar className="h-10 w-10 cursor-pointer hover-elevate">
+                <AvatarImage src={undefined} alt={user.fullName} />
+                <AvatarFallback className="bg-primary/20 text-sm font-medium">
+                  {user.fullName?.slice(0, 2).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user.fullName}</p>
               <p className="text-xs text-muted-foreground truncate">{user.email}</p>
