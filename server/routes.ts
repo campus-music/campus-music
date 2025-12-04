@@ -2869,6 +2869,607 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============= REAL CONNECTION FEATURES =============
+
+  // --- PHONE DOWN CHALLENGES ---
+
+  // Create a new phone down challenge
+  app.post("/api/phone-down-challenges", requireAuth, async (req: any, res) => {
+    try {
+      const { targetDurationMinutes, title, isGroup } = req.body;
+      
+      if (!targetDurationMinutes || targetDurationMinutes < 5 || targetDurationMinutes > 180) {
+        return res.status(400).json({ error: "Duration must be between 5 and 180 minutes" });
+      }
+      
+      const challenge = await storage.createPhoneDownChallenge({
+        hostUserId: req.session.userId,
+        targetDurationMinutes,
+        title: title || null,
+        isGroup: isGroup || false,
+        status: 'active'
+      });
+      
+      const fullChallenge = await storage.getPhoneDownChallenge(challenge.id);
+      res.status(201).json(fullChallenge);
+    } catch (error: any) {
+      console.error("Error creating phone down challenge:", error);
+      res.status(500).json({ error: error.message || "Failed to create challenge" });
+    }
+  });
+
+  // Join a phone down challenge by code
+  app.post("/api/phone-down-challenges/join", requireAuth, async (req: any, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ error: "Code is required" });
+      }
+      
+      const challenge = await storage.getPhoneDownChallengeByCode(code);
+      if (!challenge) {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      
+      if (challenge.status !== 'active') {
+        return res.status(400).json({ error: "Challenge is no longer active" });
+      }
+      
+      await storage.joinPhoneDownChallenge(challenge.id, req.session.userId);
+      const fullChallenge = await storage.getPhoneDownChallenge(challenge.id);
+      res.json(fullChallenge);
+    } catch (error: any) {
+      console.error("Error joining phone down challenge:", error);
+      res.status(500).json({ error: error.message || "Failed to join challenge" });
+    }
+  });
+
+  // Get a specific phone down challenge
+  app.get("/api/phone-down-challenges/:id", requireAuth, async (req: any, res) => {
+    try {
+      const challenge = await storage.getPhoneDownChallenge(req.params.id);
+      if (!challenge) {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      res.json(challenge);
+    } catch (error: any) {
+      console.error("Error getting phone down challenge:", error);
+      res.status(500).json({ error: error.message || "Failed to get challenge" });
+    }
+  });
+
+  // Get user's active challenges
+  app.get("/api/phone-down-challenges/active/me", requireAuth, async (req: any, res) => {
+    try {
+      const challenges = await storage.getActivePhoneDownChallenges(req.session.userId);
+      res.json(challenges);
+    } catch (error: any) {
+      console.error("Error getting active challenges:", error);
+      res.status(500).json({ error: error.message || "Failed to get active challenges" });
+    }
+  });
+
+  // Get user's challenge history
+  app.get("/api/phone-down-challenges/history/me", requireAuth, async (req: any, res) => {
+    try {
+      const challenges = await storage.getUserPhoneDownHistory(req.session.userId);
+      res.json(challenges);
+    } catch (error: any) {
+      console.error("Error getting challenge history:", error);
+      res.status(500).json({ error: error.message || "Failed to get challenge history" });
+    }
+  });
+
+  // Complete a phone down challenge (host only)
+  app.post("/api/phone-down-challenges/:id/complete", requireAuth, async (req: any, res) => {
+    try {
+      const challenge = await storage.getPhoneDownChallenge(req.params.id);
+      if (!challenge) {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      
+      if (challenge.hostUserId !== req.session.userId) {
+        return res.status(403).json({ error: "Only the host can complete the challenge" });
+      }
+      
+      if (challenge.status !== 'active') {
+        return res.status(400).json({ error: "Challenge is not active" });
+      }
+      
+      const completed = await storage.completePhoneDownChallenge(req.params.id);
+      const fullChallenge = await storage.getPhoneDownChallenge(req.params.id);
+      res.json(fullChallenge);
+    } catch (error: any) {
+      console.error("Error completing phone down challenge:", error);
+      res.status(500).json({ error: error.message || "Failed to complete challenge" });
+    }
+  });
+
+  // Cancel a phone down challenge (host only)
+  app.post("/api/phone-down-challenges/:id/cancel", requireAuth, async (req: any, res) => {
+    try {
+      const challenge = await storage.getPhoneDownChallenge(req.params.id);
+      if (!challenge) {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      
+      if (challenge.hostUserId !== req.session.userId) {
+        return res.status(403).json({ error: "Only the host can cancel the challenge" });
+      }
+      
+      await storage.cancelPhoneDownChallenge(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error canceling phone down challenge:", error);
+      res.status(500).json({ error: error.message || "Failed to cancel challenge" });
+    }
+  });
+
+  // --- USER POINTS & BADGES ---
+
+  // Get user's points
+  app.get("/api/user/points", requireAuth, async (req: any, res) => {
+    try {
+      let points = await storage.getUserPoints(req.session.userId);
+      if (!points) {
+        points = { 
+          id: '', 
+          userId: req.session.userId, 
+          totalPoints: 0, 
+          phoneDownPoints: 0,
+          listeningPartyPoints: 0,
+          concertPoints: 0,
+          updatedAt: new Date()
+        };
+      }
+      res.json(points);
+    } catch (error: any) {
+      console.error("Error getting user points:", error);
+      res.status(500).json({ error: error.message || "Failed to get points" });
+    }
+  });
+
+  // Get user's badges
+  app.get("/api/user/badges", requireAuth, async (req: any, res) => {
+    try {
+      const badges = await storage.getUserBadges(req.session.userId);
+      res.json(badges);
+    } catch (error: any) {
+      console.error("Error getting user badges:", error);
+      res.status(500).json({ error: error.message || "Failed to get badges" });
+    }
+  });
+
+  // --- LISTENING PARTIES ---
+
+  // Create a new listening party
+  app.post("/api/listening-parties", requireAuth, async (req: any, res) => {
+    try {
+      const { title, description, locationHint } = req.body;
+      
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      
+      const party = await storage.createListeningParty({
+        hostUserId: req.session.userId,
+        title: title.trim(),
+        description: description?.trim() || null,
+        locationHint: locationHint?.trim() || null,
+        status: 'active'
+      });
+      
+      const fullParty = await storage.getListeningParty(party.id);
+      res.status(201).json(fullParty);
+    } catch (error: any) {
+      console.error("Error creating listening party:", error);
+      res.status(500).json({ error: error.message || "Failed to create party" });
+    }
+  });
+
+  // Join a listening party by code
+  app.post("/api/listening-parties/join", requireAuth, async (req: any, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ error: "Code is required" });
+      }
+      
+      const party = await storage.getListeningPartyByCode(code);
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+      
+      if (party.status !== 'active') {
+        return res.status(400).json({ error: "Party has ended" });
+      }
+      
+      await storage.joinListeningParty(party.id, req.session.userId);
+      const fullParty = await storage.getListeningParty(party.id);
+      
+      // Award points for joining
+      await storage.addPoints(req.session.userId, 5, 'listeningParty');
+      
+      res.json(fullParty);
+    } catch (error: any) {
+      console.error("Error joining listening party:", error);
+      res.status(500).json({ error: error.message || "Failed to join party" });
+    }
+  });
+
+  // Get a specific listening party
+  app.get("/api/listening-parties/:id", requireAuth, async (req: any, res) => {
+    try {
+      const party = await storage.getListeningParty(req.params.id);
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+      res.json(party);
+    } catch (error: any) {
+      console.error("Error getting listening party:", error);
+      res.status(500).json({ error: error.message || "Failed to get party" });
+    }
+  });
+
+  // Get user's active listening parties
+  app.get("/api/listening-parties/active/me", requireAuth, async (req: any, res) => {
+    try {
+      const parties = await storage.getActiveListeningParties(req.session.userId);
+      res.json(parties);
+    } catch (error: any) {
+      console.error("Error getting active parties:", error);
+      res.status(500).json({ error: error.message || "Failed to get active parties" });
+    }
+  });
+
+  // Update listening party playback (host only)
+  app.patch("/api/listening-parties/:id/playback", requireAuth, async (req: any, res) => {
+    try {
+      const party = await storage.getListeningParty(req.params.id);
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+      
+      if (party.hostUserId !== req.session.userId) {
+        return res.status(403).json({ error: "Only the host can control playback" });
+      }
+      
+      const { trackId, positionMs, isPlaying } = req.body;
+      await storage.updateListeningPartyPlayback(
+        req.params.id,
+        trackId ?? party.currentTrackId,
+        positionMs ?? party.playbackPositionMs,
+        isPlaying ?? party.isPlaying
+      );
+      
+      const fullParty = await storage.getListeningParty(req.params.id);
+      res.json(fullParty);
+    } catch (error: any) {
+      console.error("Error updating listening party playback:", error);
+      res.status(500).json({ error: error.message || "Failed to update playback" });
+    }
+  });
+
+  // Add track to listening party queue
+  app.post("/api/listening-parties/:id/queue", requireAuth, async (req: any, res) => {
+    try {
+      const party = await storage.getListeningParty(req.params.id);
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+      
+      const { trackId } = req.body;
+      if (!trackId) {
+        return res.status(400).json({ error: "Track ID is required" });
+      }
+      
+      const track = await storage.getTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ error: "Track not found" });
+      }
+      
+      const queueItem = await storage.addTrackToPartyQueue(req.params.id, trackId, req.session.userId);
+      const fullParty = await storage.getListeningParty(req.params.id);
+      res.status(201).json(fullParty);
+    } catch (error: any) {
+      console.error("Error adding track to queue:", error);
+      res.status(500).json({ error: error.message || "Failed to add track to queue" });
+    }
+  });
+
+  // Remove track from listening party queue (host only)
+  app.delete("/api/listening-parties/:id/queue/:queueId", requireAuth, async (req: any, res) => {
+    try {
+      const party = await storage.getListeningParty(req.params.id);
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+      
+      if (party.hostUserId !== req.session.userId) {
+        return res.status(403).json({ error: "Only the host can remove tracks from queue" });
+      }
+      
+      await storage.removeTrackFromPartyQueue(req.params.queueId);
+      const fullParty = await storage.getListeningParty(req.params.id);
+      res.json(fullParty);
+    } catch (error: any) {
+      console.error("Error removing track from queue:", error);
+      res.status(500).json({ error: error.message || "Failed to remove track from queue" });
+    }
+  });
+
+  // Leave a listening party
+  app.post("/api/listening-parties/:id/leave", requireAuth, async (req: any, res) => {
+    try {
+      await storage.leaveListeningParty(req.params.id, req.session.userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error leaving listening party:", error);
+      res.status(500).json({ error: error.message || "Failed to leave party" });
+    }
+  });
+
+  // End a listening party (host only)
+  app.post("/api/listening-parties/:id/end", requireAuth, async (req: any, res) => {
+    try {
+      const party = await storage.getListeningParty(req.params.id);
+      if (!party) {
+        return res.status(404).json({ error: "Party not found" });
+      }
+      
+      if (party.hostUserId !== req.session.userId) {
+        return res.status(403).json({ error: "Only the host can end the party" });
+      }
+      
+      await storage.endListeningParty(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error ending listening party:", error);
+      res.status(500).json({ error: error.message || "Failed to end party" });
+    }
+  });
+
+  // --- LIVE CONCERTS ---
+
+  // Create a new live concert (artist only)
+  app.post("/api/concerts", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== 'artist') {
+        return res.status(403).json({ error: "Only artists can create concerts" });
+      }
+      
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile) {
+        return res.status(403).json({ error: "Artist profile required" });
+      }
+      
+      const { title, description, venue, address, startTime, endTime, capacity, ticketPrice } = req.body;
+      
+      if (!title || !venue || !startTime) {
+        return res.status(400).json({ error: "Title, venue, and start time are required" });
+      }
+      
+      const concert = await storage.createLiveConcert({
+        artistId: artistProfile.id,
+        title: title.trim(),
+        description: description?.trim() || null,
+        venue: venue.trim(),
+        address: address?.trim() || null,
+        universityName: user.universityName,
+        startTime: new Date(startTime),
+        endTime: endTime ? new Date(endTime) : null,
+        capacity: capacity || null,
+        ticketPrice: ticketPrice || 0,
+        status: 'upcoming'
+      });
+      
+      const fullConcert = await storage.getLiveConcert(concert.id, req.session.userId);
+      res.status(201).json(fullConcert);
+    } catch (error: any) {
+      console.error("Error creating concert:", error);
+      res.status(500).json({ error: error.message || "Failed to create concert" });
+    }
+  });
+
+  // Get upcoming concerts (optionally filtered by university)
+  app.get("/api/concerts", async (req: any, res) => {
+    try {
+      const { university, limit } = req.query;
+      const concerts = await storage.getUpcomingConcerts(
+        university as string | undefined,
+        limit ? parseInt(limit) : undefined
+      );
+      res.json(concerts);
+    } catch (error: any) {
+      console.error("Error getting concerts:", error);
+      res.status(500).json({ error: error.message || "Failed to get concerts" });
+    }
+  });
+
+  // Get concerts at user's university
+  app.get("/api/concerts/my-university", requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user?.universityName) {
+        return res.json([]);
+      }
+      
+      const concerts = await storage.getUpcomingConcerts(user.universityName);
+      res.json(concerts);
+    } catch (error: any) {
+      console.error("Error getting university concerts:", error);
+      res.status(500).json({ error: error.message || "Failed to get concerts" });
+    }
+  });
+
+  // Get a specific concert
+  app.get("/api/concerts/:id", async (req: any, res) => {
+    try {
+      const userId = req.session?.userId;
+      const concert = await storage.getLiveConcert(req.params.id, userId);
+      if (!concert) {
+        return res.status(404).json({ error: "Concert not found" });
+      }
+      res.json(concert);
+    } catch (error: any) {
+      console.error("Error getting concert:", error);
+      res.status(500).json({ error: error.message || "Failed to get concert" });
+    }
+  });
+
+  // Get concerts by artist
+  app.get("/api/artists/:artistId/concerts", async (req: any, res) => {
+    try {
+      const concerts = await storage.getLiveConcertsByArtist(req.params.artistId);
+      res.json(concerts);
+    } catch (error: any) {
+      console.error("Error getting artist concerts:", error);
+      res.status(500).json({ error: error.message || "Failed to get artist concerts" });
+    }
+  });
+
+  // Update a concert (artist only)
+  app.patch("/api/concerts/:id", requireAuth, async (req: any, res) => {
+    try {
+      const concert = await storage.getLiveConcert(req.params.id);
+      if (!concert) {
+        return res.status(404).json({ error: "Concert not found" });
+      }
+      
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile || concert.artistId !== artistProfile.id) {
+        return res.status(403).json({ error: "Only the artist can update this concert" });
+      }
+      
+      const updates = req.body;
+      if (updates.startTime) updates.startTime = new Date(updates.startTime);
+      if (updates.endTime) updates.endTime = new Date(updates.endTime);
+      
+      await storage.updateLiveConcert(req.params.id, updates);
+      const fullConcert = await storage.getLiveConcert(req.params.id, req.session.userId);
+      res.json(fullConcert);
+    } catch (error: any) {
+      console.error("Error updating concert:", error);
+      res.status(500).json({ error: error.message || "Failed to update concert" });
+    }
+  });
+
+  // Cancel a concert (artist only)
+  app.post("/api/concerts/:id/cancel", requireAuth, async (req: any, res) => {
+    try {
+      const concert = await storage.getLiveConcert(req.params.id);
+      if (!concert) {
+        return res.status(404).json({ error: "Concert not found" });
+      }
+      
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile || concert.artistId !== artistProfile.id) {
+        return res.status(403).json({ error: "Only the artist can cancel this concert" });
+      }
+      
+      await storage.cancelLiveConcert(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error canceling concert:", error);
+      res.status(500).json({ error: error.message || "Failed to cancel concert" });
+    }
+  });
+
+  // RSVP to a concert
+  app.post("/api/concerts/:id/rsvp", requireAuth, async (req: any, res) => {
+    try {
+      const { status } = req.body;
+      if (!status || !['going', 'interested'].includes(status)) {
+        return res.status(400).json({ error: "Status must be 'going' or 'interested'" });
+      }
+      
+      const concert = await storage.getLiveConcert(req.params.id);
+      if (!concert) {
+        return res.status(404).json({ error: "Concert not found" });
+      }
+      
+      // Check capacity for 'going' RSVPs
+      if (status === 'going' && concert.capacity && concert.rsvpCount >= concert.capacity) {
+        return res.status(400).json({ error: "Concert is at capacity" });
+      }
+      
+      await storage.rsvpToConcert(req.params.id, req.session.userId, status);
+      const fullConcert = await storage.getLiveConcert(req.params.id, req.session.userId);
+      res.json(fullConcert);
+    } catch (error: any) {
+      console.error("Error RSVPing to concert:", error);
+      res.status(500).json({ error: error.message || "Failed to RSVP" });
+    }
+  });
+
+  // Cancel RSVP
+  app.delete("/api/concerts/:id/rsvp", requireAuth, async (req: any, res) => {
+    try {
+      await storage.cancelRsvp(req.params.id, req.session.userId);
+      const fullConcert = await storage.getLiveConcert(req.params.id, req.session.userId);
+      res.json(fullConcert);
+    } catch (error: any) {
+      console.error("Error canceling RSVP:", error);
+      res.status(500).json({ error: error.message || "Failed to cancel RSVP" });
+    }
+  });
+
+  // Check in to a concert
+  app.post("/api/concerts/:id/check-in", requireAuth, async (req: any, res) => {
+    try {
+      const concert = await storage.getLiveConcert(req.params.id);
+      if (!concert) {
+        return res.status(404).json({ error: "Concert not found" });
+      }
+      
+      // Check if concert is happening now (within 2 hours before start time and not ended)
+      const now = new Date();
+      const concertStart = new Date(concert.startTime);
+      const twoHoursBeforeStart = new Date(concertStart.getTime() - 2 * 60 * 60 * 1000);
+      
+      if (now < twoHoursBeforeStart) {
+        return res.status(400).json({ error: "Check-in is not available yet" });
+      }
+      
+      if (concert.endTime && now > new Date(concert.endTime)) {
+        return res.status(400).json({ error: "Concert has ended" });
+      }
+      
+      const rsvp = await storage.checkInToConert(req.params.id, req.session.userId);
+      if (!rsvp) {
+        return res.status(400).json({ error: "You need to RSVP before checking in" });
+      }
+      
+      const fullConcert = await storage.getLiveConcert(req.params.id, req.session.userId);
+      res.json(fullConcert);
+    } catch (error: any) {
+      console.error("Error checking in to concert:", error);
+      res.status(500).json({ error: error.message || "Failed to check in" });
+    }
+  });
+
+  // Get concert RSVPs (artist only)
+  app.get("/api/concerts/:id/rsvps", requireAuth, async (req: any, res) => {
+    try {
+      const concert = await storage.getLiveConcert(req.params.id);
+      if (!concert) {
+        return res.status(404).json({ error: "Concert not found" });
+      }
+      
+      const artistProfile = await storage.getArtistProfile(req.session.userId);
+      if (!artistProfile || concert.artistId !== artistProfile.id) {
+        return res.status(403).json({ error: "Only the artist can view RSVPs" });
+      }
+      
+      const rsvps = await storage.getConcertRsvps(req.params.id);
+      res.json(rsvps);
+    } catch (error: any) {
+      console.error("Error getting concert RSVPs:", error);
+      res.status(500).json({ error: error.message || "Failed to get RSVPs" });
+    }
+  });
+
   // Seed data on startup
   await seedData();
 
