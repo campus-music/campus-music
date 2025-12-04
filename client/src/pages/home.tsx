@@ -416,20 +416,22 @@ export default function Home() {
                 ))
               ) : (
                 topArtists.map((artist) => (
-                  <Link key={artist.id} href={`/artist/${artist.id}`}>
-                    <Card className="w-48 flex-shrink-0 overflow-hidden hover-elevate transition-all p-4 text-center space-y-3 cursor-pointer h-full flex flex-col items-center" data-testid={`card-artist-home-${artist.id}`}>
-                      <Avatar className="h-28 w-28">
-                        <AvatarImage src={artist.profileImageUrl || undefined} alt={artist.stageName} />
-                        <AvatarFallback className="bg-primary/20">
-                          <Music className="h-10 w-10" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 w-full px-1">
-                        <h3 className="font-semibold truncate text-sm">{artist.stageName}</h3>
-                        <p className="text-xs text-muted-foreground">{artist.trackCount} tracks</p>
-                      </div>
-                    </Card>
-                  </Link>
+                  <div key={artist.id} className="w-48 flex-shrink-0">
+                    <Link href={`/artist/${artist.id}`}>
+                      <Card className="overflow-hidden hover-elevate transition-all p-4 text-center space-y-3 cursor-pointer h-full flex flex-col items-center" data-testid={`card-artist-home-${artist.id}`}>
+                        <Avatar className="h-28 w-28">
+                          <AvatarImage src={artist.profileImageUrl || undefined} alt={artist.stageName} />
+                          <AvatarFallback className="bg-primary/20">
+                            <Music className="h-10 w-10" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 w-full px-1">
+                          <h3 className="font-semibold truncate text-sm">{artist.stageName}</h3>
+                          <p className="text-xs text-muted-foreground">{artist.trackCount} tracks</p>
+                        </div>
+                      </Card>
+                    </Link>
+                  </div>
                 ))
               )}
             </div>
