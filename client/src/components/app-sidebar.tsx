@@ -22,9 +22,9 @@ import type { ArtistProfile } from "@shared/schema";
 const browseItems = [
   { title: "Home", url: "/", publicUrl: "/browse", icon: Home },
   { title: "Search", url: "/search", publicUrl: "/search", icon: Search },
+  { title: "Campuses", url: "/discover", publicUrl: "/discover", icon: GraduationCap },
   { title: "Trending", url: "/trending", publicUrl: "/all-trending", icon: TrendingUp },
-  { title: "Discover by University", url: "/discover", publicUrl: "/discover", icon: GraduationCap },
-  { title: "Browse Genres", url: "/genres", publicUrl: "/genres", icon: Sparkles },
+  { title: "Genres", url: "/genres", publicUrl: "/genres", icon: Sparkles },
 ];
 
 const libraryItems = [
