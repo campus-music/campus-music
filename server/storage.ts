@@ -59,6 +59,21 @@ import {
   type InsertLiveStreamMessage,
   type LiveStreamWithArtist,
   type LiveStreamMessageWithUser,
+  type PhoneDownChallenge,
+  type InsertPhoneDownChallenge,
+  type PhoneDownParticipant,
+  type PhoneDownChallengeWithParticipants,
+  type UserPoints,
+  type UserBadge,
+  type ListeningParty,
+  type InsertListeningParty,
+  type ListeningPartyMember,
+  type ListeningPartyQueue,
+  type ListeningPartyWithDetails,
+  type LiveConcert,
+  type InsertLiveConcert,
+  type ConcertRsvp,
+  type LiveConcertWithDetails,
   commentStickers,
   universities,
   users,
@@ -87,7 +102,16 @@ import {
   listenerFavoriteGenres,
   liveStreams,
   liveStreamViewers,
-  liveStreamMessages
+  liveStreamMessages,
+  phoneDownChallenges,
+  phoneDownParticipants,
+  userPoints,
+  userBadges,
+  listeningParties,
+  listeningPartyMembers,
+  listeningPartyQueue,
+  liveConcerts,
+  concertRsvps
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, ilike, or, and, inArray, count, gte, lt } from "drizzle-orm";
@@ -327,6 +351,51 @@ export interface IStorage {
   // Live stream messages
   sendStreamMessage(data: InsertLiveStreamMessage): Promise<LiveStreamMessage>;
   getStreamMessages(streamId: string, limit?: number): Promise<LiveStreamMessageWithUser[]>;
+
+  // ============================================
+  // REAL CONNECTION FEATURES
+  // ============================================
+
+  // Phone Down Challenges
+  createPhoneDownChallenge(data: InsertPhoneDownChallenge): Promise<PhoneDownChallenge>;
+  getPhoneDownChallenge(id: string): Promise<PhoneDownChallengeWithParticipants | undefined>;
+  getPhoneDownChallengeByCode(code: string): Promise<PhoneDownChallengeWithParticipants | undefined>;
+  joinPhoneDownChallenge(challengeId: string, userId: string): Promise<PhoneDownParticipant>;
+  completePhoneDownChallenge(id: string): Promise<PhoneDownChallenge | undefined>;
+  cancelPhoneDownChallenge(id: string): Promise<PhoneDownChallenge | undefined>;
+  getActivePhoneDownChallenges(userId: string): Promise<PhoneDownChallengeWithParticipants[]>;
+  getUserPhoneDownHistory(userId: string, limit?: number): Promise<PhoneDownChallengeWithParticipants[]>;
+
+  // User Points & Badges
+  getUserPoints(userId: string): Promise<UserPoints | undefined>;
+  addPoints(userId: string, points: number, category: 'phoneDown' | 'listeningParty' | 'concert'): Promise<UserPoints>;
+  getUserBadges(userId: string): Promise<UserBadge[]>;
+  awardBadge(userId: string, badgeCode: string, badgeName: string, badgeDescription: string, badgeIcon: string): Promise<UserBadge>;
+  hasBadge(userId: string, badgeCode: string): Promise<boolean>;
+
+  // Listening Parties
+  createListeningParty(data: InsertListeningParty): Promise<ListeningParty>;
+  getListeningParty(id: string): Promise<ListeningPartyWithDetails | undefined>;
+  getListeningPartyByCode(code: string): Promise<ListeningPartyWithDetails | undefined>;
+  joinListeningParty(partyId: string, userId: string): Promise<ListeningPartyMember>;
+  leaveListeningParty(partyId: string, userId: string): Promise<void>;
+  updateListeningPartyPlayback(id: string, trackId: string | null, positionMs: number, isPlaying: boolean): Promise<ListeningParty | undefined>;
+  addTrackToPartyQueue(partyId: string, trackId: string, userId: string): Promise<ListeningPartyQueue>;
+  removeTrackFromPartyQueue(queueId: string): Promise<void>;
+  endListeningParty(id: string): Promise<ListeningParty | undefined>;
+  getActiveListeningParties(userId: string): Promise<ListeningPartyWithDetails[]>;
+
+  // Live Concerts
+  createLiveConcert(data: InsertLiveConcert): Promise<LiveConcert>;
+  getLiveConcert(id: string, userId?: string): Promise<LiveConcertWithDetails | undefined>;
+  getUpcomingConcerts(universityName?: string, limit?: number): Promise<LiveConcertWithDetails[]>;
+  getLiveConcertsByArtist(artistId: string): Promise<LiveConcertWithDetails[]>;
+  updateLiveConcert(id: string, updates: Partial<LiveConcert>): Promise<LiveConcert | undefined>;
+  cancelLiveConcert(id: string): Promise<LiveConcert | undefined>;
+  rsvpToConcert(concertId: string, userId: string, status: string): Promise<ConcertRsvp>;
+  cancelRsvp(concertId: string, userId: string): Promise<void>;
+  checkInToConert(concertId: string, userId: string): Promise<ConcertRsvp | undefined>;
+  getConcertRsvps(concertId: string): Promise<(ConcertRsvp & { user: User })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2771,6 +2840,608 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return result.reverse(); // Return in chronological order
+  }
+
+  // ============================================
+  // REAL CONNECTION FEATURES
+  // ============================================
+
+  // Helper to generate 6-character codes
+  private generateCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  // Phone Down Challenges
+  async createPhoneDownChallenge(data: InsertPhoneDownChallenge): Promise<PhoneDownChallenge> {
+    const code = this.generateCode();
+    const [challenge] = await db
+      .insert(phoneDownChallenges)
+      .values({ ...data, code })
+      .returning();
+    
+    // Add host as first participant
+    await db.insert(phoneDownParticipants).values({
+      challengeId: challenge.id,
+      userId: data.hostUserId
+    });
+    
+    return challenge;
+  }
+
+  async getPhoneDownChallenge(id: string): Promise<PhoneDownChallengeWithParticipants | undefined> {
+    const [challenge] = await db
+      .select()
+      .from(phoneDownChallenges)
+      .where(eq(phoneDownChallenges.id, id));
+    
+    if (!challenge) return undefined;
+    
+    const [host] = await db.select().from(users).where(eq(users.id, challenge.hostUserId));
+    const participants = await db
+      .select()
+      .from(phoneDownParticipants)
+      .where(eq(phoneDownParticipants.challengeId, id));
+    
+    const participantsWithUsers = await Promise.all(
+      participants.map(async (p) => {
+        const [user] = await db.select().from(users).where(eq(users.id, p.userId));
+        return { ...p, user: user! };
+      })
+    );
+    
+    return { ...challenge, host: host!, participants: participantsWithUsers };
+  }
+
+  async getPhoneDownChallengeByCode(code: string): Promise<PhoneDownChallengeWithParticipants | undefined> {
+    const [challenge] = await db
+      .select()
+      .from(phoneDownChallenges)
+      .where(eq(phoneDownChallenges.code, code.toUpperCase()));
+    
+    if (!challenge) return undefined;
+    return this.getPhoneDownChallenge(challenge.id);
+  }
+
+  async joinPhoneDownChallenge(challengeId: string, userId: string): Promise<PhoneDownParticipant> {
+    const [existing] = await db
+      .select()
+      .from(phoneDownParticipants)
+      .where(and(
+        eq(phoneDownParticipants.challengeId, challengeId),
+        eq(phoneDownParticipants.userId, userId)
+      ));
+    
+    if (existing) return existing;
+    
+    const [participant] = await db
+      .insert(phoneDownParticipants)
+      .values({ challengeId, userId })
+      .returning();
+    return participant;
+  }
+
+  async completePhoneDownChallenge(id: string): Promise<PhoneDownChallenge | undefined> {
+    const [challenge] = await db
+      .select()
+      .from(phoneDownChallenges)
+      .where(eq(phoneDownChallenges.id, id));
+    
+    if (!challenge) return undefined;
+    
+    const endedAt = new Date();
+    const actualDuration = Math.floor((endedAt.getTime() - challenge.startedAt.getTime()) / 60000);
+    const pointsPerMinute = 10;
+    const pointsEarned = actualDuration * pointsPerMinute;
+    
+    // Update challenge
+    const [updated] = await db
+      .update(phoneDownChallenges)
+      .set({ status: 'completed', endedAt, actualDurationMinutes: actualDuration })
+      .where(eq(phoneDownChallenges.id, id))
+      .returning();
+    
+    // Award points to all participants
+    const participants = await db
+      .select()
+      .from(phoneDownParticipants)
+      .where(eq(phoneDownParticipants.challengeId, id));
+    
+    for (const p of participants) {
+      await db
+        .update(phoneDownParticipants)
+        .set({ completed: true, pointsEarned })
+        .where(eq(phoneDownParticipants.id, p.id));
+      
+      await this.addPoints(p.userId, pointsEarned, 'phoneDown');
+    }
+    
+    return updated;
+  }
+
+  async cancelPhoneDownChallenge(id: string): Promise<PhoneDownChallenge | undefined> {
+    const [challenge] = await db
+      .update(phoneDownChallenges)
+      .set({ status: 'cancelled', endedAt: new Date() })
+      .where(eq(phoneDownChallenges.id, id))
+      .returning();
+    return challenge;
+  }
+
+  async getActivePhoneDownChallenges(userId: string): Promise<PhoneDownChallengeWithParticipants[]> {
+    const participations = await db
+      .select()
+      .from(phoneDownParticipants)
+      .where(eq(phoneDownParticipants.userId, userId));
+    
+    const activeIds = participations.map(p => p.challengeId);
+    if (activeIds.length === 0) return [];
+    
+    const challenges = await db
+      .select()
+      .from(phoneDownChallenges)
+      .where(and(
+        inArray(phoneDownChallenges.id, activeIds),
+        eq(phoneDownChallenges.status, 'active')
+      ));
+    
+    return Promise.all(challenges.map(c => this.getPhoneDownChallenge(c.id))).then(
+      results => results.filter((r): r is PhoneDownChallengeWithParticipants => r !== undefined)
+    );
+  }
+
+  async getUserPhoneDownHistory(userId: string, limit: number = 20): Promise<PhoneDownChallengeWithParticipants[]> {
+    const participations = await db
+      .select()
+      .from(phoneDownParticipants)
+      .where(eq(phoneDownParticipants.userId, userId));
+    
+    const challengeIds = participations.map(p => p.challengeId);
+    if (challengeIds.length === 0) return [];
+    
+    const challenges = await db
+      .select()
+      .from(phoneDownChallenges)
+      .where(inArray(phoneDownChallenges.id, challengeIds))
+      .orderBy(desc(phoneDownChallenges.createdAt))
+      .limit(limit);
+    
+    return Promise.all(challenges.map(c => this.getPhoneDownChallenge(c.id))).then(
+      results => results.filter((r): r is PhoneDownChallengeWithParticipants => r !== undefined)
+    );
+  }
+
+  // User Points & Badges
+  async getUserPoints(userId: string): Promise<UserPoints | undefined> {
+    const [points] = await db
+      .select()
+      .from(userPoints)
+      .where(eq(userPoints.userId, userId));
+    return points;
+  }
+
+  async addPoints(userId: string, points: number, category: 'phoneDown' | 'listeningParty' | 'concert'): Promise<UserPoints> {
+    const existing = await this.getUserPoints(userId);
+    
+    if (existing) {
+      const updates: Partial<UserPoints> = {
+        totalPoints: existing.totalPoints + points,
+        updatedAt: new Date()
+      };
+      
+      if (category === 'phoneDown') {
+        updates.phoneDownPoints = existing.phoneDownPoints + points;
+      } else if (category === 'listeningParty') {
+        updates.listeningPartyPoints = existing.listeningPartyPoints + points;
+      } else {
+        updates.concertPoints = existing.concertPoints + points;
+      }
+      
+      const [updated] = await db
+        .update(userPoints)
+        .set(updates)
+        .where(eq(userPoints.userId, userId))
+        .returning();
+      return updated;
+    }
+    
+    const initial: any = {
+      userId,
+      totalPoints: points,
+      phoneDownPoints: category === 'phoneDown' ? points : 0,
+      listeningPartyPoints: category === 'listeningParty' ? points : 0,
+      concertPoints: category === 'concert' ? points : 0
+    };
+    
+    const [created] = await db.insert(userPoints).values(initial).returning();
+    return created;
+  }
+
+  async getUserBadges(userId: string): Promise<UserBadge[]> {
+    return db
+      .select()
+      .from(userBadges)
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.earnedAt));
+  }
+
+  async awardBadge(userId: string, badgeCode: string, badgeName: string, badgeDescription: string, badgeIcon: string): Promise<UserBadge> {
+    const [badge] = await db
+      .insert(userBadges)
+      .values({ userId, badgeCode, badgeName, badgeDescription, badgeIcon })
+      .returning();
+    return badge;
+  }
+
+  async hasBadge(userId: string, badgeCode: string): Promise<boolean> {
+    const [badge] = await db
+      .select()
+      .from(userBadges)
+      .where(and(
+        eq(userBadges.userId, userId),
+        eq(userBadges.badgeCode, badgeCode)
+      ));
+    return !!badge;
+  }
+
+  // Listening Parties
+  async createListeningParty(data: InsertListeningParty): Promise<ListeningParty> {
+    const code = this.generateCode();
+    const [party] = await db
+      .insert(listeningParties)
+      .values({ ...data, code })
+      .returning();
+    
+    // Add host as member
+    await db.insert(listeningPartyMembers).values({
+      partyId: party.id,
+      userId: data.hostUserId,
+      isHost: true
+    });
+    
+    return party;
+  }
+
+  async getListeningParty(id: string): Promise<ListeningPartyWithDetails | undefined> {
+    const [party] = await db
+      .select()
+      .from(listeningParties)
+      .where(eq(listeningParties.id, id));
+    
+    if (!party) return undefined;
+    
+    const [host] = await db.select().from(users).where(eq(users.id, party.hostUserId));
+    
+    const members = await db
+      .select()
+      .from(listeningPartyMembers)
+      .where(and(
+        eq(listeningPartyMembers.partyId, id),
+        sql`${listeningPartyMembers.leftAt} IS NULL`
+      ));
+    
+    const membersWithUsers = await Promise.all(
+      members.map(async (m) => {
+        const [user] = await db.select().from(users).where(eq(users.id, m.userId));
+        return { ...m, user: user! };
+      })
+    );
+    
+    let currentTrack = null;
+    if (party.currentTrackId) {
+      const [track] = await db.select().from(tracks).where(eq(tracks.id, party.currentTrackId));
+      if (track) {
+        const [artist] = await db.select().from(artistProfiles).where(eq(artistProfiles.id, track.artistId));
+        currentTrack = { ...track, artist: artist! };
+      }
+    }
+    
+    const queueItems = await db
+      .select()
+      .from(listeningPartyQueue)
+      .where(and(
+        eq(listeningPartyQueue.partyId, id),
+        eq(listeningPartyQueue.played, false)
+      ))
+      .orderBy(listeningPartyQueue.position);
+    
+    const queueWithDetails = await Promise.all(
+      queueItems.map(async (q) => {
+        const [track] = await db.select().from(tracks).where(eq(tracks.id, q.trackId));
+        const [artist] = await db.select().from(artistProfiles).where(eq(artistProfiles.id, track!.artistId));
+        const [addedBy] = await db.select().from(users).where(eq(users.id, q.addedByUserId));
+        return { ...q, track: { ...track!, artist: artist! }, addedBy: addedBy! };
+      })
+    );
+    
+    return {
+      ...party,
+      host: host!,
+      members: membersWithUsers,
+      currentTrack,
+      queue: queueWithDetails
+    };
+  }
+
+  async getListeningPartyByCode(code: string): Promise<ListeningPartyWithDetails | undefined> {
+    const [party] = await db
+      .select()
+      .from(listeningParties)
+      .where(eq(listeningParties.code, code.toUpperCase()));
+    
+    if (!party) return undefined;
+    return this.getListeningParty(party.id);
+  }
+
+  async joinListeningParty(partyId: string, userId: string): Promise<ListeningPartyMember> {
+    const [existing] = await db
+      .select()
+      .from(listeningPartyMembers)
+      .where(and(
+        eq(listeningPartyMembers.partyId, partyId),
+        eq(listeningPartyMembers.userId, userId),
+        sql`${listeningPartyMembers.leftAt} IS NULL`
+      ));
+    
+    if (existing) return existing;
+    
+    const [member] = await db
+      .insert(listeningPartyMembers)
+      .values({ partyId, userId, isHost: false })
+      .returning();
+    return member;
+  }
+
+  async leaveListeningParty(partyId: string, userId: string): Promise<void> {
+    await db
+      .update(listeningPartyMembers)
+      .set({ leftAt: new Date() })
+      .where(and(
+        eq(listeningPartyMembers.partyId, partyId),
+        eq(listeningPartyMembers.userId, userId)
+      ));
+  }
+
+  async updateListeningPartyPlayback(id: string, trackId: string | null, positionMs: number, isPlaying: boolean): Promise<ListeningParty | undefined> {
+    const [party] = await db
+      .update(listeningParties)
+      .set({ currentTrackId: trackId, playbackPositionMs: positionMs, isPlaying })
+      .where(eq(listeningParties.id, id))
+      .returning();
+    return party;
+  }
+
+  async addTrackToPartyQueue(partyId: string, trackId: string, userId: string): Promise<ListeningPartyQueue> {
+    const [lastItem] = await db
+      .select()
+      .from(listeningPartyQueue)
+      .where(eq(listeningPartyQueue.partyId, partyId))
+      .orderBy(desc(listeningPartyQueue.position))
+      .limit(1);
+    
+    const position = (lastItem?.position ?? 0) + 1;
+    
+    const [item] = await db
+      .insert(listeningPartyQueue)
+      .values({ partyId, trackId, addedByUserId: userId, position })
+      .returning();
+    return item;
+  }
+
+  async removeTrackFromPartyQueue(queueId: string): Promise<void> {
+    await db.delete(listeningPartyQueue).where(eq(listeningPartyQueue.id, queueId));
+  }
+
+  async endListeningParty(id: string): Promise<ListeningParty | undefined> {
+    const [party] = await db
+      .update(listeningParties)
+      .set({ status: 'ended', endedAt: new Date(), isPlaying: false })
+      .where(eq(listeningParties.id, id))
+      .returning();
+    return party;
+  }
+
+  async getActiveListeningParties(userId: string): Promise<ListeningPartyWithDetails[]> {
+    const memberships = await db
+      .select()
+      .from(listeningPartyMembers)
+      .where(and(
+        eq(listeningPartyMembers.userId, userId),
+        sql`${listeningPartyMembers.leftAt} IS NULL`
+      ));
+    
+    const partyIds = memberships.map(m => m.partyId);
+    if (partyIds.length === 0) return [];
+    
+    const parties = await db
+      .select()
+      .from(listeningParties)
+      .where(and(
+        inArray(listeningParties.id, partyIds),
+        eq(listeningParties.status, 'active')
+      ));
+    
+    return Promise.all(parties.map(p => this.getListeningParty(p.id))).then(
+      results => results.filter((r): r is ListeningPartyWithDetails => r !== undefined)
+    );
+  }
+
+  // Live Concerts
+  async createLiveConcert(data: InsertLiveConcert): Promise<LiveConcert> {
+    const [concert] = await db
+      .insert(liveConcerts)
+      .values(data)
+      .returning();
+    return concert;
+  }
+
+  async getLiveConcert(id: string, userId?: string): Promise<LiveConcertWithDetails | undefined> {
+    const [concert] = await db
+      .select()
+      .from(liveConcerts)
+      .where(eq(liveConcerts.id, id));
+    
+    if (!concert) return undefined;
+    
+    const [artist] = await db
+      .select()
+      .from(artistProfiles)
+      .where(eq(artistProfiles.id, concert.artistId));
+    
+    const rsvps = await db
+      .select()
+      .from(concertRsvps)
+      .where(eq(concertRsvps.concertId, id));
+    
+    const rsvpCount = rsvps.filter(r => r.status === 'going').length;
+    const interestedCount = rsvps.filter(r => r.status === 'interested').length;
+    const checkedInCount = rsvps.filter(r => r.checkedIn).length;
+    
+    let userRsvpStatus = null;
+    if (userId) {
+      const userRsvp = rsvps.find(r => r.userId === userId);
+      userRsvpStatus = userRsvp?.status || null;
+    }
+    
+    return {
+      ...concert,
+      artist: artist!,
+      rsvpCount,
+      interestedCount,
+      checkedInCount,
+      userRsvpStatus
+    };
+  }
+
+  async getUpcomingConcerts(universityName?: string, limit: number = 20): Promise<LiveConcertWithDetails[]> {
+    let query = db
+      .select()
+      .from(liveConcerts)
+      .where(and(
+        or(eq(liveConcerts.status, 'upcoming'), eq(liveConcerts.status, 'live')),
+        gte(liveConcerts.startTime, new Date())
+      ))
+      .orderBy(liveConcerts.startTime)
+      .limit(limit);
+    
+    if (universityName) {
+      query = db
+        .select()
+        .from(liveConcerts)
+        .where(and(
+          or(eq(liveConcerts.status, 'upcoming'), eq(liveConcerts.status, 'live')),
+          eq(liveConcerts.universityName, universityName),
+          gte(liveConcerts.startTime, new Date())
+        ))
+        .orderBy(liveConcerts.startTime)
+        .limit(limit);
+    }
+    
+    const concerts = await query;
+    
+    return Promise.all(concerts.map(c => this.getLiveConcert(c.id))).then(
+      results => results.filter((r): r is LiveConcertWithDetails => r !== undefined)
+    );
+  }
+
+  async getLiveConcertsByArtist(artistId: string): Promise<LiveConcertWithDetails[]> {
+    const concerts = await db
+      .select()
+      .from(liveConcerts)
+      .where(eq(liveConcerts.artistId, artistId))
+      .orderBy(desc(liveConcerts.startTime));
+    
+    return Promise.all(concerts.map(c => this.getLiveConcert(c.id))).then(
+      results => results.filter((r): r is LiveConcertWithDetails => r !== undefined)
+    );
+  }
+
+  async updateLiveConcert(id: string, updates: Partial<LiveConcert>): Promise<LiveConcert | undefined> {
+    const [concert] = await db
+      .update(liveConcerts)
+      .set(updates)
+      .where(eq(liveConcerts.id, id))
+      .returning();
+    return concert;
+  }
+
+  async cancelLiveConcert(id: string): Promise<LiveConcert | undefined> {
+    const [concert] = await db
+      .update(liveConcerts)
+      .set({ status: 'cancelled' })
+      .where(eq(liveConcerts.id, id))
+      .returning();
+    return concert;
+  }
+
+  async rsvpToConcert(concertId: string, userId: string, status: string): Promise<ConcertRsvp> {
+    const [existing] = await db
+      .select()
+      .from(concertRsvps)
+      .where(and(
+        eq(concertRsvps.concertId, concertId),
+        eq(concertRsvps.userId, userId)
+      ));
+    
+    if (existing) {
+      const [updated] = await db
+        .update(concertRsvps)
+        .set({ status })
+        .where(eq(concertRsvps.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [rsvp] = await db
+      .insert(concertRsvps)
+      .values({ concertId, userId, status })
+      .returning();
+    return rsvp;
+  }
+
+  async cancelRsvp(concertId: string, userId: string): Promise<void> {
+    await db
+      .update(concertRsvps)
+      .set({ status: 'cancelled' })
+      .where(and(
+        eq(concertRsvps.concertId, concertId),
+        eq(concertRsvps.userId, userId)
+      ));
+  }
+
+  async checkInToConert(concertId: string, userId: string): Promise<ConcertRsvp | undefined> {
+    const [rsvp] = await db
+      .update(concertRsvps)
+      .set({ checkedIn: true, checkedInAt: new Date() })
+      .where(and(
+        eq(concertRsvps.concertId, concertId),
+        eq(concertRsvps.userId, userId)
+      ))
+      .returning();
+    
+    if (rsvp) {
+      await this.addPoints(userId, 50, 'concert');
+    }
+    
+    return rsvp;
+  }
+
+  async getConcertRsvps(concertId: string): Promise<(ConcertRsvp & { user: User })[]> {
+    const rsvps = await db
+      .select()
+      .from(concertRsvps)
+      .where(eq(concertRsvps.concertId, concertId));
+    
+    return Promise.all(
+      rsvps.map(async (r) => {
+        const [user] = await db.select().from(users).where(eq(users.id, r.userId));
+        return { ...r, user: user! };
+      })
+    );
   }
 }
 
