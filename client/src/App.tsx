@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import type { ArtistProfile } from "@shared/schema";
 import { AudioPlayerProvider } from "@/lib/audio-player-context";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -93,18 +91,12 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
 
 function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic?: boolean }) {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'signup'>('login');
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
-
-  const { data: artistProfile } = useQuery<ArtistProfile>({
-    queryKey: ['/api/artist/profile'],
-    enabled: !!user && user.role === 'artist',
-  });
 
   const openLogin = () => {
     setAuthModalTab('login');
@@ -116,17 +108,6 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
     setAuthModalOpen(true);
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const profileImageUrl = artistProfile?.profileImageUrl;
-
   const showPublicSidebar = isPublic && !user;
 
   return (
@@ -137,23 +118,7 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
           <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-40">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-3 ml-auto">
-              {user ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/profile')}
-                  className="flex items-center gap-2 hover-elevate rounded-full px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  data-testid="user-avatar-header"
-                  aria-label={`View profile for ${user.fullName}`}
-                >
-                  <Avatar className="h-8 w-8 border border-border">
-                    <AvatarImage src={profileImageUrl || undefined} alt={user.fullName} />
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                      {getInitials(user.fullName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm hidden sm:block">{user.fullName}</span>
-                </button>
-              ) : isPublic ? (
+              {!user && isPublic && (
                 <>
                   <Button
                     variant="ghost"
@@ -172,7 +137,7 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
                     Sign Up
                   </Button>
                 </>
-              ) : null}
+              )}
             </div>
           </header>
           <main className="flex-1 overflow-y-auto">
