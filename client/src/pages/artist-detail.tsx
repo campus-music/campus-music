@@ -10,6 +10,7 @@ import { SupportModal } from '@/components/support-modal';
 import { SupportHistory } from '@/components/support-history';
 import { TrackCard } from '@/components/track-card';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useAuth } from '@/lib/auth-context';
 import type { ArtistProfile, Track, LiveStream, TrackWithArtist } from '@shared/schema';
 
 interface ArtistWithTracks extends ArtistProfile {
@@ -19,6 +20,7 @@ interface ArtistWithTracks extends ArtistProfile {
 export default function ArtistDetail() {
   const [, params] = useRoute('/artist/:id');
   const [, navigate] = useLocation();
+  const { user } = useAuth();
   const artistId = params?.id || '';
 
   const { data: artist, isLoading: artistLoading } = useQuery<ArtistWithTracks>({
@@ -196,11 +198,13 @@ export default function ArtistDetail() {
         </div>
       )}
 
-      {/* Support History */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Support History</h2>
-        <SupportHistory artistId={artist.id} />
-      </div>
+      {/* Support History - Only visible to the artist themselves */}
+      {user && user.id === artist.userId && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Support History</h2>
+          <SupportHistory artistId={artist.id} />
+        </div>
+      )}
     </div>
   );
 }
