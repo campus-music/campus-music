@@ -406,19 +406,19 @@ export default function Home() {
         <section>
           <SectionHeader title="Popular Artists" icon={Star} href="/all-artists" />
           <ScrollArea className="w-full">
-            <div className="flex gap-6 pb-4">
+            <div className="flex gap-4 pb-4">
               {artistsLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-40 w-40 flex-shrink-0 rounded-lg" />
+                  <Skeleton key={i} className="h-64 w-48 flex-shrink-0 rounded-lg" />
                 ))
               ) : (
                 topArtists.map((artist) => (
                   <Link key={artist.id} href={`/artist/${artist.id}`}>
-                    <Card className="w-40 flex-shrink-0 overflow-hidden hover-elevate transition-all p-4 text-center space-y-3 cursor-pointer h-full flex flex-col items-center" data-testid={`card-artist-home-${artist.id}`}>
-                      <Avatar className="h-24 w-24">
+                    <Card className="w-48 flex-shrink-0 overflow-hidden hover-elevate transition-all p-4 text-center space-y-3 cursor-pointer h-full flex flex-col items-center" data-testid={`card-artist-home-${artist.id}`}>
+                      <Avatar className="h-28 w-28">
                         <AvatarImage src={artist.profileImageUrl || undefined} alt={artist.stageName} />
                         <AvatarFallback className="bg-primary/20">
-                          <Music className="h-8 w-8" />
+                          <Music className="h-10 w-10" />
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 w-full px-1">
