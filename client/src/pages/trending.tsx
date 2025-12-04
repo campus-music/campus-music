@@ -1,29 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { TrackListItem } from '@/components/track-list-item';
+import { SearchableFilter } from '@/components/searchable-filter';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, Filter, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Flame, Music } from 'lucide-react';
 import type { TrackWithArtist } from '@shared/schema';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function Trending() {
-  const [selectedGenre, setSelectedGenre] = useState<string>('all');
-  const [selectedUniversity, setSelectedUniversity] = useState<string>('all');
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
 
   const { data: tracks, isLoading } = useQuery<TrackWithArtist[]>({
     queryKey: ['/api/tracks/trending'],
-  });
-
-  const { data: genres } = useQuery<string[]>({
-    queryKey: ['/api/genres'],
   });
 
   const { data: likedTracks } = useQuery<TrackWithArtist[]>({
@@ -37,32 +26,15 @@ export default function Trending() {
     ...Array.from(localLikedIds)
   ]);
 
-  const universities = useMemo(() => {
-    if (!tracks) return [];
-    const uniqueUniversities = new Set<string>();
-    tracks.forEach(track => {
-      if (track.universityName) {
-        uniqueUniversities.add(track.universityName);
-      }
-    });
-    return Array.from(uniqueUniversities).sort();
-  }, [tracks]);
+  // Extract unique genres and universities from tracks
+  const availableGenres = Array.from(new Set(tracks?.map(t => t.genre) || [])).sort();
+  const availableUniversities = Array.from(new Set(tracks?.map(t => t.universityName) || [])).sort();
 
-  const filteredTracks = useMemo(() => {
-    if (!tracks) return [];
-    return tracks.filter(track => {
-      const matchesGenre = selectedGenre === 'all' || track.genre === selectedGenre;
-      const matchesUniversity = selectedUniversity === 'all' || track.universityName === selectedUniversity;
-      return matchesGenre && matchesUniversity;
-    });
-  }, [tracks, selectedGenre, selectedUniversity]);
-
-  const hasActiveFilters = selectedGenre !== 'all' || selectedUniversity !== 'all';
-
-  const clearFilters = () => {
-    setSelectedGenre('all');
-    setSelectedUniversity('all');
-  };
+  const filteredTracks = tracks?.filter(track => {
+    if (selectedGenre && track.genre !== selectedGenre) return false;
+    if (selectedUniversity && track.universityName !== selectedUniversity) return false;
+    return true;
+  }) || [];
 
   const likeMutation = useMutation({
     mutationFn: async ({ trackId, isLiked }: { trackId: string; isLiked: boolean }) => {
@@ -94,77 +66,39 @@ export default function Trending() {
   };
 
   return (
-    <div className="space-y-6 pb-32">
-      <div className="flex items-center gap-3">
-        <div className="bg-primary/10 p-3 rounded-lg">
-          <TrendingUp className="h-8 w-8 text-primary" />
+    <div className="space-y-8 pb-32">
+      <div>
+        <div className="flex items-center gap-3 mb-2">
+          <Flame className="h-8 w-8 text-primary" />
+          <h1 className="text-4xl font-bold">Trending Songs</h1>
         </div>
-        <div>
-          <h1 className="text-4xl font-bold mb-1">Trending Songs</h1>
-          <p className="text-muted-foreground text-lg">
-            Most popular tracks on campus right now
-          </p>
-        </div>
+        <p className="text-muted-foreground text-lg">
+          The hottest tracks from student artists right now
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          <span className="text-sm font-medium">Filters:</span>
-        </div>
-        
-        <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-          <SelectTrigger className="w-[160px]" data-testid="select-genre-filter">
-            <SelectValue placeholder="All Genres" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Genres</SelectItem>
-            {genres?.map((genre) => (
-              <SelectItem key={genre} value={genre}>
-                {genre}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
-          <SelectTrigger className="w-[200px]" data-testid="select-university-filter">
-            <SelectValue placeholder="All Universities" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Universities</SelectItem>
-            {universities.map((university) => (
-              <SelectItem key={university} value={university}>
-                {university}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="gap-1 text-muted-foreground"
-            data-testid="button-clear-filters"
-          >
-            <X className="h-4 w-4" />
-            Clear
-          </Button>
-        )}
-
-        {hasActiveFilters && (
-          <span className="text-sm text-muted-foreground ml-auto">
-            {filteredTracks.length} {filteredTracks.length === 1 ? 'track' : 'tracks'}
-          </span>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+        <SearchableFilter
+          label="Filter by Genre"
+          options={availableGenres}
+          selected={selectedGenre}
+          onSelect={setSelectedGenre}
+          placeholder="Search or select genre..."
+          testIdPrefix="genre"
+        />
+        <SearchableFilter
+          label="Filter by University"
+          options={availableUniversities}
+          selected={selectedUniversity}
+          onSelect={setSelectedUniversity}
+          placeholder="Search or select university..."
+          testIdPrefix="university"
+        />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         {isLoading ? (
-          Array.from({ length: 15 }).map((_, i) => (
+          Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full rounded-md" />
           ))
         ) : filteredTracks.length > 0 ? (
@@ -177,16 +111,10 @@ export default function Trending() {
               onLike={() => handleLike(track.id)}
             />
           ))
-        ) : hasActiveFilters ? (
-          <div className="text-center py-20 text-muted-foreground">
-            <p>No tracks match your filters</p>
-            <Button variant="ghost" onClick={clearFilters} className="mt-2">
-              Clear filters
-            </Button>
-          </div>
         ) : (
           <div className="text-center py-20 text-muted-foreground">
-            No trending tracks available yet
+            <Music className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>{selectedGenre || selectedUniversity ? 'No tracks match your filters' : 'No trending tracks available'}</p>
           </div>
         )}
       </div>
