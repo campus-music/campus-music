@@ -173,7 +173,10 @@ export default function Home() {
       <div className="space-y-12 pb-32">
         {/* Hero Section */}
         <section className="space-y-2">
-          <h1 className="text-4xl font-bold">Welcome back{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}</h1>
+          <h1 className="text-4xl font-bold">
+            {user?.onboardingCompleted ? 'Welcome back' : 'Welcome'}
+            {user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}
+          </h1>
           <p className="text-muted-foreground">
             Your personalized music from campus artists
           </p>
