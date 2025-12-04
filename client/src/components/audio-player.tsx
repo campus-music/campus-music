@@ -50,7 +50,7 @@ export function AudioPlayer() {
       <div className="sticky bottom-0 bg-card/95 backdrop-blur-lg border-t border-card-border z-50">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4 max-w-7xl mx-auto">
-            <div className="flex items-center gap-3 min-w-0 w-48">
+            <div className="flex items-center gap-3 min-w-0 w-56">
               <Avatar className="h-10 w-10 rounded-md flex-shrink-0">
                 <AvatarImage src={currentTrack.coverImageUrl || undefined} alt={currentTrack.title} />
                 <AvatarFallback className="rounded-md">{currentTrack.title[0]}</AvatarFallback>
@@ -67,7 +67,7 @@ export function AudioPlayer() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-1 justify-center">
+            <div className="flex items-center gap-2 flex-1 justify-center">
               <Button
                 size="icon"
                 variant="ghost"
@@ -98,7 +98,7 @@ export function AudioPlayer() {
               >
                 <SkipForward className="h-4 w-4" />
               </Button>
-              <span className="text-xs text-muted-foreground w-10 text-right">
+              <span className="text-xs text-muted-foreground w-8 text-right">
                 {formatTime(currentTime)}
               </span>
               <Slider
@@ -106,22 +106,22 @@ export function AudioPlayer() {
                 max={displayDuration || 100}
                 step={1}
                 onValueChange={([value]) => seekTo(value)}
-                className="w-48"
+                className="w-32"
                 data-testid="slider-seek"
               />
-              <span className="text-xs text-muted-foreground w-10">
+              <span className="text-xs text-muted-foreground w-8">
                 {formatTime(displayDuration)}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 flex-1 justify-end">
+            <div className="flex items-center gap-2">
               <Volume2 className="h-4 w-4 text-muted-foreground" />
               <Slider
                 value={[volume * 100]}
                 max={100}
                 step={1}
                 onValueChange={([value]) => setVolume(value / 100)}
-                className="w-24"
+                className="w-20"
                 data-testid="slider-volume"
               />
             </div>
