@@ -162,9 +162,9 @@ function AppLayout({ children, isPublic }: { children: React.ReactNode; isPublic
               {children}
             </div>
           </main>
+          <AudioPlayer />
         </div>
       </div>
-      <AudioPlayer />
       <AuthModal 
         open={authModalOpen} 
         onOpenChange={setAuthModalOpen}

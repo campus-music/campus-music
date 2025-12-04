@@ -47,7 +47,7 @@ export function AudioPlayer() {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-card-border z-50">
+      <div className="sticky bottom-0 bg-card/95 backdrop-blur-lg border-t border-card-border z-50">
         <div className="px-4 py-2">
           <div className="flex items-center gap-4 max-w-7xl mx-auto">
             <div className="flex items-center gap-3 flex-1 min-w-0">
